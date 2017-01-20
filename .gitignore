@@ -54,6 +54,7 @@ build/
 *.log
 *.scc
 *.exe
+*.opendb
 
 # OS generated files #
 .DS_Store*
