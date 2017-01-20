@@ -1,0 +1,334 @@
+
+.menu .options 	{ background-image: url('menu/options.png'); }
+.menu .volume_0 	{ background-image: url('menu/volume0.png'); }
+.menu .volume_1 	{ background-image: url('menu/volume1.png'); }
+.menu .volume_2 	{ background-image: url('menu/volume2.png'); }
+.menu .volume_3 	{ background-image: url('menu/volume3.png'); }
+.menu .play,
+.menu .play_prev,
+.menu .play_next{ background-image: url('menu/play.png'); }
+.menu .download	{ background-image: url('menu/download.png'); }
+.menu .half		{ background-image: url('menu/half.png'); }
+.menu .full		{ background-image: url('menu/full.png'); }
+
+.menu .good		{ background-image: url('menu/good.png'); }
+.menu .bad		{ background-image: url('menu/bad.png'); }
+
+.menu .pause	{ background-image: url('menu/pause.png'); }
+
+.menu .more	{ background-image: url('menu/plus.png'); }
+
+#search .more	{ background-image: url('menu/plus.png'); }
+#search .search	{ background-image: url('menu/search	.png'); }
+
+.root_stream .menu
+{
+	z-index: 1;
+}
+
+.menu .bottom,
+.menu .right
+{
+	 -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    cursor: default;
+}
+
+
+#search .button, .button, .menu .progress_bar, .menu .volume_bar
+{
+	cursor: pointer;
+}
+
+.menu > div
+{
+	visibility: hidden;
+}
+
+.menu:hover > div
+{
+	visibility: visible;
+}
+
+.firstpic_container:hover .menu > div
+{
+	visibility: visible;
+}
+
+.visible
+{
+	visibility: visible !important;
+	display: block !important;
+}
+
+.menu .current_time, .menu .end_time
+{
+	opacity: .9;
+	position: absolute;
+}
+
+#search .button, .button
+{
+	opacity: 0.6;
+}
+
+#search .button:hover, .button:hover
+{
+	opacity:1;
+}
+
+.firstpic_container
+{
+	position: relative;
+}
+
+.menu *
+{
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	/* display: inline-block; */
+}
+
+.menu
+{
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	color: white;
+	font-size: 13px;
+	font-family: trebuchet ms;
+	/* background-color: rgba(255,0,0,.5); */
+	/* text-shadow: 0px 0px 10px rgba(0,0,0,.8); */
+	float: left;
+}
+
+
+.menu .top
+{
+	padding: 10px 10px;
+	text-shadow: 0px 0px 10px rgba(0,0,0,.8);
+	font-size: 18px;
+	opacity: .9;
+	position: absolute;
+	color: white;
+}
+
+.menu .bottom
+{
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	/* height: 46px; */
+	background-color: rgba(0,0,0,0.7);
+	padding: 0px 3px 10px 3px;
+	/* width: 100%; */
+	background: rgba(0,0,0,0);
+	background: -moz-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+	background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(0,0,0,0)), color-stop(100%, rgba(0,0,0,0.8)));
+	background: -webkit-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+	background: -o-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+	background: -ms-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+	background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#000000', endColorstr='#000000', GradientType=0 );
+}
+
+.root_post .menu .bottom
+{
+	background-color: rgba(0,0,0,0.9);
+}
+
+.menu .bottom > div
+{
+	display: flex;
+}
+
+.menu .bottom .timeline > div
+{
+	display: flex;
+}
+
+.menu .bottom  .current_time,
+.menu .bottom  .end_time
+{
+	margin: -13px 0px 0px 4px !important;
+	text-shadow: 0px 0px 10px rgba(0,0,0,.8);
+}
+
+.menu .bottom  .end_time
+{
+	float: right;
+	right: 8px;
+}
+
+.menu .bottom .timeline .progress_bar
+{
+	width: 100%;
+	height: 14px;
+	bbackground-color: red;
+	margin: 6px 4px;
+}
+
+.menu .bottom .timeline .progress_bar span
+{
+	display: inline-block;
+	height: 3px;
+	width: 30px;
+	margin-top: 6px;
+	padding: 0px;
+	border: 0px;
+}
+
+.menu .bottom .timeline .progress_bar .progress_bar_played
+{
+	background-color: red;
+	width: 0%;
+}
+
+.menu .bottom .timeline .progress_bar .progress_bar_loaded
+{
+	background-color: #999;
+	width: 5px;
+}
+
+.menu .bottom .timeline .progress_bar .progress_bar_toplay
+{
+	background-color: #DDD;
+	width: 100%;
+}
+
+.menu .bottom .buttons .center_buttons
+{
+	margin: 0px 0px;
+	flex: 1;
+}
+
+.menu .bottom .buttons .right_buttons,
+.menu .bottom .buttons .left_buttons
+{
+	margin: 0px 1px 0px 6px;
+	flex: 1;
+}
+
+.menu .bottom .buttons .left_buttons > div
+{
+	margin: 0px 6px 0px -4px;
+	display: inline-block;
+}
+
+.menu .bottom .buttons .right_buttons > div
+{
+	margin: 0px 4px 0px 3px;
+	float: right;
+	display: inline-block;
+}
+
+.menu .bottom .buttons .center_buttons .play,
+.menu .bottom .buttons .center_buttons .pause
+{
+	margin: -5px -2px -5px 0px;
+	width: 32px;
+	height: 32px;
+}
+
+.menu .flipH
+{
+	-moz-transform: scaleX(-1);
+    -o-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    transform: scaleX(-1);
+    filter: FlipH;
+    -ms-filter: "FlipH";
+}
+
+#search .button,
+.menu .button
+{
+	display: inline-block;
+	width: 22px;
+	height: 22px;
+	background-size: 100%;
+}
+
+.menu .right
+{
+	position: absolute;
+	right: 0px;
+	width: 21px;
+	background-color: rgba(0, 0, 0, 0.4);
+	padding: 10px;
+	border-radius: 0px 0px  0px 16px;
+	top: 0px;
+	/* display: none; */
+}
+
+.menu .right .bad,
+.menu .right .full
+{
+	margin-bottom: 10px;
+}
+
+
+.menu .bottom .volume_container
+{
+	display: inline-block;
+}
+
+.menu .bottom .volume_container:hover .inline_volume_bar,
+.menu .bottom .inline_volume_bar :hover
+{
+	visibility: visible;
+}
+
+
+.menu .bottom .volume_bar
+{
+	width: 60px;
+	margin: 7px 10px 7px 10px;
+	display: flex;
+}
+
+.menu .bottom .inline_volume_bar
+{
+	display: inline-block;
+	margin: -19px 18px;
+	/* height: 22px; */
+	/* top: 0px; */
+	position: absolute;
+	visibility: hidden;
+}
+
+
+.menu .bottom .volume_bar span
+{
+	display: inline-block;
+	height: 3px;
+	/* width: 30px; */
+	/* margin-top: -11px; */
+	/* padding: 0px; */
+	/* border: 0px; */
+}
+
+.menu .bottom .volume_bar .volume_bar_left
+{
+	background-color: red;
+	width: 90%;
+}
+
+.menu .bottom .volume_bar .volume_bar_current
+{
+	background-color: #999;
+	width: 5px;
+	height: 14px;
+	margin-top: -5px;
+}
+
+.menu .bottom .volume_bar .volume_bar_right
+{
+	background-color: #DDD;
+	width: 0%;
+}

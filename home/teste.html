@@ -1,0 +1,201 @@
+<style type="text/css">
+
+.movie_container
+{
+	position: relative;
+}
+
+.menu *
+{
+	background-position: 50% 50%;
+    background-repeat: no-repeat;
+}
+
+.movie, .menu
+{
+	width: 50%;
+	height: 540;
+	position: absolute;
+	color: white;
+	font-size: 14px;
+	font-family: trebuchet ms;
+}
+
+.menu
+{
+	visibility: hidden;
+}
+
+.movie:hover + .menu,
+.menu:hover
+{
+	visibility: visible;
+}
+
+
+.menu .top
+{
+	padding: 10px;
+	text-shadow: 0px 0px 10px black;
+	font-size: 18px;
+}
+
+.menu .bottom
+{
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	height: 64px;
+	background-color: rgba(0,0,0,.7);
+	padding: 10px;
+}
+
+.menu .bottom > div
+{
+	display: flex;
+}
+
+.menu .bottom .timeline > div
+{
+	display: inline-block;
+}
+
+.menu .bottom .timeline .current_time,
+.menu .bottom .timeline .end_time
+{
+	margin: 5px;	
+}
+
+.menu .bottom .timeline .progress_bar
+{
+	width: 100%;
+	height: 3px;
+	background-color: red;
+	margin: 11px 5px;
+}
+
+.menu .bottom .buttons .center_buttons
+{
+	margin: 8px 0px;	
+	width: 100%;
+}
+
+.menu .bottom .buttons .right_buttons,
+.menu .bottom .buttons .left_buttons
+{
+	margin: 8px 0px;	
+	width: 200px;
+}
+
+.menu .bottom .buttons .left_buttons > div
+{
+	margin: 0px 8px 0px 4px;
+	display: inline-block;
+}
+
+.menu .bottom .buttons .right_buttons > div
+{
+	margin: 0px 4px 0px 8px;
+	float: right;
+	display: inline-block;
+}
+
+.menu .bottom .buttons .center_buttons .play
+{
+	margin: -7px 12px;
+	width: 36px;
+	height: 36px;
+}
+
+.menu .flipH
+{
+	-moz-transform: scaleX(-1);
+    -o-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    transform: scaleX(-1);
+    filter: FlipH;
+    -ms-filter: "FlipH";
+}
+
+.menu .button
+{
+	display: inline-block;
+	width: 22px;
+	height: 22px;
+	background-size: 100%;
+}
+
+.menu .right
+{
+	position: absolute;
+    right: 10px;
+    width: 21px;
+    background-color: rgba(0, 0, 0, .7);
+    padding: 10px;
+    border-radius: 13px;
+    top: 10px;
+}
+
+.menu .right .bad
+{
+	margin-bottom: 10px;
+}
+
+.menu .options 	{ background-image: url('menu/options.png'); }
+.menu .volume 	{ background-image: url('menu/volume0.png'); }
+.menu .play,
+.menu .play_prev,
+.menu .play_next{ background-image: url('menu/play.png'); }
+.menu .download	{ background-image: url('menu/download.png'); }
+.menu .half	{ background-image: url('menu/half.png'); }
+.menu .full	{ background-image: url('menu/full.png'); }
+
+.menu .good	{ background-image: url('menu/good.png'); }
+.menu .bad	{ background-image: url('menu/bad.png'); }
+
+
+</style>
+
+<div class="movie_container">
+	<img class="movie" src="images/welcome3.jpg" width="960" height="540">
+
+	<div class="menu">
+		<div class="top">
+			Terminator 2			
+		</div>
+
+		<div class="right">
+			<center>
+				<div class="button bad"></div>
+				<div class="button good"></div>
+			</center>
+		</div>
+		<div class="bottom">
+			<div class="timeline">
+				<div class="current_time">0:53:15</div>
+				<div class="progress_bar"></div>
+				<div class="end_time">1:21:08</div>
+			</div>
+			<div class="buttons">
+				<div class="left_buttons">
+					<div class="button options"></div>
+					<div class="button volume"></div>
+				</div>
+				<div class="center_buttons">
+				<center>
+					<div class="button play_prev flipH"></div>
+					<div class="button play"></div>
+					<div class="button play_next"></div>					
+				</center>
+				</div>
+				<div class="right_buttons">
+					<div class="button full	"></div>
+					<div class="button half"></div>
+					<div class="button download"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</div>

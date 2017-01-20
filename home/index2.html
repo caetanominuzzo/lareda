@@ -1,0 +1,73 @@
+<html>
+<head>
+    <script src="jquery-2.1.1.min.js"></script>
+    <script src="jquery.mixitup.min.js"></script>    
+    <style type="text/css">
+
+div.mix, div.mix2
+{
+	mmargin: 70px;
+	border: 1px solid #ccc;
+	display: flex;
+	mmax-height: 180px;
+	flex-direction: column;
+}
+
+    </style>
+ <script type="text/javascript">
+
+$(function(){
+
+	// Instantiate MixItUp:
+
+	$('#container').mixItUp();
+
+	$('.container2').mixItUp({
+		selectors: {
+			target: '.mix2'
+		}
+	});
+
+	$('#container').mixItUp("sort", 'value');
+
+
+	setTimeout(function()
+	{
+		$("#a3").attr("data-value", -1);
+		$('#container').mixItUp("sort", 'value');
+
+		setTimeout(function()
+		{
+			$("#b0").attr("data-value", 3);
+			$('.container2').mixItUp("sort", 'value');
+		}, 1000);
+
+	}, 1000);
+
+});
+
+ </script>
+</head>
+<body>
+
+<div id="container">
+
+	<div class="mix" data-value="0" id="a0">0</div>
+	<div class="mix" data-value="4" id="a1">4</div>
+	<div class="mix" data-value="2" id="a2">2</div>
+	<div class="mix container2" data-value="3" id="a3">
+		
+		
+
+			<div class="mix2" data-value="0" id="b0">0</div>
+			<div class="mix2" data-value="4" id="b1">4</div>
+			<div class="mix2" data-value="2" id="b2">2</div>
+			<div class="mix2" data-value="3" id="b3">3</div>
+			<div class="mix2" data-value="1" id="b4">1</div>
+
+	</div>
+	<div class="mix" data-value="1" id="a4">1</div>
+
+</div>
+
+</body>

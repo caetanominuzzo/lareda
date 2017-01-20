@@ -1,0 +1,476 @@
+#searchResults
+{
+	margin-top: 72px;
+	width: 100%;
+	/* margin-left: 5%; */
+	height: 100%;
+}
+
+.layout .layout
+{
+	width: 100%;
+	height: auto;
+	min-height: auto;
+}
+
+#searchResults:after {
+   ccontent: '';
+   display: block;
+   clear: both;
+}
+
+
+
+.layout 
+{
+	display: inline-block;
+}
+
+@media screen and (min-width: 24em) and (max-width: 48em){
+  .layout-sizer,
+  .layout
+  {
+    width: 100%;
+  }
+
+  .layout.first
+	{
+		width: 100%;
+	}
+
+}
+
+@media screen and (min-width: 48em) and (max-width: 62em) {
+	.layout-sizer,
+  .layout
+  {
+    width: 50%;
+  }
+
+  .layout.first
+	{
+		width: 100%;
+	}
+
+}
+
+@media screen and (min-width: 62em) and (max-width: 86em) {
+	.layout-sizer,
+  .layout
+  {
+    width: 33.3%;
+  }
+
+  .layout.first
+	{
+		width: 66.6%;
+	}
+
+}
+
+@media screen and (min-width: 86em) and (max-width: 92em) {
+	.layout-sizer,
+  .layout
+  {
+    width: 25%;
+  }
+
+  .layout.first
+	{
+		width: 50%;
+	}
+
+}
+
+@media screen and (min-width: 92em) {
+	.layout-sizer,
+  .layout
+  {
+    width: 20%;
+  }
+
+  .layout.first
+	{
+		width: 40%;
+	}
+
+}
+
+
+.subResults > .layout > .cards
+{
+	height: initial !important;
+	min-height: initial !important;
+	margin-right: 10px;
+	font-family: trebuchet ms, Verdana,Arial,sans-serif;
+	box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px !important;
+	background-color: rgba(0, 0, 0, 0.9) !important;
+	color: white;
+	padding: 10px;
+	margin: 1px 0px 0px 0px;
+}
+
+.layout * .layout * .firstpic, .marker * .firstpic
+{
+	max-width: 32px;
+	margin-right: 11px;
+	margin-bottom: 5px;
+	max-height: 32px;
+	float: left;
+}
+
+
+
+.searchResults > div.layout > div.cards
+{
+	padding: 8px;
+	background-color: #FFFFFF;
+	margin: 10px;
+	font-family: trebuchet ms, Verdana,Arial,sans-serif;
+	position: relative;
+}
+
+.rootitem > div
+{
+	display: none;
+}
+
+.parents .rootitem > div
+{
+	display: inline-block;
+	width: auto;
+	height: auto;
+}
+
+
+
+.rootitem .firstpic_container,
+.rootitem .menu,
+.root_post .text,
+.root_post .parents,
+.root_post .thumb_text
+{
+	display: block;
+}
+
+.subresults
+{
+	font-size: 0.8em;
+	/* padding: 0px 0px 0px 10px; */
+	background-color: inherit;
+	/* margin-top: 1px; */
+}
+
+ #searchResults * .clip
+{
+	/* max-height: 78%; */
+	overflow: hidden;
+	z-index: 10;
+	p\: a;
+	/* margin-bottom: 70px; */
+	height: auto;
+}
+
+.root_post .firstpic
+{
+	width: 33%;
+	float: right;
+	margin: 10px !important;
+}
+
+.firstpic_container
+{
+	width: 100%;
+	/* max-width: 440px; */
+	/* float: left; */
+	/* margin-right: 15px; */
+	/* margin-bottom: 10px; */
+	/* position: absolute; */
+	height: auto;
+}
+
+.firstpic
+{
+	width: 100%;
+	z-index: 10;
+	height: auto;
+	background-color: rgba(0, 0, 0, 1) !important;
+	/* border: 1px solid #000; */
+	border-bottom: 8px;
+}
+
+
+.text
+{
+	color: white;
+	z-index: 1000;
+	text-align: justify;
+	line-height: 160%;
+}
+
+.root_stream .text
+{
+	background-color: rgba(0,0,0,0.9);
+	padding: 10px;
+}
+
+.root_post .firstpic_container_container
+{
+	background-color: rgba(0,0,0,0.9);
+	padding: 10px;
+	padding-top: 70px;
+}
+
+.root_post .firstpic_container_container > div
+{
+	/* position: relative; */
+	/* z-index: 20000; */
+}
+
+.root_post .text
+{
+	
+}
+
+.thumb_text
+{
+	color: white;
+}
+
+.root_post .content .content
+{
+	background-color: initial;
+	padding: initial;
+}
+
+.text:empty
+{
+	display: none;
+}
+
+.firstauthor, .firstdate
+{
+	display: inline-block;
+}
+
+.sub
+{
+	visibility: hidden;
+	position: absolute;
+	padding: 60px;
+	border: 1px solid #DDD;
+	background-color: white;
+	box-shadow: #CCC 4px 4px 10px 1px;
+	display: none;
+}
+
+.mono {
+  white-space: pre;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.mono div
+{
+	padding-left:10px;
+}
+
+.subinput, .subinput textarea
+{
+	/* width: 100%; */
+}
+
+.subSearch
+{
+	border: 1px solid #DDD;
+	border-top:0px;
+	/* width: 100%; */
+	background-color: white;
+	overflow-y: auto;
+	/* padding: 20px; */
+	display: none;
+	max-height: 120px;
+	position: absolute;
+	max-width: 350px;
+	margin-top: -2px;
+}
+
+.listitem * img
+{
+	max-width: 38px;
+	margin-right: 10px;
+	float: left;
+}
+
+.listitem .firstdate, .listitem .firstauthor 
+{
+	display: inline-block;
+}
+
+.listitem
+{
+	border-bottom: 1px solid #eee;
+	/* clear: both; */
+	padding: 10px;
+	cursor: pointer;
+	margin-bottom: 0px;
+	width: 40%;
+	display: inline-block;
+}
+
+.listitem:hover1
+{
+	background-color:#EEE;
+}
+
+
+.subitem
+{
+	width:50%;
+	min-width: 200px;
+	float: left;
+}
+
+#cloneResults > .layout > .cards > .clip > .subitems
+{
+	margin-bottom: 100px;
+}
+
+.subinput .buttons
+{
+	/* padding: 10px 0px 0px 0px; */
+	/* height: 40px; */
+	/* display: none; */
+	/* position: absolute; */
+	/* right: 10px; */
+	margin: -40px 10px 0px 0px;
+	float: right;
+}
+
+.subinput .buttons input
+{
+	/* float: right; */
+	height: 29px;
+}
+
+.subinput
+{
+	margin: 1px 0px 0px 0px;
+	/* background-color: rgba(0,0,0,0.9); */
+	padding: 10px 0px;
+	/* height: 87px; */
+}
+
+.textarea_padding
+{
+	padding: -10px 60px 10px 10px;
+}
+
+#render_master_stream, #render_master_post, #render_children, #render_list, #render_parents
+{
+	display: none !important;
+}
+
+.marker_parent
+{
+	height: 16px;
+    
+	display: inline-block;
+    margin: 0px;
+    padding: 0px;
+    
+	position: relative;
+	width: 160px;
+}
+
+.marker
+{
+	position: absolute;
+    width: 100%;
+	height: 18px;
+	margin-top: 0px;
+	
+	background-color: #EEE;
+	border-radius: 3px;
+	font-size:  0.8em !important;
+}
+
+.marker_ready
+{
+	overflow: hidden;
+	border: 1px solid #DDD;
+}
+
+.marker_ready:hover
+{
+	height: 60px;
+}
+
+.marker .text
+{
+	padding: 0px;
+	background-color: initial;
+}
+
+.menu .parents
+{
+	font-size: 12px;
+}
+
+.parents > .cards
+{
+	min-height: initial !important;
+	display: inline-block;
+	background-color: rgba(0, 0, 0, 0.6);
+}
+.parents > .cards > .clip
+{
+	max-height: initial; 
+}
+
+.parents > div
+{
+}
+.parents
+{
+	/* display: inline-block; */
+}
+
+.parents * img
+{
+	height: 28px;
+	/* float: left; */
+	margin-top: 2px;
+	/* border-radius: 4px; */
+	display: none;
+}
+
+.parents *
+{
+	display: inline-block;
+}
+
+.parents * .parents_thumb_text
+{
+	padding: 3px 5px;
+	cursor: pointer;
+}
+
+.parents * .alternate
+{
+	padding: 3px 5px;
+	border-left: 1px solid #eee;
+	border-right: 1px solid #eee;
+	cursor: pointer;
+}
+
+
+.subresults * .subresults {
+    ddisplay: none;
+}
+
+audio
+{
+	display: none !important;
+}
+

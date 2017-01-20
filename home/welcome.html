@@ -1,0 +1,104 @@
+<html>
+<style type="text/css">
+html
+{ 
+
+	
+  background: url(welcome.jpg) no-repeat center center fixed; 
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+  font-family: georgia, trebuchet ms;
+}
+
+.subtitles
+{
+	width: 90%;
+	bottom: 60px;
+	position: absolute;
+	text-align: center;
+	font-size: 48px;
+	font-family: arial;
+	color: yellow;
+	text-shadow: 2px 2px 4px black;
+	line-height: 70px;
+}
+
+.newWelcomeKey
+{
+	position: absolute;
+	width: 260px;
+	left: 65%;
+	top: 40px;
+	background: linear-gradient(to bottom, rgba(255,255,255, 0.7), rgba(255,255,255, 0));
+	padding: 20px 20px;
+	border-radius: 10px;
+	height: 310px
+}
+
+input
+{
+	background-color: #FFF;
+	border: 1px solid #CCC;
+	
+	border-radius: 3px;	
+	height: 30px;
+	float:left;
+	font-size: 16px;
+	margin: 0px;
+}
+
+.txt
+{
+	padding: 2px 8px 0px 8px;
+	width: 150px;
+}
+
+.button
+{
+	background-color: #39F;
+	color: white;
+	font-size: 14px;
+	padding: 3px 10px;
+	margin-left: 10px;
+	border: 1px solid #6AF;
+}
+
+.title
+{
+	font-size: 28px;
+	font-weight: normal;
+	font-variant: small-caps;
+
+}
+
+span
+{
+	font-size: 16px;
+	font-weight: normal;
+	display: block;
+	margin-bottom: 26px;
+}
+
+</style>
+<body>
+
+<div class="subtitles">
+	Voc&ecirc; tem que pedir pra um amigo <br /> criar uma nova chave pra voc&ecirc;.	
+</div>
+
+<div class="newWelcomeKey">
+	<span class="title">Chave de ativa&ccedil;&atilde;o inv&aacute;lida</span>
+
+	<span>Pe&ccedil;a para um amigo criar uma nova chave de ativa&ccedil;&atilde;o para voc&ecirc;.</span>
+
+	<span>Digite aqui sua nova chave.</span>
+
+	<form method="GET" action="addPeer">
+		<textarea class="txt" name="key"> <input type="submit" class="button" value="Enviar" />
+	</form>
+</div>
+
+</body>
+</html>

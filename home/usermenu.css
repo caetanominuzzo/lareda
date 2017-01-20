@@ -1,0 +1,113 @@
+img.userPic
+{
+	width: 46px;
+	height: 46px;
+	border-radius: 50%;
+}
+
+#userMenu
+{
+	display: none;
+	background-color: #FFF;
+	position: absolute;
+	right: 0px;
+	padding: 10px 10px 0px 20px;
+	top: 0px;
+	border-bottom: solid 1px #CCC;
+	width: 280px;
+	border: 1px solid #CCC;
+	margin-top: -10px;
+	border-radius: 0px 0px 5px 5px;
+	background: white;
+	height: 259px;
+}
+
+#right:hover #userMenu
+{
+	display: block;
+}
+
+
+#post
+{
+	width: 210px;
+}
+
+#post .searchTxt
+{
+	width: 100%;
+}
+
+#right > img.userPic
+{
+	position: absolute;
+	right: 20px;
+	top: 14px;
+	display: none;
+	box-shadow: 11px -14px 61px rgba(0,0,0, 1);
+}
+
+#right > img.userPic:first-child
+{
+	display: block;
+	z-index: 10;	
+}
+
+#post textarea.searchInput
+{
+	height: 80px;
+}
+
+#userSubOptions
+{
+	width: 40px;
+	float: right;
+	margin-top: 12px;
+	border-left: 1px solid #EEE;
+	padding: 8px 2px 2px 8px;
+}
+
+#userSubOptions img.userPic
+{
+	width: 28px;
+	height: 28px;
+	margin-right: 4px;
+	margin-bottom: 25px;
+}
+
+#userMenu div.postButton
+{
+
+}
+
+div#textOptions
+{
+	font-size: 14px;
+	font-family: arial;
+}
+
+div#textOptions ul
+{
+	list-style-type: none;
+	margin: 0px;
+	-webkit-padding-start: 0px;
+}
+
+div#textOptions li
+{
+	padding: 0px 0px 20px 0px;
+}
+
+div#userMenu div#entrar
+{
+	width: 100%;
+	padding: 10px 0px;
+	border-top: 1px solid #CCC;
+	margin: 10px 0px;
+}
+
+div#userMenu div#entrar div.postButton
+{
+	float: none;
+	margin: 0px;
+}

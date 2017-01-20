@@ -1,0 +1,59 @@
+div.results
+{
+	background-color: #FFF;
+	border: 1px solid #EEE;
+	border-radius: 3px;
+	padding: 0px;
+	margin-top: 3px;
+	display: none;
+	width: 100%	;
+	z-index: 10000;
+}
+
+div.results > div.field
+{
+	min-width: 200px;
+	height: 30px;
+	display: block;
+	overflow: hidden;
+}
+
+div.results img
+{
+	width: 40px;
+}
+
+div.results > div.field:hover
+{
+	background-color: #69F;
+	cursor: pointer;
+	color: #111;
+}
+
+div.input div.results div.field
+{
+	font-size: 70%;	
+	padding: 10px;
+	display: block;
+	border-bottom: 1px solid #EEE;
+}
+
+div.input div.results div.field:first-child
+{
+	border-radius: 3px 3px 0px 0px;
+}
+
+div.input div.results div.field:last-child
+{
+	border: 0px;
+	border-radius: 0px 0px 3px 3px;
+}
+
+div.input div.results div.field div.field
+{
+	font-size: 80%;	
+	padding: 0px 20px 0px 0px;
+	display: inline-block;
+	border: 0px;
+}
+

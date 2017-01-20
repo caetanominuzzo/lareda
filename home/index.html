@@ -1,0 +1,397 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="dialog.css">
+    <link rel="stylesheet" type="text/css" href="index.css">
+    <link rel="stylesheet" type="text/css" href="filetypes.css">
+    <link rel="stylesheet" type="text/css" href="inlinesearch.css">
+    <link rel="stylesheet" type="text/css" href="results.css">
+    <link rel="stylesheet" type="text/css" href="usermenu.css">
+    <link rel="stylesheet" type="text/css" href="login.css">
+    <link rel="stylesheet" type="text/css" href="menu.css">
+
+
+
+    <script src="jquery-2.1.4.min.js"></script>
+
+     <script src="isotope.pkgd.min.js"></script>
+
+     <script src="diff_match_patch.js"></script>
+
+     <script src="jquery.timeago.js"></script>
+
+     <script src="video.js"></script>
+
+     <script src="audio.js"></script>
+
+    <script src="utils.js"></script>
+
+    <script src="context.js"></script>
+
+    <script src="upload.js"></script>
+
+    <script src="indent.js"></script>
+
+    <script src="drag.js"></script>
+
+     <script src="nav.js"></script>
+
+    <script src="input.js"></script>
+
+    <script src="input.post.js"></script>
+
+    <script src="input.search.js"></script>
+
+   
+
+    <script src="filetypes.js"></script>
+
+    <script src="user.js"></script>
+
+    <script src="menu.js"></script>
+
+    <script src="index.js"></script>
+
+
+
+
+
+
+</head>
+<body>
+
+
+    <div id="login" class="dialog">
+        <div>Qual o seu nome?</div>
+        <div class="sub">Voc&ecirc; tamb&eacute;m pode pesquisar pela sua cidade, data de nascimento.</div>
+        <div>
+             <div id="loginInput" contentEditable="true"></div>
+            <div class="postButton" id="selectUserButton">Entrar</div>
+            <div id="loginInputResults" class="results"></div>
+        </div>
+
+    </div>
+
+    <div id="newUser" class="dialog">
+        <div>Criando o usuario <b><span id="newUserusername"></span></b>, confirmar?</div>
+        <div class="postButton" id="confirmSelectUserButton">Criar</div>
+    </div>
+
+    <div id="welcomeKey" class="dialog">
+        <div>Envie o c&oacute;digo para seu amigo:</div>
+        <div id="welcomeKeyText"></div>
+        <div class="postButton">Ok</div>
+    </div>
+
+    <div id="userImgResult"></div>
+
+
+    <div id="head">
+
+        <div id="logoshadow"></div>
+
+        <div id="logo"></div>
+
+        <div id="search">
+            <div class="more button"></div>
+            <div class="search button"></div>
+            
+            <div id="searchInput" class="searchInput" contentEditable="true"></div>
+            
+
+            <input style="display:none" type="button" value="Get" id="getbutton">
+
+        </div>
+
+
+
+        <div id="right">
+            <img src="images/anonymous.jpg" class="userPic" />
+
+
+            <div id="userMenu">
+
+
+                <div id="post">
+
+
+                </div>
+
+
+                <div id="userSubOptions">
+
+                </div>
+
+
+                <div class="postButton">Publicar</div>
+
+
+                <div id="entrar">
+                    <div class="postButton" id="loginButton" style="display:none">Entrar</div>
+
+                    <div class="postButton" id="logoutButton" style="display:none">Sair</div>
+                </div>
+
+
+
+                <div id="textOptions">
+                    <ul>
+                        <li><a href="">Enviar a rede para um amigo.</a></li>
+
+                        <li><a href="javascript:$.user.getWelcomeKey()">Enviar c&oacute;digo de acesso para um amigo.</a></li>
+                    </ul>
+
+                </div>
+
+
+
+
+
+
+
+            </div>
+        </div>
+
+    </div>
+
+    <div id="body">
+        <div id="navItems" class="searchResults"></div>
+        <div id="searchResults" class="searchResults">
+            <div class="layout-sizer"></div>
+        </div>
+    </div>
+
+
+   
+
+<div class="layout anchor root_stream" address="" id='render_master_stream'>
+
+    <div class="cards">
+        <div class="clip">
+            <div class="rootitem content">
+                <div class="firstpic_container">
+
+
+
+                    <div class="menu">
+                        <div class="top visible">
+                            <div class="parents"></div>
+                            <div class="thumb_text"></div>
+                            <div class="firstauthor subresults"></div>
+                            <div class="firstdate subresults"></div>
+                                          
+
+                        </div>
+
+                        <div class="right">
+                            <center>
+
+                                <div class="button bad"></div>
+                                <div class="button good"></div>
+                            </center>
+                        </div>
+                        <div class="bottom">
+                            <div class="end_time">00:00:00</div>
+                            <div class="current_time">00:00:00</div>                    
+                            <div class="timeline">
+
+                                <div class="progress_bar">
+                                    <span class="progress_bar_played"></span>
+                                    <span class="progress_bar_loaded"></span>
+                                    <span class="progress_bar_toplay"></span>
+                                </div>
+
+                            </div>
+                            <div class="buttons">
+                                <div class="left_buttons">
+                                    <div class="button options"></div>
+                                    <div class="volume_container">
+                                        <div class="button volume volume_0"></div>
+                                        <div class="inline_volume_bar">
+                                             <div class="volume_bar">
+                                                <span class="volume_bar_left"></span>
+                                                <span class="volume_bar_current"></span>
+                                                <span class="volume_bar_right"></span>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                                <div class="center_buttons">
+                                <center>
+                                    <div class="button play_prev flipH"></div>
+                                    <div class="button play"></div>
+                                    <div class="button play_next"></div>                    
+                                </center>
+                                </div>
+                                <div class="right_buttons">
+                                    <div class="button full "></div>
+                                    <div class="button more "></div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <video class="firstpic firstaudio video-js" preload="metadata" poster=""><source src=""></video>
+                    <audio class="firstpic firstaudio video-js" preload="metadata"><source src=""></audio>
+                </div>
+                <div class="text subresults"></div>  
+                <div class="subinput">
+                    <div class="textarea_padding">
+                        <div class="searchInput" contentEditable="true"></div>
+                    </div>
+                    <div class="buttons"><input type="button" value="Post"></div>
+                </div>
+                
+                <div class="subitems subresults"></div>
+
+                
+                
+            </div>
+            
+           
+        </div>
+    </div>
+</div>
+
+
+<div class="layout anchor root_post" address="" id='render_master_post'>
+ <div class="cards">
+        <div class="clip">
+            <div class="rootitem content">
+                <div class="firstpic_container">
+
+                    
+
+
+                    <div class="menu">
+                        <div class="top visible">
+                            <div class="parents"></div>
+                            <div class="thumb_text"></div>
+                            <div class="firstauthor subresults"></div>
+                            <div class="firstdate subresults"></div>
+                        </div>
+
+                        <div class="right">
+                            <center>
+
+                                <div class="button bad"></div>
+                                <div class="button good"></div>
+                            </center>
+                        </div>
+                        <div class="bottom">
+                            
+                            
+                            
+                            <div class="buttons">
+                                <div class="left_buttons">
+                                    <div class="button options"></div>
+                                </div>
+                                
+                                <div class="right_buttons">
+                                    <div class="button more "></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="firstpic_container_container">
+
+                        
+
+
+                        <video class="firstpic firstaudio video-js" preload="metadata" poster=""><source src=""></video>
+                        <audio class="firstpic firstaudio video-js" preload="metadata"><source src=""></audio>
+
+                        <div class="text subresults"></div>  
+
+                    </div>
+
+                </div>
+                
+                <div class="subinput">
+                    <div class="textarea_padding">
+                        <div class="searchInput" contentEditable="true"></div>
+                    </div>
+                    <div class="buttons"><input type="button" value="Post"></div>
+                </div>
+                
+                <div class="subitems subresults"></div>
+
+                
+                
+            </div>
+            
+           
+        </div>
+    </div>
+</div>
+
+
+
+<div class="layout anchor" address=""  id='render_children'>
+    <div class="cards">
+        <div class="clip">
+           <div class="rootitem content">
+                <div class="firstpic_menu">
+                    <img class="firstpic" src="images/black.gif">
+                </div>
+                <div class="thumb_text"></div>
+                <div class="firstauthor subresults"></div>
+                <div class="firstdate subresults"></div>
+            </div>
+             <div class="subitems subresults">
+                
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div address=""  id='render_text'>
+    <div class="cards">
+        <div class="clip">
+           <div class="rootitem content">
+                <div class="thumb_text"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id='render_parents' class='parents subresults'>
+    <div class="cards">
+        <div class="clip">
+            <div class="rootitem content">
+                <img  src="images/black.gif" />
+                <div class="parents_thumb_text button"></div>
+                <div class="alternate button">+</div>
+             </div>
+         </div>
+
+    </div>
+</div>
+
+<div id='render_list' class='listitem subresults' contentEditable="false"><div class="cards"><div class="clip"><div class="rootitem content"><img class="firstpic" /><div class="thumb_text"></div><div class="firstauthor subresults"></div><div class="firstdate subresults"></div></div></div></div></div>
+
+</body>
+</html>
+
+
+<!--
+
+<div>Icons made by <a href="http://www.freepik.com" title="Freepik">Freepik</a>, <a href="http://www.flaticon.com/authors/egor-rumyantsev" title="Egor Rumyantsev">Egor Rumyantsev</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a>             is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>
+
+<div>Icons made by <a href="http://www.flaticon.com/authors/elegant-themes" title="Elegant Themes">Elegant Themes</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a>             is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>
+
+
+<div>Icons made by <a href="http://www.flaticon.com/authors/rami-mcmin" title="Rami McMin">Rami McMin</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a>             is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>
+
+<div>Icons made by <a href="http://www.flaticon.com/authors/egor-rumyantsev" title="Egor Rumyantsev">Egor Rumyantsev</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a>             is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>
+
+<div>Icons made by <a href="http://www.freepik.com" title="Freepik">Freepik</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a>             is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>
+
+<div>Icons made by <a href="http://www.freepik.com" title="Freepik">Freepik</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a>             is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>
+
+-->

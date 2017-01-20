@@ -1,0 +1,46 @@
+div.dialog
+{
+	width: 80%;
+	max-width: 400px;
+	padding: 100px 20px 20px 20px;
+	border: 1px solid #CCC;
+	border-radius: 5px;
+	background-image: url(images/logo2.png);
+	background-size: 100px;
+	background-repeat: no-repeat;
+	background-position: 20px 20px;
+	background-color: white;
+	margin-left: 40%;
+	margin-top: 10%;
+	position: absolute;
+	z-index: 20000;
+	display: none;
+	line-height:  150%;
+}
+
+div.dialog > div
+{
+	margin-bottom: 20px;
+}
+
+div.dialog div.sub
+{
+	font-size: 14px;
+	color: #666;
+}
+
+div.dialog div.results
+{
+	width: 280px;
+}
+
+
+div.dialog div#selectUserButton
+{
+	float: right;
+}		
+
+div#userImgResult
+{
+	display: none;
+}
