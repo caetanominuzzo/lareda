@@ -128,21 +128,11 @@ namespace library
 
         internal string ToString()
         {
-#if SIMPLES
-
             return string.Format("Address {0}\r\nTarget {1}\r\nLink {2}\r\n{3}\r\n",
                 Utils.ToSimpleAddress(Address),
                 Utils.ToSimpleAddress(TargetAddress),
                 Utils.ToSimpleAddress(LinkAddress),
                 Hash == null || Addresses.Equals(Hash, Addresses.zero) ? "" : "CONTEUDO");
-#else
-
-            return string.Format("Address {0}\r\nTarget {1}\r\nLink {2}\r\n{3}\r\n",
-                Utils.ToBase64String(Address),
-                Utils.ToBase64String(TargetAddress),
-                Utils.ToBase64String(LinkAddress),
-                Hash == null || Addresses.Equals(Hash, Addresses.zero) ? "" : "CONTEUDO");
-#endif
         }
     }
 }

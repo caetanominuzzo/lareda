@@ -216,11 +216,12 @@ namespace library
 
             }
 
-            Log.Write("Pesquisando: " + Utils.ToSimpleAddress(address) + " - " + type.ToString() + "  " + Utils.ToBase64String(address));
+            Log.Write("Pesquisando: " + Utils.ToSimpleAddress(address) + " - " + type.ToString() + "  " + Utils.ToSimpleAddress(address));
 
             if (metapackets.Any())
                 SearchReturn(address, type, metapackets);
-            else
+
+            //else
             {
                 Log.Write("Não encontrado: " + Utils.ToSimpleAddress(address));
 

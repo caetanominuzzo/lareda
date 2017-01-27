@@ -193,7 +193,7 @@ namespace library
                 Concat(Data ?? bytes_empty).ToArray();
 
             Log.Write(Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
-                Command.ToString() + "] [" + Utils.ToBase64String(Address != null && Address.Length > 0? Address : Data) + "] [" + Utils.Points(Data ?? bytes_empty) + "] " + "[" + Utils.Points(data));
+                Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0? Address : Data) + "] [" + Utils.Points(Data ?? bytes_empty) + "] " + "[" + Utils.Points(data));
 
             ThreadSend(DestinationPeer.EndPoint, data);
 

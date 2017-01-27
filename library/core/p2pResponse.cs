@@ -110,6 +110,11 @@ namespace library
 
         void ProcessMetadata()
         {
+            if(Utils.ToSimpleAddress(Request.Address) == "129")
+            {
+
+            }
+
             if (Request.Data.Length > pParameters.addressSize) 
             {
                 //Packets.Add(Request.Header.Address, Request.Data, Request.Header.OriginPeer);

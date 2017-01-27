@@ -1,4 +1,7 @@
-﻿#if PRINT
+﻿#define SIMPLE
+//#define PRINT
+
+#if PRINT
 
 using GraphVizWrapper;
 using GraphVizWrapper.Commands;
@@ -218,14 +221,17 @@ namespace library
 
         public static string ToSimpleAddress(byte[] data)
         {
+#if !SIMPLE
+            return ToBase64String(data);
+#endif
+
             return ToSimpleAddress(ToSimpleName(data));
         }
 
         public static string ToSimpleAddress(string simpleName)
         {
-
 #if !SIMPLE
-            return "0";
+            return simpleName;
 #endif
 
 
@@ -309,9 +315,36 @@ namespace library
 
         static int prints = 1;
 
+        internal static string framePrint = string.Empty;
+
+        public static void PrintSearchResult(byte[] search, MetaPacketType type, IEnumerable<Metapacket> metapackets)
+        {
+#if !PRINT
+            return;
+#endif
+            if (framePrint == string.Empty)
+                framePrint = Client.Print();
+            var simple = int.Parse(Utils.ToSimpleAddress(search));
+
+            if (true || simple > 350)
+            {
+
+                var tmp = framePrint + simple + " [shape=ellipse, color=\"#FF0000\", style=filled];\r\n";
+
+
+                foreach (var m in metapackets)
+                {
+                    tmp += Utils.ToSimpleAddress(m.Address) + " [shape=ellipse, color=\"#FFFF00\", style=filled];\r\n";
+
+                }
+
+                Utils.Print(tmp);
+            }
+        }
+
         public static void Print(string value = null)
         {
-            #if PRINT
+#if PRINT
 
             GraphGeneration wrapper;
 
@@ -343,7 +376,7 @@ namespace library
                 //process = System.Diagnostics.Process.Start("file:///" + path);
             }
 
-        #endif
+#endif
         }
     }
 
