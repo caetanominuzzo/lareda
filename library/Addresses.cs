@@ -48,9 +48,10 @@ namespace library
 
         public static bool Equals(byte[] s1, byte[] s2, bool full = false)
         {
-         //   if (s1 == null || s2 == null)
-         //       return false;
-            //return s1 == s2;
+            //Pointer comparision of addresses was an early optimization and caused non local searchs to return false.
+            //Keeping coding modifications but forcing to always compare the address content.
+            //This should be mitigated by replacing all address in incoming packets by its local conterpart, then this commit could be reverted.
+            full = true;
 
             if (!full)
                 return s1 == s2;
