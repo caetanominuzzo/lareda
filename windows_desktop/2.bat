@@ -2,22 +2,22 @@ copy la-red.exe a\
 copy la-red.pdb a\ 
 copy library.* a\ 
 
-del packet.*
-del link.* 
-del hash.* 
+del packet.* /q
+del link.*  /q
+del hash.*  /q
 cd packets
-del *.*
+del *.* /q
 
 cd ..
 
 cd a\
 
-del packet.* 
-del link.* 
-del hash.* 
+del packet.*  /q
+del link.*  /q
+del hash.* /q 
 
 cd packets
-del *.*
+del *.* /q
 
 cd ..
 

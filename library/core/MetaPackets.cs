@@ -466,6 +466,11 @@ namespace library
 
         internal static IEnumerable<Metapacket> LocalSearch(byte[] address, MetaPacketType type)
         {
+            if(Utils.ToSimpleAddress(address) == "129")
+            {
+
+            }
+
             var result = new Metapacket[0];
 
             if(type == MetaPacketType.Link)
@@ -531,9 +536,6 @@ namespace library
 
                 return result;
             }
-
-
-
            
         }
 

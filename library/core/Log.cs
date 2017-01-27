@@ -21,7 +21,7 @@ namespace library
 
         public static void Write(string s, int tabs = 0)
         {
-            if (tabs < 10)
+            if (tabs < 0)
                 return;
 
             lock ("data.txt")

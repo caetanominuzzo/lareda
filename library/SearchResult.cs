@@ -150,10 +150,7 @@ namespace library
                 lock (AddressestoSearch)
                     AddressestoSearch.Clear();
 
-                framePrint = string.Empty;
-
-
-
+                Utils.framePrint = string.Empty;
             }
             else
             {
@@ -262,56 +259,13 @@ namespace library
                 PrepareToRender(c, parentCount);
         }
 
-        string framePrint = string.Empty;
+        
 
         List<string> frames = new List<string>();
 
         bool AddSearchResults(byte[] search, MetaPacketType type, IEnumerable<Metapacket> metapackets)
         {
-           
-#if PRINT
-             if (framePrint == string.Empty)
-                framePrint = Client.Print();
-
-
-            var simple = int.Parse(Utils.ToSimpleAddress(search));
-
-            if (true || simple > 350)
-            {
-
-                var tmp = framePrint + simple + " [shape=ellipse, color=\"#FF0000\", style=filled];\r\n";
-
-
-                foreach (var m in metapackets)
-                {
-                    tmp += Utils.ToSimpleAddress(m.Address) + " [shape=ellipse, color=\"#FFFF00\", style=filled];\r\n";
-
-                    //  Log.Write("\t\t\t: " + Utils.ToSimpleAddress(m.Address));
-
-                    //if (Utils.ToSimpleAddress(m.Address) == "055")
-                    //    Log.Write(m.ToString());
-
-                    //Log.Write(m.ToString());
-                }
-
-                Utils.Print(tmp);
-            }
-#endif
-
-            //Log.Write("RETURN: " + Utils.ToSimpleAddress(search));
-
-            //foreach (var m in metapackets)
-            //{
-            //    Log.Write("\t\t\t: " + Utils.ToSimpleAddress(m.Address));
-
-            //    //if (Utils.ToSimpleAddress(m.Address) == "055")
-            //    //    Log.Write(m.ToString());
-
-            //    //Log.Write(m.ToString());
-            //}
-
-            if (Utils.ToSimpleAddress(search) == "362")
-            { }
+            Utils.PrintSearchResult(search, type, metapackets);  
 
             if (metapackets.Count() > MetaPackets.MostUsedRatio.Average * 2000)
                 return false;
@@ -380,7 +334,7 @@ namespace library
 
         internal void SetDeepDistance(DIV item, int source, byte[] distanceMarker)
         {
-            Log.Write(item.ToString() + "  " + Utils.ToSimpleAddress(distanceMarker), 10+(source * 2));
+            //Log.Write(item.ToString() + "  " + Utils.ToSimpleAddress(distanceMarker), 10+(source * 2));
 
             if(Utils.ToSimpleAddress(Utils.ToSimpleName(item.Address)) == "084")
             {
