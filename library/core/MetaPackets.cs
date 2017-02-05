@@ -338,9 +338,9 @@ namespace library
 
         internal static byte[] ToBytes(Metapacket metapacket, bool includeAddress)
         {
-            Log.Write("---to bytes ---- ");
+            //Log.Write("---to bytes ---- ");
 
-            Log.Write(metapacket.ToString());
+            //Log.Write(metapacket.ToString());
 
             return
                 (includeAddress? metapacket.Address : new byte[0]).
@@ -417,9 +417,9 @@ namespace library
 
             result.LastAccess = DateTime.FromBinary(lastAccess);
 
-            Log.Write("---from bytes---");
+            //Log.Write("---from bytes---");
 
-            Log.Write(result.ToString());
+            //Log.Write(result.ToString());
 
             return result;
         }

@@ -224,7 +224,6 @@ namespace library
 #if !SIMPLE
             return ToBase64String(data);
 #endif
-
             return ToSimpleAddress(ToSimpleName(data));
         }
 

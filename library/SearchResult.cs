@@ -698,7 +698,11 @@ namespace library
 
             if (packet != null)
             {
-                return  Encoding.Unicode.GetString(packet.Skip(pParameters.packetHeaderSize).ToArray()).Replace("\\", "\\\\").Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"").Trim();
+                return Encoding.Unicode.GetString(packet.Skip(pParameters.packetHeaderSize).ToArray()).Replace("\\", "\\\\").Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"").Trim();
+            }
+            else
+            {
+                p2pFile.Queue.Add(Utils.ToBase64String(item.Address), Utils.ToBase64String(item.Address));
             }
 
             return string.Empty;

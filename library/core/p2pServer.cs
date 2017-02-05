@@ -69,7 +69,10 @@ namespace library
                     if (remoteEndPoint != null)
                     {
                         Log.Write(Client.LocalPeer.EndPoint.Port + " <<< " + remoteEndPoint.Port + " [" +
-    ((RequestCommand)buffer[0]).ToString() + "] [" + Utils.ToSimpleAddress(buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray()) + "] [" + Utils.Points(buffer.Skip(pParameters.requestHeaderSize + pParameters.addressSize).Take(128).ToArray()) + "] [" + Utils.Points(buffer));
+    ((RequestCommand)buffer[0]).ToString() + "] [" + Utils.ToSimpleAddress(buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray()) + "] [" + Utils.Points(buffer.Skip(pParameters.requestHeaderSize + pParameters.addressSize).Take(128).ToArray()));
+
+                        if (buffer[0] == (int)RequestCommand.Packet)
+                            Log.Write(Encoding.Unicode.GetString(buffer.Skip(pParameters.packetHeaderSize).ToArray()),1);
 
                        // Log.Write("<<<    " + remoteEndPoint.Port + "    " + Utils.Points(buffer.Take(128)));
 

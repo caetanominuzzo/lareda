@@ -208,45 +208,32 @@ namespace library
 
         internal static void Search(byte[] address, MetaPacketType type)
         {
+
+            Log.Write("Pesquisando local: " + Utils.ToSimpleAddress(address) + " - " + type.ToString() + "  " + Utils.ToSimpleAddress(address));
+
             var metapackets = MetaPackets.LocalSearch(address, type);
-
-
-            if (metapackets.Any(x => x.Hash != null))
-            {
-
-            }
-
-            Log.Write("Pesquisando: " + Utils.ToSimpleAddress(address) + " - " + type.ToString() + "  " + Utils.ToSimpleAddress(address));
 
             if (metapackets.Any())
                 SearchReturn(address, type, metapackets);
 
-            //else
+            Log.Write(metapackets.Count() + " encontrado(s).", 1);
+
+            Log.Write("Pesquisando remoto: " + Utils.ToSimpleAddress(address), 1);
+
+            int requisitions = 0;
+
+            byte[] byte_key = address;
+
+            while (requisitions < pParameters.propagation)
             {
-                Log.Write("Não encontrado: " + Utils.ToSimpleAddress(address));
+                var s = new p2pRequest(type == MetaPacketType.Hash ? RequestCommand.Hashs : RequestCommand.Links, null, Client.LocalPeer, Client.LocalPeer, Peers.GetPeer(address), address);
 
+                var sent = s.Send();
 
-                int requisitions = 0;
-
-                byte[] byte_key = address;
-
-                while (requisitions < pParameters.propagation)
-                {
-                    var s = new p2pRequest(type == MetaPacketType.Hash ? RequestCommand.Hashs : RequestCommand.Links, null, Client.LocalPeer, Client.LocalPeer, Peers.GetPeer(address), address);
-
-                    var sent = s.Send();
-
-                    //var sent = p2pRequest.Send(
-                    //        address: BitConverter.GetBytes(byte_key.Length).Concat(byte_key).ToArray(),
-                    //        command: RequestCommand.Hashs,
-                    //        ignoreDeadEnd: true,
-                    //        wait: false);
-
-                    if (sent)
-                        requisitions++;
-                    else
-                        break;
-                }
+                if (sent)
+                    requisitions++;
+                else
+                    break;
             }
 
         }
@@ -579,14 +566,14 @@ namespace library
                     var tAddress = int.Parse(Utils.ToSimpleAddress(y.Address));
 
                     //if ((tAddress < 350))// || tAddress > 650))
-                     //   continue;
+                    //   continue;
 
                     if (simpleAddress > 0)
                         s += "->" + Utils.ToSimpleAddress(y.LinkAddress);
 
                     s += ";" + Environment.NewLine;
 
-                    
+
 
                     int linksCount = y.LinkAddress.Length / pParameters.addressSize;
 

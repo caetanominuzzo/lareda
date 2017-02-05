@@ -193,7 +193,15 @@ namespace library
                 Concat(Data ?? bytes_empty).ToArray();
 
             Log.Write(Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
-                Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0? Address : Data) + "] [" + Utils.Points(Data ?? bytes_empty) + "] " + "[" + Utils.Points(data));
+                Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0? Address : Data));
+
+            if (Command == RequestCommand.Packet && data.Length > pParameters.requestHeaderSize + pParameters.addressSize)
+            {
+                if (data.Length > 200)
+                    Log.Write("size: " + data.Length);
+                else
+                    Log.Write(Encoding.Unicode.GetString(data.Skip(pParameters.requestHeaderSize + pParameters.addressSize).ToArray()), 1);
+            }
 
             ThreadSend(DestinationPeer.EndPoint, data);
 
