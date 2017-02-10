@@ -20,6 +20,7 @@ namespace library
             patterns.Add("quality", new Regex("(?:PPV\\.)?[HP]DTV|(?:HD)?CAM|B[rR]Rip|TS|(?:PPV )?WEB-?DL(?: DVDRip)?|H[dD]Rip|DVDRip|DVDRiP|DVDRIP|CamRip|W[EB]B[rR]ip|[Bb]lu[Rr]ay|DvDScr|hdtv"));
             patterns.Add("codec", new Regex("xvid|x264|h\\.?264", RegexOptions.IgnoreCase));
             patterns.Add("audio", new Regex("MP3|DD5\\.?1|Dual[\\- ]Audio|LiNE|DTS|AAC(?:\\.?2\\.0)?|AC3(?:\\.5\\.1)?"));
+            patterns.Add("group", new Regex("(- ?([^-]+(?:-={[^-]+-?$)?))$"));
             patterns.Add("region", new Regex("R[0-9]"));
             patterns.Add("extended", new Regex("EXTENDED"));
             patterns.Add("hardcoded", new Regex("HC"));
@@ -37,17 +38,6 @@ namespace library
                 Start();
 
             Dictionary<string, string> values = new Dictionary<string, string>();
-
-            var group = new Regex("(- ?([^-]+(?:-={[^-]+-?$)?))$");
-
-            var v = RegexMatch(group, title);
-
-            if (v != string.Empty)
-            {
-                title = group.Replace(title, string.Empty);
-
-                values.Add("group", v);
-            }
 
             var parts = SplitValues(values, title);
 
@@ -112,8 +102,16 @@ namespace library
                     {
                         values.Add(key, v);
 
-                        parts[i] = "|";
+                        parts[i] = string.Empty;
                     }
+                    else if (parts[i].Trim().Length == 1 && (parts[i].Trim() == "." || parts[i].Trim() == "-" || parts[i].Trim() == "|"))
+                    {
+
+                        parts[i] = string.Empty;
+                    }
+                    else
+                        parts[i] = parts[i].Trim();
+
 
                 }
             }

@@ -39,6 +39,8 @@ namespace library
 
         public static IDisposable Start(byte[] p2pAddress, int p2pPort)
         {
+            Log.Clear();
+
             P2pAddress = p2pAddress;
 
             P2pPort = p2pPort;
@@ -557,8 +559,8 @@ namespace library
 
                     var addresss = int.Parse(Utils.ToSimpleAddress(y.Address));
 
-                    // if (addresss < 351)
-                    //   continue;
+                     if (addresss < 351)
+                       continue;
 
                     var s = Utils.ToSimpleAddress(y.TargetAddress) + "->" + Utils.ToSimpleAddress(y.Address);
 

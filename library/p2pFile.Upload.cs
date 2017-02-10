@@ -57,7 +57,9 @@ namespace library
                         if (paths[0] != null)
                             tags = TagLib.File.Create(paths[0]);
                     }
-                    catch { }
+                    catch (Exception e) {
+                        Log.Write("Fileupload error: " + e.ToString());
+                    }
 
                     var fi = new FileInfo(paths[0]);
 
@@ -163,16 +165,14 @@ namespace library
 
                                 var tmp = Path.Combine(pParameters.localTempDir, Utils.ToBase64String(Utils.GetAddress())) + format.FileExtension;
 
-                                ffmpegProcess.ExecuteAsync(string.Format(@"-i ""{0}"" -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
+                                ffmpegProcess.ExecuteAsync(string.Format(@"-ss 00:00:00 -i ""{0}"" -t 00:02:10  -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
                                         file.Paths[0],
                                         format.FfmpegSelector,
                                         streamNumber++,
                                         tmp));
 
                                 if (format.MediaTypes == MediaTypes.Text)
-                                {
-                                    tmp = ConvertSrtToVtt(tmp);
-                                }
+                                    tmp = Subtitles.ConvertSrtToVtt(tmp);
 
                                 using (var stream = new FileStream(tmp, FileMode.Open, FileAccess.Read))
                                 {
@@ -192,10 +192,31 @@ namespace library
                                 }
                             }
                         }
+                        /////////////////////////////
+                        var tmpSubtitle = Path.Combine(Path.GetDirectoryName(file.Paths[0]), Path.GetFileNameWithoutExtension(file.Paths[0])) + ".srt";
 
+                        if(System.IO.File.Exists(tmpSubtitle))
+                        {
+                            
+                            tmpSubtitle = Subtitles.ConvertSrtToVtt(tmpSubtitle);
 
+                            using (var stream = new FileStream(tmpSubtitle, FileMode.Open, FileAccess.Read))
+                            {
+                                var streamConcept = file.ConceptAddress;
 
+                                if (videoConcept != null)
+                                    streamConcept = videoConcept;
 
+                                var contentAddress = StreamUpload(
+                                                        streamConcept,
+                                                        PacketTypes.Content,
+                                                        stream, file.Tags,
+                                                        VirtualAttributes.MIME_TYPE_TEXT_STREAM);
+
+                            }
+                            
+                        }
+                        ///////////////////////////
                     }
                     else
                     {
@@ -230,65 +251,7 @@ namespace library
         }
 
 
-        /// <summary>
-        /// from https://github.com/woollybogger/srt-to-vtt-converter
-        /// </summary>
-        /// <param name="sFilePath"></param>
-        static string ConvertSrtToVtt(string sFilePath)
-        {
-            var result = sFilePath.Replace(".srt", ".vtt");
-
-            using (var strReader = new StreamReader(sFilePath))
-            using (var strWriter = new StreamWriter(result))
-            {
-                var rgxDialogNumber = new Regex(@"^\d+$");
-                var rgxTimeFrame = new Regex(@"(\d\d:\d\d:\d\d,\d\d\d) --> (\d\d:\d\d:\d\d,\d\d\d)");
-
-                // Write starting line for the WebVTT file
-                strWriter.WriteLine("WEBVTT");
-                strWriter.WriteLine("");
-
-                // Handle each line of the SRT file
-                string sLine;
-                while ((sLine = strReader.ReadLine()) != null)
-                {
-                    // We only care about lines that aren't just an integer (aka ignore dialog id number lines)
-                    if (rgxDialogNumber.IsMatch(sLine))
-                        continue;
-
-                    // If the line is a time frame line, reformat and output the time frame
-                    Match match = rgxTimeFrame.Match(sLine);
-                    if (match.Success)
-                    {
-                        //if (_offsetMs > 0)
-                        //{
-                        //    // Extract the times from the matched time frame line
-                        //    var tsStartTime = TimeSpan.Parse(match.Groups[1].Value.Replace(',', '.'));
-                        //    var tsEndTime = TimeSpan.Parse(match.Groups[2].Value.Replace(',', '.'));
-
-                        //    // Modify the time with the offset
-                        //    long startTimeMs = _nOffsetDirection * _offsetMs + (uint)tsStartTime.TotalMilliseconds;
-                        //    long endTimeMs = _nOffsetDirection * _offsetMs + (uint)tsEndTime.TotalMilliseconds;
-                        //    tsStartTime = TimeSpan.FromMilliseconds(startTimeMs < 0 ? 0 : startTimeMs);
-                        //    tsEndTime = TimeSpan.FromMilliseconds(endTimeMs < 0 ? 0 : endTimeMs);
-
-                        //    // Construct the new time frame line
-                        //    sLine = tsStartTime.ToString(@"hh\:mm\:ss\.fff") +
-                        //            " --> " +
-                        //            tsEndTime.ToString(@"hh\:mm\:ss\.fff");
-                        //}
-                        //else
-                        {
-                            sLine = sLine.Replace(',', '.'); // Simply replace the comma in the time with a period
-                        }
-                    }
-
-                    strWriter.WriteLine(sLine); // Write out the line
-                }
-            }
-
-            return result;
-        }
+      
 
         static void DirectoryUpload(byte[] conceptAddress, string[] path, byte[] userAddress)
         {
@@ -669,7 +632,9 @@ namespace library
                     nameItems = TorrentNameParser.ParseTitle(title);
                 }
             }
-            catch { }
+            catch (Exception e) {
+                Log.Write("GeneratePosts:Title error: " + e.ToString());
+            }
 
             if (tags == null || tags.Properties == null)
             {

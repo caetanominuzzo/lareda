@@ -22,4 +22,4 @@ del *.* /q
 cd ..
 
 
-start la-red
+#start la-red

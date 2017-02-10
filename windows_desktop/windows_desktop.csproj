@@ -208,6 +208,9 @@
   <PropertyGroup>
     <PostBuildEvent>if $(ConfigurationName) == Release (
 $(SolutionDir)windows_desktop_installer/bin/$(ConfigurationName)/windows_desktop_installer.exe
+) else ( 
+powershell Stop-Process -processname la-red
+powershell start-process 2.bat
 )</PostBuildEvent>
   </PropertyGroup>
   <Import Project="..\packages\Accord.3.0.2\build\Accord.targets" Condition="Exists('..\packages\Accord.3.0.2\build\Accord.targets')" />

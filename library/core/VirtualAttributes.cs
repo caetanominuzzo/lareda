@@ -174,8 +174,8 @@ namespace library
 
                 Metapacket.Create(value, VirtualAttributes.CONCEITO);
 
-                if (field.Name == "MIME_TYPE_IMAGE_THUMB")
-                    return;
+                //if (field.Name == "MIME_TYPE_IMAGE_THUMB")
+                //    return;
             }
                 
         }

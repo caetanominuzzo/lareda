@@ -14,9 +14,16 @@ namespace library
 
         static bool enableStopMotion = false;
 
+        internal static void Clear()
+        {
+            File.WriteAllText("data.txt", string.Empty);
+        }
+
         static void write(string s)
         {
-            File.AppendAllText("data.txt", s);
+            s = DateTime.Now.ToShortTimeString() + " " + s;
+
+            File.AppendAllText("data.txt",  s);
         }
 
         public static void Write(string s, int tabs = 0)
@@ -56,12 +63,12 @@ namespace library
 
                 }
 
-                if (log.Contains(s))
-                    return;
+                //if (log.Contains(s))
+                //    return;
 
                 log.Enqueue(s);
 
-                if (log.Count() > 2)
+                if (log.Count() > 2000)
                     log.Dequeue();
 
                 var ss = s.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);

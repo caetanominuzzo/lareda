@@ -86,7 +86,6 @@ namespace library
                 DistancesItems.Add(VirtualAttributes.MIME_TYPE_IMAGE_THUMB);
             }
 
-
             Creation = creation;
 
             Address = address ?? Utils.GetAddress();

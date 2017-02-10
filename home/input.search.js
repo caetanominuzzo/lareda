@@ -224,6 +224,8 @@ $.input.bindItem = function($item, item)
 	var img =  $content.find("video:first")[0] ||  $content.find("img:first")[0];	
 
 	var audio = $content.find("audio:first")[0];
+
+	var subtitle = $content.find("track:first")[0];
 	
 	var parents = $('.parents:first', $content); 
 
@@ -274,6 +276,12 @@ $.input.bindItem = function($item, item)
 			img.setAttribute("src", item.audio);			
 		}
 	}
+
+	if(img && img.tagName == "VIDEO" && (typeof item.subtitle != 'undefined'))
+	{
+		subtitle.setAttribute("src", item.subtitle);			
+	}
+
 
 	if(item.author)
 		$.input.updateItems(author, [item.author], 'text');

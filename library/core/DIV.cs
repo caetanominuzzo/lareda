@@ -223,7 +223,7 @@ namespace library
             var maxDeepness = 1;// Client.MaxDeepness;
 
             if (childrenFilter == GettingChildrenFilter.Superior)
-                maxDeepness = 5;
+                maxDeepness = 3;
 
 
 
@@ -305,6 +305,12 @@ namespace library
 
                 audioStream = "\"audio\": \"" + audioStreamAddres + "\"";
 
+                var subtitleStream = string.Empty;
+
+                var subtitleStreamAddres = SearchResult.FirstContent(videoDiv == null ? this : videoDiv, VirtualAttributes.MIME_TYPE_TEXT_STREAM);
+
+                subtitleStream = "\"subtitle\": \"" + subtitleStreamAddres + "\"";
+
                 #endregion
 
 
@@ -354,7 +360,7 @@ namespace library
                         superiorChildren = string.Format("\"superiorchildren\": [{0}]", string.Join(", ", superiorChildrenList));
                 }
 
-                var results = new string[] { thumb_text, address, index, weight, date, text, pic, videoStream, audioStream, author, download, inferiorChildren, superiorChildren }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                var results = new string[] { thumb_text, address, index, weight, date, text, pic, videoStream, audioStream, subtitleStream, author, download, inferiorChildren, superiorChildren }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
 
                 if (results.Any())
                 {
