@@ -211,16 +211,16 @@ namespace library
         internal static void Search(byte[] address, MetaPacketType type)
         {
 
-            Log.Write("Pesquisando local: " + Utils.ToSimpleAddress(address) + " - " + type.ToString() + "  " + Utils.ToSimpleAddress(address));
+            //Log.Write("Pesquisando local: " + Utils.ToSimpleAddress(address) + " - " + type.ToString() + "  " + Utils.ToSimpleAddress(address));
 
             var metapackets = MetaPackets.LocalSearch(address, type);
 
             if (metapackets.Any())
                 SearchReturn(address, type, metapackets);
 
-            Log.Write(metapackets.Count() + " encontrado(s).", 1);
+            //Log.Write(metapackets.Count() + " encontrado(s).", 1);
 
-            Log.Write("Pesquisando remoto: " + Utils.ToSimpleAddress(address), 1);
+            //Log.Write("Pesquisando remoto: " + Utils.ToSimpleAddress(address), 1);
 
             int requisitions = 0;
 
@@ -258,7 +258,7 @@ namespace library
                 OnFileUpload(filename, base64Address);
         }
 
-        public static byte[] Post(string title = null, byte[] conceptAddress = null, string target = null, string userAddressBase64 = null, string[] refs = null, string content = null)
+        public static byte[] Post(string title = null, byte[] parentConceptAddress = null, string target = null, string userAddressBase64 = null, string[] refs = null, string content = null)
         {
 
             if (title != null && title.Contains("AlbumArtSmall"))
@@ -282,18 +282,21 @@ namespace library
                 return null;
             }
 
-            if (conceptAddress == null)
+            var conceptAddress = parentConceptAddress;// Utils.GetAddress();
+
+            if (parentConceptAddress == null)
             {
                 conceptAddress = Utils.GetAddress();
 
                 Metapacket.Create(conceptAddress, VirtualAttributes.CONCEITO);
-            }
 
+                //if (parentConceptAddress != null)
+                //    Metapacket.Create(conceptAddress, parentConceptAddress);
+            }
 
             if (refs != null)
                 foreach (var p in refs)
                 {
-
                     var title_index = Utils.ToAddressSizeArray(p);
 
                     var title_hashs = MetaPackets.LocalSearch(title_index, MetaPacketType.Hash);
@@ -559,8 +562,8 @@ namespace library
 
                     var addresss = int.Parse(Utils.ToSimpleAddress(y.Address));
 
-                     if (addresss < 351)
-                       continue;
+                    // if (addresss < 351)
+                     //  continue;
 
                     var s = Utils.ToSimpleAddress(y.TargetAddress) + "->" + Utils.ToSimpleAddress(y.Address);
 

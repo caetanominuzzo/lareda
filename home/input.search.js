@@ -9,7 +9,8 @@ $.input.search = function(target, term)
                 term: term || target.text,
                 context: target.context.id,
                 mode: target.context.mode,
-                parent: target.context.parent ? target.context.parent.context.id : null
+                parent: target.context.parent ? target.context.parent.context.id : null,
+                filter: target.filter || null
             },
 		dataType: "json",
 		method: "POST"
@@ -26,6 +27,7 @@ $.input.models =
 	list	: $("#render_list")
 }
 
+
 $.input.models.children.click($.nav.parentsItemClick);
 
 $.input.models.list.click($.nav.listItemClick);
@@ -33,6 +35,16 @@ $.input.models.list.click($.nav.listItemClick);
 $.input.models.parents.click($.nav.parentsItemClick);
 
 $.input.models.text.click($.nav.parentsItemClick);
+
+/*
+$.input.models.children.click($.nav.searchItemClick);
+
+$.input.models.list.click($.nav.searchItemClick);
+
+$.input.models.parents.click($.nav.searchItemClick);
+
+$.input.models.text.click($.nav.searchItemClick);
+*/
 
 for (var model in $.input.models)
 {
@@ -156,16 +168,11 @@ $.input.updateItems = function($parent, items, mode)
 		if($item.length == 0)
 		{
 			$item = $.input.cloneModel(
-						mode == 'list'? 
-							$.input.models.list : 
-							mode == 'children'?
-								$.input.models.children :
-								mode == 'parents'?
-									$.input.models.parents :
-									mode == 'text'?
-										$.input.models.text :
-										item.root == 'post' ?
-											$.input.models.master_post :
+						mode == 'list'? $.input.models.list : 
+							mode == 'children'? $.input.models.children :
+								mode == 'parents'? $.input.models.parents :
+									mode == 'text'? $.input.models.text :
+										item.root == 'post' ? $.input.models.master_post :
 											$.input.models.master_stream,
 						item.address);
 
@@ -327,11 +334,6 @@ $.input.bindItem = function($item, item)
 
 $.input.cloneModel = function($model, address)
 {
-	if($model == $.input.models.master_post)
-	{
-		debugger;
-	}
-
 	if(typeof $.input.ids == 'undefined')
 		$.input.ids  = 1;
 

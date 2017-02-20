@@ -74,18 +74,18 @@ $.context.create = function ($target, mode, parent)
             clearTimeout(target.context.timeoutObject);
         },
 
-        start: function (term) {
+        start: function (term, filter) {
             target.context.stop();
 
             target.context.interval = $.context.minInterval;
 
             target.text = term;
 
+            target.filter = filter;
+
             $.input.search(target);
 
             target.context.process();
-
-            //target.context.timeoutObject = setTimeout(target.context.process, target.context.interval);  
 
             if(target.parent)
             {
@@ -94,14 +94,9 @@ $.context.create = function ($target, mode, parent)
             
         }
 
-
-
-
     };
 
     target.context.timeoutObject = setTimeout(target.context.process, target.context.interval);
-
-    //target.context.process();
 
     target.setAttribute("contextid", target.context.id);
 }

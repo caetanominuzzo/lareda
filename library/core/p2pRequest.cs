@@ -192,8 +192,8 @@ namespace library
                // Concat(Address).
                 Concat(Data ?? bytes_empty).ToArray();
 
-            Log.Write(Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
-                Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0? Address : Data));
+            //Log.Write(Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
+            //    Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0? Address : Data));
 
             if (Command == RequestCommand.Packet && data.Length > pParameters.requestHeaderSize + pParameters.addressSize)
             {
@@ -230,8 +230,6 @@ namespace library
             u.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
             u.Client.Bind(new IPEndPoint(IPAddress.Any, Client.P2pPort));
-
-            //Log.Write(">>>    " + remoteEndPoint.Port + "    " + Utils.Points(data.Take(128)));
 
             Client.Stats.Sent.Add(data.Length);
 

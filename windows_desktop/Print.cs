@@ -66,21 +66,31 @@ namespace windows_desktop
 
         public static void Genarate(string print)
         {
-            byte[] output = wrapper.GenerateGraph("digraph{compound=true;" + print + "}", Enums.GraphReturnType.Png);
+            var graph = "digraph{compound=true;" + print + "}";
+
+            byte[] output = wrapper.GenerateGraph(graph, Enums.GraphReturnType.Svg);
 
             if (output != null && output.Length > 0)
             {
-                var path = @"C:\la-red\windows_desktop\bin\Debug\print\image.png";
+                var file = "demo.svg";
+
+                var txtFile = "demo.gv";
+
+                var path = @"..\\..\\..\\home\\jquery.graphviz.svg-master\\";
+
+                path = Path.GetFullPath( path);
 
                 if (!Directory.Exists(Path.GetDirectoryName(path)))
                     Directory.CreateDirectory(Path.GetDirectoryName(path));
 
-                File.WriteAllBytes(path, output);
+                File.WriteAllBytes(path + file, output);
+                    
+                File.WriteAllText(path + txtFile, graph);
 
                 if (process != null)
                     process.Close();
 
-                process = System.Diagnostics.Process.Start("file:///" + path);
+                process = System.Diagnostics.Process.Start("http://localhost:46005/k5c0241K9ckEw3ruLh2ZTUppkFtTurVikZJTuMn8UX8_/jquery.graphviz.svg-master/demo.html");
 
                 //var psi = new ProcessStartInfo();
 

@@ -47,12 +47,6 @@ $(function()
 
 			$.user.createUserAvatarOrSingup();
 
-/*
-			$.input.post ("bbb ccc", null, function(id)
-				{
-					$.input.post("ddd", id);
-				});
-*/
 		},
 		dataType: "text"});
 

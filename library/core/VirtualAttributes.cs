@@ -17,6 +17,8 @@ namespace library
 
         public static byte[] MIME_TYPE_IMAGE_THUMB = Utils.GetAddress();
 
+
+
         public static byte[] MIME_TYPE_DIRECTORY = Utils.GetAddress();
 
         public static byte[] MIME_TYPE_DOWNLOAD = Utils.GetAddress();
@@ -113,6 +115,7 @@ namespace library
         public static byte[] MIME_TYPE_WEB = Utils.GetAddress();
 
         public static byte[] MIME_TYPE_TEXT = Utils.GetAddress();
+
         public static byte[] CONTEUDO = Utils.GetAddress();
        
         public static byte[] Nome = Utils.GetAddress();
@@ -170,7 +173,7 @@ namespace library
                 var value = (byte[])field.GetValue(null);
 
                 
-                Client.Post(title: field.Name, conceptAddress: value);
+                Client.Post(field.Name, value);
 
                 Metapacket.Create(value, VirtualAttributes.CONCEITO);
 

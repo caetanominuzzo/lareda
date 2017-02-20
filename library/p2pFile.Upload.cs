@@ -670,7 +670,7 @@ namespace library
 
             if (!string.IsNullOrWhiteSpace(tags.Tag.Title))
             {
-                Client.Post(tags.Tag.Title, conceptAddress: conceptAddress);
+                Client.Post(tags.Tag.Title, conceptAddress);
 
             }
             else if (nameItems == null)

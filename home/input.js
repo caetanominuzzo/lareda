@@ -43,7 +43,8 @@ $.input.monitorChanges = function()
 				if(txt.context.mode != "main")
 					results.css('display', 'none');
 
-				results.isotope('destroy');
+				if(results.hasClass('isotope'))
+					results.isotope('destroy');
 			}
 
 			if(txt.innerText.length > 0)

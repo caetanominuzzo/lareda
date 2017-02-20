@@ -2,7 +2,7 @@ $(function() {
 
 $.menu = {};
 
-
+$.menu.MIME_TYPE_TEXT_STREAM = 'a3GOXtEDByHlwKI7aPuaAJwAM_wZq3bkQWB2H7QaL0E=';
 
 $.menu.bind = function($item, item, video)
 {
@@ -214,6 +214,22 @@ $.menu.bind = function($item, item, video)
 
 		audio.volume = offset/ total;
 	});
+
+	var $language = $('.language', $menu);
+
+	$language.bind('click', function(e) 
+	{
+		e.stopPropagation();
+
+		var $this = $(this).parents('.layout:first');
+
+		var text = $this.attr("address");
+		
+		$.nav.items.empty();
+
+		$.searchInput[0].context.start(text, $.menu.MIME_TYPE_TEXT_STREAM);
+	})
+
 
 }
 

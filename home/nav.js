@@ -29,13 +29,11 @@ $.nav.searchItemClick = function(e)
 
 		$input.focus();
 
-		$.nav.search.css('-webkit-filter', 'blur(1px)');
-
 		return;
 	}
 
 
-	$navItem = $.input.cloneModel($.input.models.master, $this.attr('address'));
+	$navItem = $.input.cloneModel($.input.models.master_stream, $this.attr('address'));
 
 	$navItem.off('click');
 	
@@ -44,14 +42,6 @@ $.nav.searchItemClick = function(e)
 	$.context.create($navItem, 'nav', $("#searchInput")[0]);
 
 	$navItem[0].context.start($navItem.attr('address'));
-
-	//
-
-	//$navItem = $this.clone(true);
-
-	
-
-	$.nav.search.css('-webkit-filter', 'blur(1px)');
 
 
 	$navItem.
@@ -140,15 +130,11 @@ $.nav.parentsItemClick = function(e)
 
 	var $this = $(this);
 
-	var text = $this.attr("address");// $(".thumb_text:first", $this).text();
+	var text = $this.attr("address");
 
-//	$.nav.search.empty();
-	
 	$.nav.items.empty();
 
 	$.searchInput[0].context.start(text);
-
-	//$.input.search($.searchInput[0], text);
 }
 
 

@@ -8,6 +8,8 @@ namespace library
 {
     public class DIV
     {
+        internal byte[] filter;
+
         internal string simpleAddress
         {
             get { return Utils.ToSimpleAddress(Address); }
@@ -210,17 +212,14 @@ namespace library
         }
 
 
-        public string Serialize(int parentCount = 0, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
+        public string Serialize(byte[] filter, int parentCount = 0, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
         {
-            if (Utils.ToSimpleAddress(this.Address) == "378")
-            {
-                Log.Write("###########");
-            }
+            this.filter = filter;
 
             if (IsRendered)
                 return string.Empty;
 
-            var maxDeepness = 1;// Client.MaxDeepness;
+            var maxDeepness = filter == null? 1 : 3;// Client.MaxDeepness;
 
             if (childrenFilter == GettingChildrenFilter.Superior)
                 maxDeepness = 3;
@@ -241,8 +240,28 @@ namespace library
 
             IsRendered = true;
 
-            if (SearchResult.GetDeepDistance(this, VirtualAttributes.CONCEITO) == 0 && SearchResult.GetDeepDistance(this, VirtualAttributes.CONTEUDO) == 0)
+            if(this.Children.Any(x => Utils.ToSimpleAddress(x.Address)=="379" ))
+            { }
+
+            if(filter != null && this.Children.Count() > 0)
             {
+
+            }
+
+
+            if (Utils.ToSimpleAddress(this.Address) == "687")
+            { }
+
+            Log.Write("printing: " + Utils.ToSimpleAddress(this.Address), 10 + parentCount);
+
+            if ((filter == null && SearchResult.GetDeepDistance(this, VirtualAttributes.CONCEITO) == 0 && 
+                SearchResult.GetDeepDistance(this, VirtualAttributes.CONTEUDO) == 0) ||
+                    (filter != null && SearchResult.GetDeepDistance(this, filter) == 0))
+               // && (filter == null || SearchResult.GetDeepDistance(this, filter) == 0))
+            {
+                if (Utils.ToSimpleAddress(this.Address) == "687")
+                { }
+
                 if (childrenFilter == GettingChildrenFilter.Inferior)
                     parentCount++;
 
@@ -263,7 +282,7 @@ namespace library
                 {
                     if (!Addresses.Equals(this.Address, firstauthor.Address))
                     {
-                        var a = firstauthor.Serialize(parentCount);
+                        var a = firstauthor.Serialize(filter, parentCount);
 
                         if (!string.IsNullOrWhiteSpace(a))
                             author = "\"author\": " + a + "";
@@ -346,7 +365,7 @@ namespace library
 
                 if (childrenFilter == GettingChildrenFilter.Inferior)
                 {
-                    var inferiorChildrenList = SerializeChildren(parentCount, true, GettingChildrenFilter.Inferior);
+                    var inferiorChildrenList = SerializeChildren(filter, parentCount, true, GettingChildrenFilter.Inferior);
 
                     if (inferiorChildrenList.Any())
                         inferiorChildren = string.Format("\"children\": [{0}]", string.Join(", ", inferiorChildrenList));
@@ -354,7 +373,7 @@ namespace library
 
                 if (this.Index)
                 {
-                    var superiorChildrenList = SerializeChildren(parentCount, true, GettingChildrenFilter.Superior);
+                    var superiorChildrenList = SerializeChildren(filter, parentCount, true, GettingChildrenFilter.Superior);
 
                     if (superiorChildrenList.Any())
                         superiorChildren = string.Format("\"superiorchildren\": [{0}]", string.Join(", ", superiorChildrenList));
@@ -383,7 +402,7 @@ namespace library
             {
                 if (true)
                 {
-                    var inferiorChildrenList = SerializeChildren(parentCount, false, childrenFilter);
+                    var inferiorChildrenList = SerializeChildren(filter, parentCount, false, childrenFilter);
 
                     if (inferiorChildrenList.Any())
                         return string.Join(", ", inferiorChildrenList);
@@ -393,7 +412,7 @@ namespace library
 
         }
 
-        private string[] SerializeChildren(int parentCount, bool onChildren, GettingChildrenFilter childrenFilter)
+        private string[] SerializeChildren(byte[] filter, int parentCount, bool onChildren, GettingChildrenFilter childrenFilter)
         {
             var ttt = getChildren(parentCount, onChildren, childrenFilter: childrenFilter);
 
@@ -401,7 +420,7 @@ namespace library
 
             foreach (var tttt in ttt)
             {
-                var ssss = tttt.Serialize(parentCount, childrenFilter);
+                var ssss = tttt.Serialize(filter, parentCount, childrenFilter);
 
                 if (!string.IsNullOrEmpty(ssss))
                     ar.Add(ssss);
@@ -420,26 +439,12 @@ namespace library
         {
             int maxWideness = 20;
 
-            if (simpleAddress == "039")
-            {
-
-            }
-
-            if (parentCount == 0)
-            {
-                //   var tt = SearchResult.FirstContent(this, null, null, VirtualAttributes.MIME_TYPE_TEXT_THUMB, true);
-            }
-
-
-
             lock (this)
             {
 
-             //   Log.Write(this.ToString());
-
                 var result = Children.Where(
                     x =>
-                        (!onChildrens || (childrenFilter == GettingChildrenFilter.Superior ?
+                        (filter != null || !onChildrens || (childrenFilter == GettingChildrenFilter.Superior ?
                             x.CollapsedWeight(this) > this.Weight :
                             x.CollapsedWeight(this) <= this.Weight)) &&
 
@@ -447,17 +452,13 @@ namespace library
                         (parentCount != 0 || x.Index) &&
                         not != x &&
                         SearchResult.GetDeepDistance(x, VirtualAttributes.MIME_TYPE_DIRECTORY) != 0
-                    //x.AverageChildrenWeight > 1
-                    // && !x.Children.Any(y => y == this)
                         ).
 
                     OrderByDescending(
 
                         x =>
-                            SearchResult.GetDeepDistance(x, VirtualAttributes.CONCEITO) == 0 &&
-                            SearchResult.GetDeepDistance(x, VirtualAttributes.CONTEUDO) == 0
-                    //x.Distances[(int)DIV.DISTANCE_MARKERS.Concept] == 0 &&
-                    //x.Distances[(int)DIV.DISTANCE_MARKERS.Content] == 0
+                            (filter == null && SearchResult.GetDeepDistance(x, VirtualAttributes.CONCEITO) == 0 &&
+                            SearchResult.GetDeepDistance(x, VirtualAttributes.CONTEUDO) == 0) || (filter != null && SearchResult.GetDeepDistance(x, filter) == 0)
                         ).
 
                     ThenByDescending(
@@ -467,30 +468,17 @@ namespace library
 
                     Take(maxWideness);
 
-                //if (onChildrens)
-                //{
-                //    if (childrenFilter == GettingChildrenFilter.Superior)
-                //        result = result.Where(x => x.CollapsedWeight(this) > this.Weight);
-                //    else if (childrenFilter == GettingChildrenFilter.Inferior)
-                //        result = result.Where(x => x.CollapsedWeight(this) <= this.Weight);
-                //}
-
-                //var t = result.ToArray();
-
-                //foreach (var r in result)
-                //{
-                //    Log.Write(r.ToString() + "(" + this.Weight + ")" +  "\t" + SearchResult.FirstContent(r, VirtualAttributes.MIME_TYPE_TEXT_THUMB, true) + "\t" + (SearchResult.GetDeepDistance(r, VirtualAttributes.CONCEITO) == 0 &&
-                //        SearchResult.GetDeepDistance(r, VirtualAttributes.CONTEUDO) == 0 ? r.CollapsedWeight(this) : r.AverageChildrenWeight).ToString(), 1);
-                //}
-
-                return result;//.Where(x => Sigmoid(onChildrens ? x.CollapsedWeight(this) : x.Weight) > .8).ToArray();
+                return result;
             }
         }
 
         double LogAndReturnWeight(DIV item)
         {
-            var w = SearchResult.GetDeepDistance(item, VirtualAttributes.CONCEITO) == 0 &&
-                SearchResult.GetDeepDistance(item, VirtualAttributes.CONTEUDO) == 0 ? item.CollapsedWeight(this) : item.AverageChildrenWeight;
+            var w = (filter == null &&
+                SearchResult.GetDeepDistance(item, VirtualAttributes.CONCEITO) == 0 &&
+                SearchResult.GetDeepDistance(item, VirtualAttributes.CONTEUDO) == 0) ||
+                (filter != null && SearchResult.GetDeepDistance(item, filter) == 0)
+                ? item.CollapsedWeight(this) : item.AverageChildrenWeight;
 
             //Log.Write(item.ToString() + "\t" + w.ToString(), 1);
 
