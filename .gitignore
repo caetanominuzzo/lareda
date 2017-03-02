@@ -195,7 +195,9 @@ $RECYCLE.BIN/
 #####
 # End of core ignore list, below put you custom 'per project' settings (patterns or path)
 #####
-*.db
-*.db
 *.mp4
 *.srt
+*.gv
+*.svg
+la-red.VC.db
+home/jquery.graphviz.svg-master/temp/

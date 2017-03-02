@@ -38,6 +38,8 @@ namespace library
 
         byte[] bTerm = null;
 
+        public byte[] Filter = null;
+
         public RenderMode Mode = RenderMode.Main;
 
         List<byte[]> SearchedAddresses = new List<byte[]>();
@@ -240,11 +242,10 @@ namespace library
                 OrderByDescending(
 
                 x =>
-
                       SearchResult.GetDeepDistance(x, VirtualAttributes.CONCEITO) == 0 &&
                         SearchResult.GetDeepDistance(x, VirtualAttributes.CONTEUDO) == 0
 
-                    //x.Distances[(int)DIV.DISTANCE_MARKERS.Concept] == 0
+                //x.Distances[(int)DIV.DISTANCE_MARKERS.Concept] == 0
                 //&& x.Distances[(int)DIV.DISTANCE_MARKERS.Content] == 0
 
                 ).ThenByDescending(
@@ -573,7 +574,7 @@ namespace library
             result.Src = metapacket;
 
             result.Index =  (metapacket != null && metapacket.Type == MetaPacketType.Hash) || (bTerm != null && Addresses.Equals(bTerm, address));
-
+            
             //pra nao passar de um conceito pro outro aleatoriamente enquanto nao estabiliza os resultados
             if (VirtualAttributes.IsVirtualAttribute(result.Address))
             //if (int.Parse(Utils.ToSimpleAddress(result.Address)) < VirtualAttributes.Count)
@@ -657,7 +658,7 @@ namespace library
 
                 //         ));
 
-                var ar1 = root.Serialize();
+                var ar1 = root.Serialize(Filter);
 
                 return "[" + ar1 + "]";
 
