@@ -8,9 +8,7 @@ $.menu.bind = function($item, item, video)
 {
 	var $menu = $('.menu:first', $item);
 
-	var $current_time = $('.current_time', $menu);
-
-	var $end_time = $('.end_time', $menu);
+	var $lasting_time = $('.lasting_time', $menu);
 
 	var $video = $(video);
 
@@ -23,7 +21,7 @@ $.menu.bind = function($item, item, video)
 
 	$video.bind('durationchange', function(e)
 	{
-		$end_time.text($.menu.secToTime(video.duration));
+		$lasting_time.text($.menu.secToTime(video.duration));
 	});
 
 	var $progress = $('.progress_bar', $menu);
@@ -35,7 +33,9 @@ $.menu.bind = function($item, item, video)
 	
 	$video.bind('timeupdate', function(e)
 	{
-		$current_time.text($.menu.secToTime(video.currentTime));
+		var lasting = video.duration - video.currentTime;
+
+		$lasting_time.text($.menu.secToTime(lasting));
 
 		var perc = $video[0].currentTime / video.duration;
 
@@ -224,11 +224,86 @@ $.menu.bind = function($item, item, video)
 		var $this = $(this).parents('.layout:first');
 
 		var text = $this.attr("address");
-		
+
 		$.nav.items.empty();
 
-		$.searchInput[0].context.start(text, $.menu.MIME_TYPE_TEXT_STREAM);
-	})
+		var $language_options = $('.language_options', $language);
+
+		var $subtitle_options = $('.language_options .subtitle_options', $language);
+
+		var $audio_options = $('.language_options .audio_options', $language);
+
+		$subtitle_options.empty();
+
+		$audio_options.empty();
+
+		var language_itens = [];
+
+		item.subtitles.forEach(function(t){
+
+			var $tt = $("<div class='language_options_item'>"+t.thumb_text+"</div>");
+
+			$tt.bind('click', function(ttt)
+			{
+					var $parentPicContainer = $(ttt.target).closest(".firstpic_container");
+
+					var $video = $('video', $parentPicContainer);
+
+					$('track', $video).attr('mode', 'hidden');
+					var ttrakk = $('track', $video)[0];
+
+					var player = $video[0];
+
+
+					let tracks = player.textTracks;
+
+					for (let i = 0; i < tracks.length; i++) {
+					  let track = tracks[i];
+
+					  // find the captions track that's in english
+					  if (track.label === t.thumb_text) {
+					    track.mode = 'showing';
+					  }
+					  else
+					  	track.mode = 'disabled';
+					}
+
+			});
+
+			$subtitle_options.append($tt);
+
+		});
+
+		item.audios.forEach(function(t){
+
+			var $ttt = $("<div class='language_options_item'>"+t.thumb_text+"</div>");
+
+			$ttt.bind('click', function(ttt)
+			{
+				var $parentPicContainer = $(ttt.target).closest(".firstpic_container");
+
+				$("audio:first", $parentPicContainer)[0].setAttribute('src', t.address);
+
+				$("audio:first", $parentPicContainer)[0].load();				
+
+				$("audio:first", $parentPicContainer)[0].currentTime = video.currentTime;
+
+
+				if($('.play', $.input.models.master).is('.play'))
+					$("audio:first", $parentPicContainer)[0].play();				
+
+			});
+
+			$audio_options.append($ttt);
+
+		});
+
+		$language_options.toggle();
+
+		$(".timeline", $menu).toggle();
+
+
+	});
 
 
 }
@@ -279,6 +354,7 @@ $.menu.play = function(e)
 
 $.menu.playAudio = function()
 {
+	this.nextElementSibling.load();
 	this.nextElementSibling.play();	
 }
 

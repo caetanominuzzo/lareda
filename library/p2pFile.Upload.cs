@@ -135,13 +135,13 @@ namespace library
                                             FileExtension = ".mp4",
                                             MIME_TYPE = VirtualAttributes.MIME_TYPE_VIDEO_STREAM,
                                             Max  = 1 //forgive me
-                                        },   
+                                        },
                                         new {
                                             MediaTypes = MediaTypes.Audio,
                                             FfmpegSelector = "a",
                                             FileExtension = ".mp4",
                                             MIME_TYPE = VirtualAttributes.MIME_TYPE_AUDIO_STREAM,
-                                            Max  = file.Tags.Properties.Codecs.Where(x => x.MediaTypes == MediaTypes.Audio).Count()
+                                            Max  = 2// file.Tags.Properties.Codecs.Where(x => x.MediaTypes == MediaTypes.Audio).Count()
                                         },
                                
                                         new {
@@ -187,34 +187,61 @@ namespace library
                                                             stream, file.Tags,
                                                             format.MIME_TYPE);
 
+                                    var language = VirtualAttributes.PT_BR;
+
+                                    if (streamNumber > 1)
+                                        language = VirtualAttributes.EN_US;
+
+                                    var culturetype = Metapacket.Create(contentAddress, language);
+
+                                    Metapacket.Create(culturetype.Address, VirtualAttributes.Culture);
+
                                     if (videoConcept == null)
                                         videoConcept = contentAddress;
                                 }
                             }
                         }
-                        /////////////////////////////
-                        var tmpSubtitle = Path.Combine(Path.GetDirectoryName(file.Paths[0]), Path.GetFileNameWithoutExtension(file.Paths[0])) + ".srt";
 
-                        if(System.IO.File.Exists(tmpSubtitle))
+                        var srtFiles = Directory.GetFiles(Path.GetDirectoryName(file.Paths[0]), Path.GetFileNameWithoutExtension(file.Paths[0]) + ".*.srt");
+
+                        foreach (var srtFile in srtFiles)
                         {
-                            
-                            tmpSubtitle = Subtitles.ConvertSrtToVtt(tmpSubtitle);
+                            /////////////////////////////
+                            var tmpSubtitle = Path.Combine(Path.GetDirectoryName(file.Paths[0]), Path.GetFileNameWithoutExtension(file.Paths[0])) + ".*.srt";
 
-                            using (var stream = new FileStream(tmpSubtitle, FileMode.Open, FileAccess.Read))
+                            tmpSubtitle = srtFile;
+
+                            var t = tmpSubtitle.Split('.');
+
+                            var language = VirtualAttributes.PT_BR;
+
+                            if (t[1] == "en")
+                                language = VirtualAttributes.EN_US;
+
+                            if (System.IO.File.Exists(tmpSubtitle))
                             {
-                                var streamConcept = file.ConceptAddress;
 
-                                if (videoConcept != null)
-                                    streamConcept = videoConcept;
+                                tmpSubtitle = Subtitles.ConvertSrtToVtt(tmpSubtitle);
 
-                                var contentAddress = StreamUpload(
-                                                        streamConcept,
-                                                        PacketTypes.Content,
-                                                        stream, file.Tags,
-                                                        VirtualAttributes.MIME_TYPE_TEXT_STREAM);
+                                using (var stream = new FileStream(tmpSubtitle, FileMode.Open, FileAccess.Read))
+                                {
+                                    var streamConcept = file.ConceptAddress;
+
+                                    if (videoConcept != null)
+                                        streamConcept = videoConcept;
+
+                                    var contentAddress = StreamUpload(
+                                                            streamConcept,
+                                                            PacketTypes.Content,
+                                                            stream, file.Tags,
+                                                            VirtualAttributes.MIME_TYPE_TEXT_STREAM);
+
+                                    var culturetype = Metapacket.Create(contentAddress, language);
+
+                                    Metapacket.Create(culturetype.Address, VirtualAttributes.Culture);
+                                }
 
                             }
-                            
                         }
                         ///////////////////////////
                     }

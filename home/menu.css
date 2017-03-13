@@ -6,7 +6,6 @@
 .menu .volume_2 	{ background-image: url('menu/volume2.png'); }
 .menu .volume_3 	{ background-image: url('menu/volume3.png'); }
 .menu .play,
-.menu .play_prev,
 .menu .play_next{ background-image: url('menu/play.png'); }
 .menu .download	{ background-image: url('menu/download.png'); }
 .menu .half		{ background-image: url('menu/half.png'); }
@@ -66,20 +65,15 @@
 	display: block !important;
 }
 
-.menu .current_time, .menu .end_time
-{
-	opacity: .9;
-	position: absolute;
-}
 
-#search .button, .button
+#search .button
 {
 	opacity: 0.6;
 }
 
 #search .button:hover, .button:hover
 {
-	opacity:1;
+	oopacity:1;
 }
 
 .firstpic_container
@@ -126,7 +120,7 @@
 	bottom: 0px;
 	/* height: 46px; */
 	background-color: rgba(0,0,0,0.7);
-	padding: 0px 3px 10px 3px;
+	padding: 20px;
 	/* width: 100%; */
 	background: rgba(0,0,0,0);
 	background: -moz-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
@@ -148,38 +142,39 @@
 	display: flex;
 }
 
+.menu .bottom .buttons
+{
+	background-color: #000;
+	padding: 10px 10px;
+	/* margin-bottom: -7px; */
+	opacity: 0.8;
+}
+
 .menu .bottom .timeline > div
 {
 	display: flex;
 }
 
-.menu .bottom  .current_time,
-.menu .bottom  .end_time
+.menu .bottom  .lasting_time
 {
-	margin: -13px 0px 0px 4px !important;
+	margin: 0px 3px 0px 10px !important;
 	text-shadow: 0px 0px 10px rgba(0,0,0,.8);
-}
-
-.menu .bottom  .end_time
-{
-	float: right;
-	right: 8px;
 }
 
 .menu .bottom .timeline .progress_bar
 {
 	width: 100%;
-	height: 14px;
+	height: 28px;
 	bbackground-color: red;
-	margin: 6px 4px;
+	/* margin: 6px 9px; */
 }
 
 .menu .bottom .timeline .progress_bar span
 {
 	display: inline-block;
-	height: 3px;
+	height: 8px;
 	width: 30px;
-	margin-top: 6px;
+	margin-top: 4px;
 	padding: 0px;
 	border: 0px;
 }
@@ -202,38 +197,23 @@
 	width: 100%;
 }
 
-.menu .bottom .buttons .center_buttons
-{
-	margin: 0px 0px;
-	flex: 1;
-}
-
 .menu .bottom .buttons .right_buttons,
 .menu .bottom .buttons .left_buttons
 {
-	margin: 0px 1px 0px 6px;
 	flex: 1;
 }
 
 .menu .bottom .buttons .left_buttons > div
 {
-	margin: 0px 6px 0px -4px;
+	margin: 0px 4px;
 	display: inline-block;
 }
 
 .menu .bottom .buttons .right_buttons > div
 {
-	margin: 0px 4px 0px 3px;
-	float: right;
+	margin: 0px 4px;
 	display: inline-block;
-}
-
-.menu .bottom .buttons .center_buttons .play,
-.menu .bottom .buttons .center_buttons .pause
-{
-	margin: -5px -2px -5px 0px;
-	width: 32px;
-	height: 32px;
+	float: right;
 }
 
 .menu .flipH
@@ -246,6 +226,8 @@
     -ms-filter: "FlipH";
 }
 
+.menu .left_buttons,
+.menu .right_buttons,
 #search .button,
 .menu .button
 {
@@ -332,4 +314,44 @@
 {
 	background-color: #DDD;
 	width: 0%;
+}
+
+.menu .bottom .buttons .button.language .language_options
+{
+    position: absolute;
+    /* width: 300px; */
+    /* height: 150px; */
+    background-color: black;
+    /* margin-top: -100px; */
+    /* opacity: .91; */
+    display: none;
+    bottom: 62px;
+    right: 20px;
+}
+
+.menu .bottom .buttons .button.language .language_options div
+{
+    padding: 5px;
+    display: block;
+}
+
+.menu .bottom .buttons .button.language .language_options .language_options_item
+{
+	padding: 10px 50px;
+	display: block;
+}
+
+.menu .bottom .buttons .button.language .language_options > DIV
+{
+	display: inline-block;
+}
+
+.menu .bottom .buttons .button.language .language_options_title
+{
+	display: inline-block;
+}
+
+
+video::-webkit-media-text-track-display {
+    margin-top: -40px;
 }

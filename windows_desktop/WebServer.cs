@@ -330,8 +330,6 @@ namespace windows_desktop
 
             var term = data["term"];
 
-            var filter = data["filter"];
-
             if (string.IsNullOrWhiteSpace(term))
                 term = string.Empty;
 
@@ -341,14 +339,12 @@ namespace windows_desktop
 
             CloseResponse(context);
 
-            Search(contextId, term, mode, parentContextId, filter);
+            Search(contextId, term, mode, parentContextId);
         }
 
-        static void Search(string contextId, string term, RenderMode mode, string parentContextID, string filter)
+        static void Search(string contextId, string term, RenderMode mode, string parentContextID)
         {
             var bContextId = Utils.AddressFromBase64String(contextId);
-
-            var bFilter = Utils.AddressFromBase64String(filter);
 
             CacheItem<SearchResult> searchItem = null;
 
@@ -378,9 +374,7 @@ namespace windows_desktop
 
                 search = new SearchResult(bContextId, term, mode, parentContext == null ? null : parentContext.CachedValue);
 
-                if (bFilter != null)
-                    search.Filter = bFilter;
-
+                
                 searchs.Add(search);
             }
             else
@@ -388,10 +382,7 @@ namespace windows_desktop
                 searchItem.Reset();
 
                 search = searchItem.CachedValue;
-
-                if (bFilter != null)
-                    search.Filter = bFilter;
-
+                
                 search.AddSearch(term, mode);
             }
 
@@ -483,6 +474,11 @@ namespace windows_desktop
             else
             {
                 downloads.Add(new FileDownloadObject(address, context, Program.webCache + "/" + Utils.ToBase64String(address)));
+
+                if(address[0] == 246 && address[1] == 171)
+                {
+
+                }
 
                 Client.Download(Utils.ToBase64String(address), Program.webCache + "/" + Utils.ToBase64String(address));
             }
