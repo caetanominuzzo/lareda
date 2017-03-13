@@ -19,7 +19,7 @@ namespace library
             var result = sFilePath.Replace(".srt", ".vtt");
 
             using (var strReader = new StreamReader(sFilePath))
-            using (var strWriter = new StreamWriter(result, false))
+            using (var strWriter = new StreamWriter(result))
             {
                 var rgxDialogNumber = new Regex(@"^\d+$");
                 var rgxTimeFrame = new Regex(@"(\d\d:\d\d:\d\d,\d\d\d) --> (\d\d:\d\d:\d\d,\d\d\d)");

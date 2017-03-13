@@ -11,25 +11,13 @@ namespace library
     {
         public static byte[] CONCEITO = Utils.GetAddress();
 
-        public static byte[] MIME_TYPE_TEXT_THUMB = Utils.GetAddress();
-
-        public static byte[] Culture = Utils.GetAddress();
-
-        public static byte[] VERSAO = Utils.GetAddress();
-
-        public static byte[] PT_BR = Utils.GetAddress();
-
-        public static byte[] EN_US = Utils.GetAddress();
-
-
-
-
-
-
-
         public static byte[] AUTHOR = Utils.GetAddress();
 
+        public static byte[] MIME_TYPE_TEXT_THUMB = Utils.GetAddress();
+
         public static byte[] MIME_TYPE_IMAGE_THUMB = Utils.GetAddress();
+
+
 
         public static byte[] MIME_TYPE_DIRECTORY = Utils.GetAddress();
 
@@ -41,11 +29,9 @@ namespace library
 
         public static byte[] ROOT_POST = Utils.GetAddress();
 
-        
-
         public static byte[] Uploader = Utils.GetAddress();
 
-        
+        public static byte[] Culture = Utils.GetAddress();
 
         public static byte[] FileExtension = Utils.GetAddress();
 
@@ -134,7 +120,7 @@ namespace library
        
         public static byte[] Nome = Utils.GetAddress();
         
-        
+        public static byte[] VERSAO = Utils.GetAddress();
 
 
         public static byte[] DATA = Utils.GetAddress();
@@ -191,7 +177,7 @@ namespace library
 
                 Metapacket.Create(value, VirtualAttributes.CONCEITO);
 
-                //if (field.Name == "VERSAO")
+                //if (field.Name == "MIME_TYPE_IMAGE_THUMB")
                 //    return;
             }
                 

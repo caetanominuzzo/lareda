@@ -232,7 +232,7 @@ $.input.bindItem = function($item, item)
 
 	var audio = $content.find("audio:first")[0];
 
-	
+	var subtitle = $content.find("track:first")[0];
 	
 	var parents = $('.parents:first', $content); 
 
@@ -286,19 +286,7 @@ $.input.bindItem = function($item, item)
 
 	if(img && img.tagName == "VIDEO" && (typeof item.subtitle != 'undefined'))
 	{
-
-		var count = 0;
-
-		item.subtitles.forEach(function(t){
-
-			var $subtitle = $('<track kind="subtitles" src="'+t.address+'" srclang="en" label="'+t.thumb_text+'" '+(count==0?'mode="showing"':'')+'>');
-
-			count++;
-			
-			$(img).append($subtitle);
-		});
-
-		
+		subtitle.setAttribute("src", item.subtitle);			
 	}
 
 
@@ -331,12 +319,12 @@ $.input.bindItem = function($item, item)
 
 	if(item.index == 0)
 	{
-		//if(!$item.parent().hasClass('subitems'))
-		//{
+		if(!$item.parent().hasClass('subitems'))
+		{
 			$('.first').removeClass('first');
 			
 			$item.addClass('first');
-		//}
+		}
 
 		$item.removeClass('pure-u-md-1-4');
 	}
