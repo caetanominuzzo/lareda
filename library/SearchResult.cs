@@ -38,8 +38,6 @@ namespace library
 
         byte[] bTerm = null;
 
-        public byte[] Filter = null;
-
         public RenderMode Mode = RenderMode.Main;
 
         List<byte[]> SearchedAddresses = new List<byte[]>();
@@ -116,7 +114,7 @@ namespace library
 
             if (tmpbTerm != null)
             {
-                lock(RootResults)
+                lock (RootResults)
                     bTerm = MetaPackets.LocalizeAddress(tmpbTerm);
 
                 Search(bTerm, MetaPacketType.Link);
@@ -189,7 +187,7 @@ namespace library
             if (!searched)
             {
                 //Log.Write("SEARCH: " + Utils.ToSimpleAddress(address));
-                
+
                 Client.Search(address, type);
             }
 
@@ -234,7 +232,7 @@ namespace library
 
             DIV[] children = null;
 
-            lock(item)
+            lock (item)
                 children = item.Children.
                 Where(
                     x => !x.IsValid // && (x.Weight == 1 || x.AverageChildrenWeight / x.Weight > .5)
@@ -260,18 +258,18 @@ namespace library
                 PrepareToRender(c, parentCount);
         }
 
-        
+
 
         List<string> frames = new List<string>();
 
         bool AddSearchResults(byte[] search, MetaPacketType type, IEnumerable<Metapacket> metapackets)
         {
-            Utils.PrintSearchResult(search, type, metapackets);  
+            Utils.PrintSearchResult(search, type, metapackets);
 
             if (metapackets.Count() > MetaPackets.MostUsedRatio.Average * 2000)
                 return false;
 
-            if(metapackets.Count() == 11221)
+            if (metapackets.Count() == 11221)
             {
 
             }
@@ -337,9 +335,9 @@ namespace library
         {
             //Log.Write(item.ToString() + "  " + Utils.ToSimpleAddress(distanceMarker), 10+(source * 2));
 
-            if(Utils.ToSimpleAddress(Utils.ToSimpleName(item.Address)) == "084")
+            if (Utils.ToSimpleAddress(Utils.ToSimpleName(item.Address)) == "084")
             {
-                if(distanceMarker[0] == 172)
+                if (distanceMarker[0] == 172)
                 {
 
                 }
@@ -511,7 +509,7 @@ namespace library
 
             var target = RootAddItem(metapacket.TargetAddress, null, null);
 
-           
+
 
             if (ChildrenAdd(target, address))
                 anyInvalidation = true;
@@ -519,7 +517,7 @@ namespace library
             if (ChildrenAdd(address, target))
                 anyInvalidation = true;
 
-            if (metapacket.Marker !=null&& Utils.ToSimpleAddress(Utils.ToSimpleName(target.Address)) == "084")
+            if (metapacket.Marker != null && Utils.ToSimpleAddress(Utils.ToSimpleName(target.Address)) == "084")
             {
                 if (metapacket.Marker[0] == 172)
                 {
@@ -530,8 +528,8 @@ namespace library
             if (metapacket.Marker != null)
                 SetDeepDistance(target, 0, metapacket.Marker);
 
-           // if (metapacket.Marker != null)
-          //      SetDeepDistance(link, 0, metapacket.Marker);
+            // if (metapacket.Marker != null)
+            //      SetDeepDistance(link, 0, metapacket.Marker);
 
 
 
@@ -551,7 +549,7 @@ namespace library
 
         internal DIV RootAddItem(byte[] address, byte[] hash, Metapacket metapacket)
         {
-            if(Utils.ToSimpleAddress(address) == "362")
+            if (Utils.ToSimpleAddress(address) == "362")
             { }
 
             var result = Find(address);
@@ -573,8 +571,8 @@ namespace library
 
             result.Src = metapacket;
 
-            result.Index =  (metapacket != null && metapacket.Type == MetaPacketType.Hash) || (bTerm != null && Addresses.Equals(bTerm, address));
-            
+            result.Index = (metapacket != null && metapacket.Type == MetaPacketType.Hash) || (bTerm != null && Addresses.Equals(bTerm, address));
+
             //pra nao passar de um conceito pro outro aleatoriamente enquanto nao estabiliza os resultados
             if (VirtualAttributes.IsVirtualAttribute(result.Address))
             //if (int.Parse(Utils.ToSimpleAddress(result.Address)) < VirtualAttributes.Count)
@@ -609,7 +607,7 @@ namespace library
 
                 var toSearch = GetToSearch();
 
-                if(toSearch == null)
+                if (toSearch == null)
                     PrepareToRender(RootResults);
 
                 toSearch = GetToSearch();
@@ -621,7 +619,7 @@ namespace library
                     toSearch = GetToSearch();
                 }
 
-                if(anyInvalidation)
+                if (anyInvalidation)
                     PrepareToRender(RootResults);
             }
         }
@@ -658,7 +656,7 @@ namespace library
 
                 //         ));
 
-                var ar1 = root.Serialize(Filter);
+                var ar1 = root.Serialize();
 
                 return "[" + ar1 + "]";
 
@@ -672,7 +670,7 @@ namespace library
 
         internal static string FirstContent(DIV item, byte[] marker, bool text = false)
         {
-            var t = ClosestMarker(item, marker);
+            var t = marker == null ? item : ClosestMarker(item, marker);
 
             //Log.Write("packet get " + Utils.ToBase64String(t.Address));
 
@@ -681,21 +679,39 @@ namespace library
 
             return text ?
 
-                Content(t) :
+                Content(t.Address) :
 
                  Utils.ToBase64String(t.Src.LinkAddress);
         }
 
-        internal static string Content(DIV item)
+        internal static IEnumerable<string> FirstContentYield(DIV item, byte[] marker, bool text = false)
         {
-            if (item == null)
-                return string.Empty;
+            List<string> result = new List<string>();
+
+            var t = ClosestMarkerList(item, marker);
+
+            foreach (var tt in t)
+            {
+                if (tt != null)
+                    result.Add(text ?
+
+                Content(tt.Src.LinkAddress) :
+
+                 Utils.ToBase64String(tt.Src.LinkAddress));
+            }
+
+            //Log.Write("packet get " + Utils.ToBase64String(t.Address));
+
+            return result;
+        }
+
+   
+
+        internal static string Content(byte[] address)
+        {
+            var packet = Packets.Get(address);
 
 
-
-            var packet = Packets.Get(item.Address);
-
-            
 
             if (packet != null)
             {
@@ -703,10 +719,20 @@ namespace library
             }
             else
             {
-                p2pFile.Queue.Add(Utils.ToBase64String(item.Address), Utils.ToBase64String(item.Address));
+                p2pFile.Queue.Add(Utils.ToBase64String(address), Utils.ToBase64String(address));
             }
 
             return string.Empty;
+        }
+
+        internal static string Content(DIV item)
+        {
+            if (item == null)
+                return string.Empty;
+
+            return Content(item.Address);
+
+            
         }
 
         internal static string FirstContent(DIV item, List<DIV> searched = null, DIV root = null, byte[] MIME_TYPE = null, bool text = true, Stack<DIV> parents = null)
@@ -832,7 +858,7 @@ namespace library
 
 
 
-            if (SearchResult.GetDeepDistance(item, marker) == 0)
+            if (item != null && SearchResult.GetDeepDistance(item, marker) == 0)
             //if (item.Distances[(int)marker] == 0)
             {
                 if (predicate == null || item.Children.Any(
@@ -853,10 +879,10 @@ namespace library
             }
             else
             {
-                IOrderedEnumerable<DIV> list = null;
+                List<DIV> list = null;
 
                 lock (item)
-                    list = item.Children.OrderBy(x => 1);
+                    list = item.Children.OrderBy(x => 1).ToList();
 
                 if (list.Any())
                 {
@@ -864,7 +890,7 @@ namespace library
 
                     lock (item)
                         list = item.Children.
-                            OrderBy(x => SearchResult.GetDeepDistance(x, marker));
+                            OrderBy(x => SearchResult.GetDeepDistance(x, marker)).ToList();
 
                     foreach (var l in list)
                     {
@@ -885,6 +911,85 @@ namespace library
             return null;
         }
 
+        internal static IEnumerable<DIV> ClosestMarkerList(DIV item, byte[] marker, List<DIV> searched = null, DIV root = null, byte[] predicate = null, Stack<DIV> parents = null)
+        {
+            if (parents == null)
+                parents = new Stack<DIV>();
+
+             if (parents.Count() < 9)
+            {
+
+                if (searched == null)
+                    searched = new List<DIV>();
+
+                if (root == null)
+                    root = item;
+
+                if (!searched.Any(x => Addresses.Equals(x.Address, item.Address)))
+                {
+
+                    searched.Add(item);
+
+
+
+                    if (SearchResult.GetDeepDistance(item, marker) == 0)
+                    //if (item.Distances[(int)marker] == 0)
+                    {
+                        if (predicate == null || item.Children.Any(
+                            x => Addresses.Equals(x.Address, predicate)))
+                        {
+                            var target = DIV.Find(item.Children, item.Src.TargetAddress);
+
+                            var link = DIV.Find(item.Children, item.Src.LinkAddress);
+
+                            if (target == root)
+                                item = link;
+
+                            else if (link == root)
+                                item = target;
+
+                            yield return item;
+                        }
+                    }
+                    else
+                    {
+                        IOrderedEnumerable<DIV> list = null;
+
+                        lock (item)
+                            list = item.Children.OrderBy(x => 1);
+
+                        if (list.Any())
+                        {
+                            parents.Push(item);
+
+                            lock (item)
+                                list = item.Children.
+                                    OrderBy(x => SearchResult.GetDeepDistance(x, marker));
+
+                            foreach (var l in list)
+                            {
+                                var s = ClosestMarkerList(l, marker, searched, root, predicate, parents);
+
+                                if (s != null)
+                                {
+                                    if (parents.Any())
+                                        parents.Pop();
+
+                                    foreach (var ss in s)
+                                        if (ss != null)
+                                            yield return ss;
+                                }
+                            }
+
+                            if (parents.Any())
+                                parents.Pop();
+                        }
+                    }
+
+                    //yield return null;
+                }
+            }
+        }
 
         public void Dispose()
         {

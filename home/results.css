@@ -33,7 +33,7 @@
     width: 100%;
   }
 
-  .layout.first
+  .layout[index="0"]
 	{
 		width: 100%;
 	}
@@ -47,7 +47,7 @@
     width: 50%;
   }
 
-  .layout.first
+  .layout[index="0"]
 	{
 		width: 100%;
 	}
@@ -61,7 +61,7 @@
     width: 33.3%;
   }
 
-  .layout.first
+  .layout[index="0"]
 	{
 		width: 66.6%;
 	}
@@ -75,7 +75,7 @@
     width: 25%;
   }
 
-  .layout.first
+  .layout[index="0"]
 	{
 		width: 50%;
 	}
@@ -89,7 +89,7 @@
     width: 20%;
   }
 
-  .layout.first
+  .layout[index="0"]
 	{
 		width: 40%;
 	}
