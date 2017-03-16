@@ -29,7 +29,7 @@ namespace windows_desktop
 
         static public event DraggingHandler OnDragging;
 
-        static Cache<FileDownloadObject> downloads = new Cache<FileDownloadObject>(60);
+        static Cache<FileDownloadObject> downloads = new Cache<FileDownloadObject>(60000);
 
         static Cache<SearchResult> searchs = new Cache<SearchResult>(60000);
 
@@ -110,6 +110,14 @@ namespace windows_desktop
         {
             var context = (HttpListenerContext)o;
 
+            if (context.Request.RawUrl.Contains("favico"))
+            {
+                CloseResponse(context);
+
+                return;
+            }
+
+
             var response = context.Response;
 
             context.Response.AddHeader("Access-Control-Allow-Origin", "*");
@@ -147,9 +155,9 @@ namespace windows_desktop
 
                         var method = typeof(Client).GetMethod(par[0]);
 
-                        var res = method.Invoke(null, par.Length == 1? null : new string[] { par[1] });
+                        var res = method.Invoke(null, par.Length == 1 ? null : new string[] { par[1] });
 
-                        CloseResponse(context, res == null?string.Empty : res.ToString());
+                        CloseResponse(context, res == null ? string.Empty : res.ToString());
                     }
                     else
                     {
@@ -374,7 +382,7 @@ namespace windows_desktop
 
                 search = new SearchResult(bContextId, term, mode, parentContext == null ? null : parentContext.CachedValue);
 
-                
+
                 searchs.Add(search);
             }
             else
@@ -382,13 +390,13 @@ namespace windows_desktop
                 searchItem.Reset();
 
                 search = searchItem.CachedValue;
-                
+
                 search.AddSearch(term, mode);
             }
 
-            
+
         }
-        
+
         static bool ProcessCache(HttpListenerContext context)
         {
             var path = GetSegment(context, 2);
@@ -461,6 +469,9 @@ namespace windows_desktop
 
             var data = Client.GetLocal(address);
 
+            //todo:pelamor só pra testar
+            //data = null;
+
             if (data != null)
             {
                 //var json = JsonConvert.SerializeObject(new { A = sAddress, C = Encoding.Unicode.GetString(data) });
@@ -475,10 +486,13 @@ namespace windows_desktop
             {
                 downloads.Add(new FileDownloadObject(address, context, Program.webCache + "/" + Utils.ToBase64String(address)));
 
-                if(address[0] == 246 && address[1] == 171)
+                if (address[0] == 246 && address[1] == 171)
                 {
 
                 }
+
+                //precisa setar alguma coisa no response pra ele nao morrer.
+                context.Response.StatusCode = 666;
 
                 Client.Download(Utils.ToBase64String(address), Program.webCache + "/" + Utils.ToBase64String(address));
             }
@@ -560,8 +574,11 @@ namespace windows_desktop
 
             try
             {
+
                 if (closeFile)
-                    download.FileStream = new FileStream(download.Filename, FileMode.Open, FileAccess.Read);
+                {
+                    download.FileStream = new FileStream(download.Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                }
 
                 Stream file = download.FileStream;
 
@@ -610,8 +627,6 @@ namespace windows_desktop
 
                         cache.Reset();
                     }
-
-
                 }
                 catch (Exception e)
                 {
