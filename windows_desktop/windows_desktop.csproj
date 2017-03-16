@@ -208,7 +208,7 @@
   <PropertyGroup>
     <PostBuildEvent>if $(ConfigurationName) == Release (
 $(SolutionDir)windows_desktop_installer/bin/$(ConfigurationName)/windows_desktop_installer.exe
-) else ( 
+) else if $(ConfigurationName) == DebugRede ( 
 powershell Stop-Process -processname la-red
 powershell start-process 2.bat
 )</PostBuildEvent>

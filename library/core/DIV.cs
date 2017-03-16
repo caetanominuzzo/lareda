@@ -215,6 +215,9 @@ namespace library
             if (IsRendered)
                 return string.Empty;
 
+            if (this.IsVirtualAttribute)
+                return string.Empty;
+
             var maxDeepness = 1;// Client.MaxDeepness;
 
             if (childrenFilter == GettingChildrenFilter.Superior)
@@ -229,8 +232,6 @@ namespace library
 
             IsRendered = true;
             
-            Log.Write("printing: " + Utils.ToSimpleAddress(this.Address), 10 + parentCount);
-
             if (SearchResult.GetDeepDistance(this, VirtualAttributes.CONCEITO) == 0 && 
                 SearchResult.GetDeepDistance(this, VirtualAttributes.CONTEUDO) == 0)
             {

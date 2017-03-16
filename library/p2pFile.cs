@@ -28,6 +28,10 @@ namespace library
 
         int dequeueOffset;
 
+        internal bool Success = false;
+
+        bool Cancel = false;
+
         internal p2pFile(byte[] address, string filename = null, string specifFile = null)
         {
             Address = address;
@@ -54,6 +58,9 @@ namespace library
                     {
                         IEnumerable<Packet> arrived = FilePackets.Where(x => x.Arrived);
 
+                        if (arrived.Count() == FilePackets.Count())
+                            Success = true;
+
                         FilePackets.RemoveAll(x => x.Arrived);
 
                         FilePacketsArrived.AddRange(arrived);
@@ -61,6 +68,16 @@ namespace library
                         dequeueOffset = 0;
 
                        
+                    }
+
+                    if(this.Filename.Contains("wIqQ9qIsc3es9hKs2bLxd"))
+                    {
+
+                    }
+
+                    if (Utils.ToBase64String(this.Address).Contains("wIqQ9qIsc3es9hKs2bLxd"))
+                        {
+
                     }
 
                     if (!FilePackets.Any())
@@ -83,14 +100,16 @@ namespace library
                         
             }
 
-            stoppedEvent.Set();
+                stoppedEvent.Set();
         }
 
-        internal void AddPacket(byte[] address, string filename = null)
+        internal Packet AddPacket(byte[] address, string filename = null)
         {
             Packet p = new Packet(this, address, filename);
 
             AddPacket(p);
+
+            return p;
         }
 
         void AddPacket(Packet packet)
@@ -107,7 +126,11 @@ namespace library
 
         public void Dispose()
         {
-            stoppedEvent.Close();
+            Cancel = true;
+
+            lock(FilePackets)
+                FilePackets.Clear();
         }
     }
+
 }

@@ -11,7 +11,7 @@ namespace library
 {
     partial class p2pFile
     {
-        class Packet
+        internal class Packet
         {
             p2pFile File;
 
@@ -35,6 +35,8 @@ namespace library
             internal bool MayHaveLocalData = true;
 
             object dataArrivedObjectLocker = new object();
+
+            List<p2pFile.Packet> Children = new List<Packet>();
 
             internal Packet(p2pFile file, byte[] address, string filename = null)
             {
@@ -76,7 +78,7 @@ namespace library
                             List<byte[]> addresses = Addresses.ToAddresses(data.Skip(pParameters.packetHeaderSize));
 
                             foreach (byte[] addr in addresses)
-                                File.AddPacket(addr, Filename);
+                                Children.Add(File.AddPacket(addr, Filename));
 
                             break;
 
@@ -117,6 +119,8 @@ namespace library
 
             internal void Get()
             {
+                Log.Write("packet get: " + Utils.ToSimpleAddress(Address) + "\t" + Utils.ToBase64String(Address));
+
                 byte[] data = null;
 
                 if (this.Filename.StartsWith("cache/", StringComparison.CurrentCultureIgnoreCase) || MayHaveLocalData)

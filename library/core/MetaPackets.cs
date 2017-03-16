@@ -225,11 +225,21 @@ namespace library
 
             var buffer = File.ReadAllBytes(filename);
 
+            var metapackets = FromBytes(buffer);
+
+            foreach(var m in metapackets)
+            {
+                m.Type = type;
+
+                Add(m);
+            }
+
+            /*
             var offset = 0;
 
             while (offset < buffer.Length)
             {
-                var address = Utils.ReadBytes(buffer, offset);
+                var address = buffer.Skip(offset).Take(pParameters.addressSize).ToArray();
 
                 offset += pParameters.addressSize;
 
@@ -244,11 +254,12 @@ namespace library
 
                     metapacket.Type = type;
 
-                    metapacket.Address = address;
+                    //metapacket.Address = address;
 
                     Add(metapacket);
                 }
             }
+            */
 
             //byte[] buffer = File.ReadAllBytes(Parameters.localPostsFile);
 
@@ -274,16 +285,17 @@ namespace library
 
         internal static void Save(MetaPacketType type)
         {
-            return;
+            //return;
             List<byte> data = new List<byte>();
 
             Stats stats = type == MetaPacketType.Link ? Links : Hashs;
 
-            data.AddRange(BitConverter.GetBytes(stats.LocalAddressDistance.Average));
 
-            data.AddRange(BitConverter.GetBytes(stats.LastAccess.Average));
+            //data.AddRange(BitConverter.GetBytes(stats.LocalAddressDistance.Average));
 
-            data.AddRange(BitConverter.GetBytes(stats.Count));
+            //data.AddRange(BitConverter.GetBytes(stats.LastAccess.Average));
+
+            //data.AddRange(BitConverter.GetBytes(stats.Count));
 
             var list = stats.Items;
 
@@ -291,13 +303,13 @@ namespace library
             {
                 foreach (var a in list.Keys)
                 {
-                    data.AddRange(a);
+                    //data.AddRange(a);
 
-                    data.AddRange(BitConverter.GetBytes(list[a].Count()));
+                    //data.AddRange(BitConverter.GetBytes(list[a].Count()));
 
                     foreach (var b in list[a])
                     {
-                        data.AddRange(ToBytes(b, false));
+                        data.AddRange(ToBytes(b, true));
                     }
                 }
 
@@ -554,9 +566,12 @@ namespace library
 
         internal static byte[] LocalizeAddress(byte[] bTerm)
         {
-            var t = Links.Items.FirstOrDefault(x => Addresses.Equals(x.Key, bTerm, true));
+            lock (Links.Items)
+            {
+                var t = Links.Items.FirstOrDefault(x => Addresses.Equals(x.Key, bTerm, true));
 
-            return t.Key;
+                return t.Key;
+            }
         }
     }
 

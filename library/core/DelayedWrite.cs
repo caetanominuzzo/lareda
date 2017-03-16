@@ -127,9 +127,9 @@ namespace library
             lock (queue)
             {
                 if (item != null)
-                        queue.Remove(item);
+                    queue.Remove(item);
                 else if (list != null)
-                        queue.RemoveAll(x => list.Any(y => y == x));
+                    queue.RemoveAll(x => list.Any(y => y == x));
 
                 count = queue.Count();
             }

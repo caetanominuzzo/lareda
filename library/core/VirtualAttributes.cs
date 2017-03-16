@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,6 +10,7 @@ namespace library
 {
     public static class VirtualAttributes
     {
+
         public static byte[] CONCEITO = Utils.GetAddress();
 
         public static byte[] MIME_TYPE_TEXT_THUMB = Utils.GetAddress();
@@ -27,9 +29,14 @@ namespace library
 
 
 
+
+
+
         public static byte[] AUTHOR = Utils.GetAddress();
 
         public static byte[] MIME_TYPE_IMAGE_THUMB = Utils.GetAddress();
+
+
 
         public static byte[] MIME_TYPE_DIRECTORY = Utils.GetAddress();
 
@@ -41,11 +48,7 @@ namespace library
 
         public static byte[] ROOT_POST = Utils.GetAddress();
 
-        
-
         public static byte[] Uploader = Utils.GetAddress();
-
-        
 
         public static byte[] FileExtension = Utils.GetAddress();
 
@@ -108,16 +111,6 @@ namespace library
 
         public static byte[] AudioCodec = Utils.GetAddress();
 
-
-
-
-
-
-        //todo: gerar numeros, talvez mudar de lugar
-        
-
-        
-
         public static byte[] MIME_TYPE_IMAGE = Utils.GetAddress();
 
         public static byte[] MIME_TYPE_VIDEO_STREAM = Utils.GetAddress();
@@ -134,12 +127,11 @@ namespace library
        
         public static byte[] Nome = Utils.GetAddress();
         
-        
-
 
         public static byte[] DATA = Utils.GetAddress();
-        
-        
+
+
+
 
         public static int Count = Utils.AddressCount;
 
@@ -182,16 +174,16 @@ namespace library
 
         public static void BootStrap()
         {
+
             foreach(var field in Fields)
             {
                 var value = (byte[])field.GetValue(null);
 
-                
                 Client.Post(field.Name, value);
 
                 Metapacket.Create(value, VirtualAttributes.CONCEITO);
 
-                //if (field.Name == "VERSAO")
+                //if (field.Name == "MIME_TYPE_IMAGE_THUMB")
                 //    return;
             }
                 

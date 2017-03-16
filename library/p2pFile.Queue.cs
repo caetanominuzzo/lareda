@@ -13,10 +13,18 @@ namespace library
     {
         internal static class Queue
         {
-            static List<p2pFile> queue = new List<p2pFile>();
+
+            static Cache<p2pFile> queue = null;
 
             internal static void Add(string base64Address, string filename, string specifFIle = null)
             {
+                if (queue == null)
+                {
+                    queue = new Cache<p2pFile>(20 * 1000);
+
+                    queue.OnCacheExpired += Queue_OnCacheExpired;
+                }
+
                 byte[] address = Utils.AddressFromBase64String(base64Address);
 
                 Add(address, filename, specifFIle);
@@ -24,6 +32,21 @@ namespace library
 
             static void Add(byte[] address, string filename, string specifFIle = null)
             {
+                Log.Write("add packet " + filename);
+
+                //lock(queue)
+                //{
+                //    var item = queue.FirstOrDefault(x => Addresses.Equals(x.CachedValue.Address, address, true) &&
+                //        x.CachedValue.Filename == filename);
+                    
+                //    if(item != null)
+                //    {
+                //        item.Reset();
+
+                //        return;
+                //    }
+                //}
+
                 p2pFile file = new p2pFile(address, filename, specifFIle);
 
                 //root packet
@@ -33,12 +56,28 @@ namespace library
                     queue.Add(file);
             }
 
+            private static void Queue_OnCacheExpired(CacheItem<p2pFile> item)
+            {
+                Log.Write("expire packet " + item.CachedValue.Filename);
+                item.CachedValue.Dispose();
+            }
+
             internal static void QueueComplete(p2pFile file)
             {
-                lock (queue)
-                    queue.Remove(file);
+                CacheItem<p2pFile> cacheItem = null;
 
-                Client.DownloadComplete(file.Address, file.Filename, file.SpecifFilename);
+                lock (queue)
+                {
+                    cacheItem = queue.FirstOrDefault(x => x.CachedValue.Address != null && Addresses.Equals(x.CachedValue.Address, file.Address, true));
+
+                    if (cacheItem != null)
+                    {
+                        queue.Remove(cacheItem);
+                    }
+                }
+
+                if(file.Success)
+                    Client.DownloadComplete(file.Address, file.Filename, file.SpecifFilename);
             }
 
             private static void Save()
@@ -47,12 +86,14 @@ namespace library
                 {
                     Client.Stats.belowMaxReceivedEvent.Set();
 
-                    queue.ForEach(x => x.stoppedEvent.WaitOne());
+                    queue.ForEach(x => x.CachedValue.stoppedEvent.WaitOne());
 
                     List<byte> buffer = new List<byte>();
 
-                    foreach (p2pFile file in queue)
+                    foreach (var item in queue)
                     {
+                        var file = item.CachedValue;
+
                         buffer.AddRange(BitConverter.GetBytes(file.Address.Length));
                         buffer.AddRange(file.Address);
 
