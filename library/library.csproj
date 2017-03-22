@@ -115,6 +115,7 @@
     <Compile Include="p2pFile.Packet.cs" />
     <Compile Include="p2pFile.Queue.cs" />
     <Compile Include="p2pFile.Upload.cs" />
+    <Compile Include="p2pStream.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SearchResult.cs" />
     <Compile Include="Subtitles.cs" />
