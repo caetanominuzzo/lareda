@@ -211,12 +211,17 @@ namespace library
         internal static void Search(byte[] address, MetaPacketType type)
         {
 
+            
             //Log.Write("Pesquisando local: " + Utils.ToSimpleAddress(address) + " - " + type.ToString() + "  " + Utils.ToSimpleAddress(address));
 
             var metapackets = MetaPackets.LocalSearch(address, type);
 
             if (metapackets.Any())
                 SearchReturn(address, type, metapackets);
+
+            if (VirtualAttributes.IsVirtualAttribute(address))
+                return;
+
 
             //Log.Write(metapackets.Count() + " encontrado(s).", 1);
 
@@ -260,11 +265,6 @@ namespace library
 
         public static byte[] Post(string title = null, byte[] parentConceptAddress = null, string target = null, string userAddressBase64 = null, string[] refs = null, string content = null)
         {
-
-            if (title != null && title.Contains("AlbumArtSmall"))
-            {
-
-            }
             var linkAddress = Utils.AddressFromBase64String(title);
 
             if (linkAddress != null)
@@ -448,7 +448,7 @@ namespace library
 
             //return;
 
-            var dir = @"C:\Users\caetano\Documents\Visual Studio 2013\Projects\Wikpedia\Wikpedia\bin\Debug\txt\";
+            //var dir = @"C:\Users\caetano\Documents\Visual Studio 2013\Projects\Wikpedia\Wikpedia\bin\Debug\txt\";
 
             //var files = File.ReadAllLines(@"C:\Users\caetano\Documents\Visual Studio 2013\Projects\Wikpedia\Wikpedia\bin\Debug\graph.txt");
 
@@ -538,6 +538,12 @@ namespace library
 
             return result;
         }
+
+        public static void QueuePrint()
+        {
+            p2pFile.Queue.Print();
+        }
+        
 
         public static string Print()
         {

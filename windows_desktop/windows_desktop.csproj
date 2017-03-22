@@ -64,6 +64,16 @@
   <PropertyGroup>
     <SignManifests>false</SignManifests>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugNetwork|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Frapper">
       <HintPath>..\packages\Frapper.1.0.4\lib\net35\Frapper.dll</HintPath>
@@ -208,7 +218,7 @@
   <PropertyGroup>
     <PostBuildEvent>if $(ConfigurationName) == Release (
 $(SolutionDir)windows_desktop_installer/bin/$(ConfigurationName)/windows_desktop_installer.exe
-) else if $(ConfigurationName) == DebugRede ( 
+) else if $(ConfigurationName) == DebugNetwork ( 
 powershell Stop-Process -processname la-red
 powershell start-process 2.bat
 )</PostBuildEvent>

@@ -15,9 +15,68 @@ namespace library
         {
             p2pFile File;
 
-            byte[] Address;
+            internal byte[] Address;
 
             string Filename;
+
+            internal PacketTypes PacketType;
+
+            void ProcessPacketPriority()
+            {
+                var root = File.Root;
+
+                if (!root.Arrived)
+                {
+                    File.Status = FileStatus.addressStructureIncomplete;
+
+                    return;
+                }
+
+                if (root.Arrived && root.PacketType != PacketTypes.Addresses)
+                {
+                    File.Status = FileStatus.dataStructureComplete;
+
+                    return;
+                }
+
+                if (root.Children.All(x => !x.Arrived))
+                {
+                    File.Status = FileStatus.addressStructureIncomplete;
+
+                    return;
+                }
+
+                if (root.Children.Any(x => x.Arrived && x.PacketType != PacketTypes.Addresses))
+                {
+                    if (root.Children.First().Arrived &&
+                        root.Children.Last().Arrived)
+                        File.Status = FileStatus.dataStructureComplete;
+
+                    else
+                        File.Status = FileStatus.addressStructureComplete;
+                }
+
+                if (root.Children.All(x => x.Arrived && x.PacketType == PacketTypes.Addresses
+                        && x.Children.All(y => !y.Arrived)))
+                {
+                    File.Status = FileStatus.addressStructureIncomplete;
+
+                    return;
+                }
+
+                if (root.Children.All(x => x.Arrived && x.PacketType == PacketTypes.Addresses
+                        && x.Children.Any(y => y.Arrived && y.PacketType != PacketTypes.Addresses)))
+                {
+                    if (root.Children.First().Children.First().Arrived &&
+                        root.Children.Last().Children.Last().Arrived)
+                        File.Status = FileStatus.dataStructureComplete;
+                    else
+                        File.Status = FileStatus.addressStructureComplete;
+
+                    return;
+                }
+
+            }
 
             internal bool Arrived
             {
@@ -34,17 +93,23 @@ namespace library
 
             internal bool MayHaveLocalData = true;
 
+            internal byte[] data { get; private set; }
+
             object dataArrivedObjectLocker = new object();
 
             List<p2pFile.Packet> Children = new List<Packet>();
 
-            internal Packet(p2pFile file, byte[] address, string filename = null)
+            p2pFile.Packet Parent = null;
+
+            internal Packet(p2pFile file, p2pFile.Packet parent, byte[] address, string filename = null)
             {
                 File = file;
 
                 Address = address;
 
                 Filename = filename;
+                
+                Parent = parent;
             }
 
             internal void VerifyDataArrived(byte[] address, byte[] data)
@@ -61,24 +126,39 @@ namespace library
             {
                 lock (dataArrivedObjectLocker)
                 {
+                    Log.Write("packet arrived:\t[" + Utils.ToSimpleAddress(File.Address) + "]\t[" + Utils.ToSimpleAddress(Address), Log.LogTypes.queueGetPacket);
 
+                    this.data = data;
 
                     File.ReturnRatio = (File.ReturnRatio + (RequestSent / (double)Arrives + 1)) / 2;
 
                     if (Arrives != 0)
                         return;
 
+                    PacketType = (PacketTypes)data[0];
 
-                    var packetType = (PacketTypes)data[0];
-
-                    switch (packetType)
+                    switch (PacketType)
                     {
                         case PacketTypes.Addresses:
 
                             List<byte[]> addresses = Addresses.ToAddresses(data.Skip(pParameters.packetHeaderSize));
 
+                            var count = addresses.Count();
+
+                            //if (count > 0)
+                            //    Children.Add(File.AddPacket(addresses[0], this, Filename));
+
+                            //if (count > 2)
+                            //    Children.Add(File.AddPacket(addresses[count - 2], this, Filename));
+
+                            //if (count > 1)
+                            //    Children.Add(File.AddPacket(addresses[count - 1], this, Filename));
+
+                            //if(count > 3)
+                            //    Children.AddRange(File.AddPacketRange(addresses.Skip(1).Take(count -3), this, Filename));
+
                             foreach (byte[] addr in addresses)
-                                Children.Add(File.AddPacket(addr, Filename));
+                                Children.Add(File.AddPacket(addr, this, Filename));
 
                             break;
 
@@ -90,7 +170,7 @@ namespace library
                                 Addresses.ToDirectories(data.Skip(pParameters.packetHeaderSize).ToArray());
 
                             foreach (byte[] addr in files.Keys)
-                                File.AddPacket(addr, Path.Combine(File.Filename, files[addr]));
+                                File.AddPacket(addr, this, Path.Combine(File.Filename, files[addr]));
 
                             break;
 
@@ -115,11 +195,16 @@ namespace library
 
                     Arrives++;
                 }
+
+                ProcessPacketPriority();
+
+                File.newPacketEvent.Set();
             }
 
             internal void Get()
             {
-                Log.Write("packet get: " + Utils.ToSimpleAddress(Address) + "\t" + Utils.ToBase64String(Address));
+                Log.Write("packet get: \t[" + Utils.ToSimpleAddress(File.Address) + "]\t [" + Utils.ToSimpleAddress(Address) + "]\t " + Filename, Log.LogTypes.queueGetPacket);
+
 
                 byte[] data = null;
 
@@ -159,7 +244,7 @@ namespace library
                         //var sent = p2pRequest.Send(
                         //    address: Address,
                         //    wait: !File.MayHaveLocalData());
-                        
+
                         var sent = true;
 
                         if (sent)

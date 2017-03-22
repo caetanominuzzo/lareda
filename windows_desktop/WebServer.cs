@@ -71,6 +71,7 @@ namespace windows_desktop
             server = new HttpListener();
 
             server.Prefixes.Add("http://+:" + Program.WebPort + "/");
+            
 
             try
             {
@@ -96,6 +97,7 @@ namespace windows_desktop
                 {
                     if (server.IsListening)
                         ThreadPool.QueueUserWorkItem(ProcessReceive, server.GetContext());
+         
                     //ProcessReceive(server.GetContext());
                 }
                 catch { }
@@ -116,8 +118,7 @@ namespace windows_desktop
 
                 return;
             }
-
-
+            
             var response = context.Response;
 
             context.Response.AddHeader("Access-Control-Allow-Origin", "*");
@@ -565,24 +566,32 @@ namespace windows_desktop
 
         private static void ProcessSeek(CacheItem<FileDownloadObject> cache)
         {
-
+            
             var download = cache.CachedValue;
 
             var context = download.Context;
 
             var closeFile = download.FileStream == null;
 
+            var source = download.Source;
+
             try
             {
 
                 if (closeFile)
                 {
-                    download.FileStream = new FileStream(download.Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    //download.FileStream = new FileStream(download.Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
+                    download.FileStream = p2pStream.GetStream(download.Filename, source);
+
+                    //download.FileStream.Seek(0, SeekOrigin.Begin);
                 }
 
-                Stream file = download.FileStream;
+                var file = download.FileStream;
 
-                context.Response.StatusCode = 206;
+
+
+                context.Response.StatusCode = 200;
 
                 long range1 = 0;
 
@@ -594,7 +603,13 @@ namespace windows_desktop
 
                     range1 = long.Parse(ranges[0]);
 
+                    context.Response.StatusCode = 206;
+
                     range2 = long.Parse(ranges[1]);
+
+                    
+
+                    Thread.Sleep(6000);
                 }
                 catch { }
 
@@ -606,41 +621,65 @@ namespace windows_desktop
 
                 context.Response.ContentLength64 = responseSize;
 
-                file.Seek(range1, 0);
+                file.Seek(range1, 0, source);
 
                 long bufferSize = Math.Min(Program.MaxNonRangeDownloadSize, responseSize);
 
                 var buffer = new byte[bufferSize];
 
                 var read = 0;
-
                 try
                 {
-                    while ((read = file.Read(buffer, 0, (int)bufferSize)) > 1)
+                    while ((read = file.Read(buffer, 0, (int)bufferSize, source)) > 1)
                     {
-                        context.Response.OutputStream.Write(buffer, 0, read);
+                        int attempts = 0;
 
-                        context.Response.OutputStream.Flush();
+                        while (attempts < 5)
+                        {
+                            try
+                            {
+                                context.Response.OutputStream.Write(buffer, 0, read);
 
-                        if (!context.Response.OutputStream.CanWrite)
-                            break;
+                                context.Response.OutputStream.Flush();
 
-                        cache.Reset();
+
+                                //if (!context.Response.OutputStream.CanWrite)
+                                //    break;
+
+                                cache.Reset();
+
+                                break;
+                            }
+                            catch(HttpListenerException e)
+                            {
+                                Thread.Sleep(50);
+
+                                Log.Write("SeekHttpListenerException: " + file.Filename + "\tattempt: " + attempts + " " + e.ToString(), Log.LogTypes.InterfaceException);
+                            }
+
+                            attempts++;
+                        }
+
                     }
                 }
                 catch (Exception e)
                 {
-
+                    Log.Write("SeekException: " + file.Filename + "\tellapsed: " + DateTime.Now.Subtract(cache.CreateTime).TotalSeconds + " " + e.ToString(), Log.LogTypes.InterfaceException);
                 }
                 finally
                 {
                     context.Response.Close();
                 }
             }
+            catch (Exception e)
+            {
+                Log.Write("SeekLastException: " + e.ToString(), Log.LogTypes.InterfaceException);
+            }
+
             finally
             {
                 if (closeFile && download.FileStream != null)
-                    download.FileStream.Close();
+                    download.FileStream.Dispose(source);
 
             }
         }
@@ -920,13 +959,15 @@ namespace windows_desktop
         {
             internal byte[] Address;
 
-            internal Stream FileStream;
+            internal p2pStream FileStream;
 
             internal HttpListenerContext Context;
 
             internal string Filename;
 
-            internal FileDownloadObject(byte[] address, HttpListenerContext context, string filename, Stream fileStream = null)
+            internal string Source;
+
+            internal FileDownloadObject(byte[] address, HttpListenerContext context, string filename, p2pStream fileStream = null)
             {
                 Address = address;
 
@@ -935,11 +976,13 @@ namespace windows_desktop
                 Filename = filename;
 
                 Context = context;
+
+                Source = Utils.ToBase64String(Utils.GetAddress()); 
             }
 
             public void Dispose()
             {
-                FileStream.Close();
+                FileStream.Dispose(Source);
             }
         }
     }

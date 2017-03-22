@@ -232,8 +232,6 @@ namespace library
 
         internal static void AddPeersFromBytes(byte[] request)
         {
-            Log.Write("Addpeers:" + Utils.Points(request));
-
             int c = request.Count() / Peers.reg_size;
 
             for (int i = 0; i < c; i++)
@@ -253,21 +251,6 @@ namespace library
 
         static internal IEnumerable<byte> ToBytes(Peer peer)
         {
-            Log.Write("to bytes-------------------------");
-
-            Log.Write("address: " + Utils.Points(peer.Address) + Utils.ToBase64String(peer.Address), 1);
-
-            Log.Write("endpoint: "+ Utils.Points(Addresses.ToBytes(peer.EndPoint)), 1);
-
-            Log.Write("last ac: " + Utils.Points(BitConverter.GetBytes(peer.LastAccess.ToBinary())), 1);
-
-            Log.Write("latency: " + Utils.Points(BitConverter.GetBytes(peer.Latency)), 1);
-
-            Log.Write("everybody: " + Utils.Points(peer.Address
-                .Concat(Addresses.ToBytes(peer.EndPoint))
-                .Concat(BitConverter.GetBytes(peer.LastAccess.ToBinary()))
-                .Concat(BitConverter.GetBytes(peer.Latency))
-                    .ToArray()), 2);
 
             return peer.Address
                 .Concat(Addresses.ToBytes(peer.EndPoint))
@@ -314,15 +297,6 @@ namespace library
 
             Peer peer = Peers.CreatePeer(endpoint, address);
 
-            Log.Write("from bytes-------------------------");
-
-            Log.Write("address: " + Utils.Points(peer.Address) + Utils.ToBase64String(peer.Address), 1);
-
-            Log.Write("endpoint: " + Utils.Points(Addresses.ToBytes(peer.EndPoint)), 1);
-
-            Log.Write("last ac: " + Utils.Points(BitConverter.GetBytes(peer.LastAccess.ToBinary())), 1);
-
-            Log.Write("everybody: " + Utils.Points(data), 2);
 
 
 
@@ -334,10 +308,6 @@ namespace library
             peer.Latency = BitConverter.ToDouble(data, offset);
 
 
-
-            Log.Write("latency: " + Utils.Points(BitConverter.GetBytes(peer.Latency)), 1);
-
-            
             return peer;
         }
 

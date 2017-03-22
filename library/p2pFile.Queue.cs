@@ -20,7 +20,7 @@ namespace library
             {
                 if (queue == null)
                 {
-                    queue = new Cache<p2pFile>(20 * 1000);
+                    queue = new Cache<p2pFile>(10 * 1000);
 
                     queue.OnCacheExpired += Queue_OnCacheExpired;
                 }
@@ -30,36 +30,83 @@ namespace library
                 Add(address, filename, specifFIle);
             }
 
+
+            public static IEnumerable<p2pFile> All()
+            {
+                return p2pFile.Queue.queue.Items();
+            }
+
             static void Add(byte[] address, string filename, string specifFIle = null)
             {
-                Log.Write("add packet " + filename);
+                
 
-                //lock(queue)
-                //{
-                //    var item = queue.FirstOrDefault(x => Addresses.Equals(x.CachedValue.Address, address, true) &&
-                //        x.CachedValue.Filename == filename);
-                    
-                //    if(item != null)
-                //    {
-                //        item.Reset();
+                lock (queue)
+                {
+                    var item = queue.FirstOrDefault(x => Addresses.Equals(x.CachedValue.Address, address, true) &&
+                        x.CachedValue.Filename == filename);
 
-                //        return;
-                //    }
-                //}
+                    if (item != null)
+                    {
+                        item.Reset();
+
+                        return;
+                    }
+                }
 
                 p2pFile file = new p2pFile(address, filename, specifFIle);
 
-                //root packet
-                file.AddPacket(address, filename);
-
                 lock (queue)
                     queue.Add(file);
+
+            }
+
+            internal static void Reset(p2pFile file)
+            {
+                lock (queue)
+                {
+                    var item = queue.FirstOrDefault(x => x.CachedValue == file);
+
+                    if (item != null)
+                        item.Reset();
+                }
+
             }
 
             private static void Queue_OnCacheExpired(CacheItem<p2pFile> item)
             {
-                Log.Write("expire packet " + item.CachedValue.Filename);
+                Log.Write("expire file \t[" + Utils.ToSimpleAddress(item.CachedValue.Address) + "]\t " +  item.CachedValue.Filename, Log.LogTypes.queueExpireFile);
+
                 item.CachedValue.Dispose();
+            }
+
+            internal static void Print()
+            {
+                Log.Write("### DOWNLOAD QUEUE ###", Log.LogTypes.Ever);
+
+                foreach(var f in queue)
+                {
+                    Log.Write("File:\t[" + Utils.ToSimpleAddress(f.CachedValue.Address) + "]\t[" + f.CachedValue.Filename, Log.LogTypes.Ever, 1);
+
+                    Log.Write("Packets queue:\t" + f.CachedValue.FilePackets.Count(), Log.LogTypes.Ever, 2);
+
+                    Log.Write("Packets arrived:\t" + f.CachedValue.FilePacketsArrived.Count(), Log.LogTypes.Ever, 2);
+
+                    var count = 0;
+
+                    foreach(var t in f.CachedValue.FilePackets)
+                    {
+                        Log.Write("Packet:\t[" + Utils.ToSimpleAddress(t.Address) , Log.LogTypes.Ever, 2);
+
+                        if (count++ > 10)
+                        {
+                            Log.Write("...", Log.LogTypes.Ever, 3);
+
+                            Log.Write("Packet:\t[" + Utils.ToSimpleAddress(f.CachedValue.FilePackets.Last().Address), Log.LogTypes.Ever, 3);
+
+                            break;
+                        }
+                    }
+                }
             }
 
             internal static void QueueComplete(p2pFile file)

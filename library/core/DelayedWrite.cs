@@ -21,7 +21,21 @@ namespace library
 
             return null;
         }
+        /*
+        public static byte[] ReadFile(string filename, int bytesOffset, int bytesCount)
+        {
+            var packetOffsetStart = ((int)bytesOffset / pParameters.packetSize) + 1;
 
+            var packetOffsetEnd = ((int)(bytesOffset + bytesCount) / pParameters.packetSize) + 1;
+
+            var result = new List<byte>();
+
+            lock(queue)
+            {
+                queue.Where(x => x.Filename == filename && x.Offset >= packetOffsetStart && x.Offset <= packetOffsetEnd);
+            }
+        }
+        */
         #region Thread Refresh
 
         static List<DelayedWriteItem> queue = new List<DelayedWriteItem>();
@@ -83,8 +97,12 @@ namespace library
                     if (!Directory.Exists(Path.GetDirectoryName(item.Filename)))
                         Directory.CreateDirectory(Path.GetDirectoryName(item.Filename));
 
-                    using (Stream stream = new FileStream(item.Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+                    p2pStream stream = null;
+
+                    try
                     {
+                        stream = p2pStream.GetStream(item.Filename, typeof(DelayedWrite).Name);
+
                         DelayedWriteItem[] same_file;
 
                         lock (queue)
@@ -96,9 +114,9 @@ namespace library
 
                             foreach (DelayedWriteItem writeItem in same_file)
                             {
-                                stream.Seek(writeItem.Offset * pParameters.packetSize, 0);
+                                stream.Seek(writeItem.Offset * pParameters.packetSize, 0, typeof(DelayedWrite).Name);
 
-                                stream.Write(writeItem.Data, 0, writeItem.Data.Length);
+                                stream.Write(writeItem.Data, 0, writeItem.Data.Length, typeof(DelayedWrite).Name);
 
                                 toRemove.Add(writeItem);
                             }
@@ -111,6 +129,10 @@ namespace library
                                     queue.Where(x => x.Filename == item.Filename).OrderBy(x => x.Offset).ToArray();
                             }
                         }
+                    }
+                    finally
+                    {
+                        stream.Dispose(typeof(DelayedWrite).Name);
                     }
                 }
             }

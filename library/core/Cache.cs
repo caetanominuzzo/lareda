@@ -16,6 +16,12 @@ namespace library
 
         Timer activeTimeoutTimer;
 
+        public IEnumerable<T> Items()
+        {
+            foreach (var t in this)
+                yield return t.CachedValue;
+        }
+
         public Cache(double timeout = -1)
         {
             Timeout = timeout;
@@ -115,6 +121,8 @@ namespace library
     {
         internal DateTime DateTime;
 
+        public DateTime CreateTime { get; private set; }
+
         public T CachedValue;
 
         public void Reset()
@@ -126,6 +134,8 @@ namespace library
             CachedValue = value;
 
             DateTime = DateTime.Now;
+
+            CreateTime = DateTime;
         }
     }
 

@@ -68,11 +68,21 @@ namespace library
 
                     if (remoteEndPoint != null)
                     {
-                        //Log.Write(Client.LocalPeer.EndPoint.Port + " <<< " + remoteEndPoint.Port + " [" +
-    //((RequestCommand)buffer[0]).ToString() + "] [" + Utils.ToSimpleAddress(buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray()) + "] [" + Utils.Points(buffer.Skip(pParameters.requestHeaderSize + pParameters.addressSize).Take(128).ToArray()));
+                        var command = (RequestCommand)buffer[0];
 
-                        if (buffer[0] == (int)RequestCommand.Packet)
-                            Log.Write(Encoding.Unicode.GetString(buffer.Skip(pParameters.packetHeaderSize).ToArray()),1);
+                        Log.Write(Client.LocalPeer.EndPoint.Port + " <<< " + remoteEndPoint.Port + " [" +
+                           (command).ToString() + "] [" + Utils.ToSimpleAddress(buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray()) + "] [" + Utils.Points(buffer.Skip(pParameters.requestHeaderSize + pParameters.addressSize).Take(128).ToArray()),
+
+                              command == RequestCommand.Packet ? Log.LogTypes.p2pIncomingPackets :
+                                command == RequestCommand.Hashs ? Log.LogTypes.p2pIncomingHash :
+                                    command == RequestCommand.Links ? Log.LogTypes.p2pIncomingMetapackets :
+                                        command == RequestCommand.Peer ? Log.LogTypes.p2pIncomingPeers : Log.LogTypes.None
+
+
+
+
+                           );
+
 
                         var r = p2pRequest.CreateRequestFromReceivedBytes(remoteEndPoint, buffer);
 
@@ -83,8 +93,9 @@ namespace library
                         Client.Stats.Received.Add(buffer.Length);
                     }
                 }
-                catch(Exception e) {
-                    Log.Write(e.ToString());
+                catch (Exception e)
+                {
+                    Log.Write(e.ToString(), Log.LogTypes.p2pIncomingException);
                 }
             }
 

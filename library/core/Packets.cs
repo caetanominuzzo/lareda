@@ -347,6 +347,7 @@ namespace library
 
     enum PacketTypes
     {
+        NonSet = 0,
         Content = 1,
         Addresses = 2,
         Directory = 4,

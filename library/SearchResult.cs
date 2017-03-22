@@ -357,8 +357,9 @@ namespace library
 
             source++;
 
-            foreach (var p in item.Parents)
-                SetDeepDistance(p, source, distanceMarker);
+            lock (item.Parents)
+                foreach (var p in item.Parents)
+                    SetDeepDistance(p, source, distanceMarker);
         }
 
         internal static int GetDeepDistance(DIV item, byte[] distanceMarker)
@@ -430,11 +431,13 @@ namespace library
 
             parents.Push(item);
 
-            foreach (var p in item.Parents)
-            {
-                // if(p.Weight > item.Weight)
-                ConceptInvalidate(p, parents);
-            }
+
+            lock (item.Parents)
+                foreach (var p in item.Parents)
+                {
+                    // if(p.Weight > item.Weight)
+                    ConceptInvalidate(p, parents);
+                }
 
             parents.Pop();
 
@@ -459,7 +462,8 @@ namespace library
                 {
                     t.Children.Add(item);
 
-                    item.Parents.Add(t);
+                    lock (item.Parents)
+                        item.Parents.Add(t);
 
                     if (item.Src != null && t.Src == null)
                         t.Src = item.Src;
@@ -705,7 +709,7 @@ namespace library
             return result;
         }
 
-   
+
 
         internal static string Content(byte[] address)
         {
@@ -732,7 +736,7 @@ namespace library
 
             return Content(item.Address);
 
-            
+
         }
 
         internal static string FirstContent(DIV item, List<DIV> searched = null, DIV root = null, byte[] MIME_TYPE = null, bool text = true, Stack<DIV> parents = null)
@@ -780,7 +784,7 @@ namespace library
 
                 if (any)
                 {
-                    Log.Write("packet get " + Utils.ToBase64String(content.Address));
+                    //Log.Write("packet get " + Utils.ToBase64String(content.Address));
 
                     var packet = Packets.Get(content.Address);
 
@@ -916,7 +920,7 @@ namespace library
             if (parents == null)
                 parents = new Stack<DIV>();
 
-             if (parents.Count() < 9)
+            if (parents.Count() < 9)
             {
 
                 if (searched == null)

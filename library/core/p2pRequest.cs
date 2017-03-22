@@ -192,16 +192,15 @@ namespace library
                // Concat(Address).
                 Concat(Data ?? bytes_empty).ToArray();
 
-            //Log.Write(Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
-            //    Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0? Address : Data));
+            Log.Write(Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
+                Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0 ? Address : Data), 
+                
+                Command == RequestCommand.Packet? Log.LogTypes.p2pOutgoingPackets :
+                    Command == RequestCommand.Hashs ? Log.LogTypes.p2pOutgoingHash :
+                        Command == RequestCommand.Links ? Log.LogTypes.p2pOutgoingMetapackets :
+                            Command == RequestCommand.Peer ? Log.LogTypes.p2pOutgoingPeers : Log.LogTypes.None
 
-            if (Command == RequestCommand.Packet && data.Length > pParameters.requestHeaderSize + pParameters.addressSize)
-            {
-                if (data.Length > 200)
-                    Log.Write("size: " + data.Length);
-                else
-                    Log.Write(Encoding.Unicode.GetString(data.Skip(pParameters.requestHeaderSize + pParameters.addressSize).ToArray()), 1);
-            }
+                );
 
             ThreadSend(DestinationPeer.EndPoint, data);
 
@@ -239,7 +238,7 @@ namespace library
             }
             catch (Exception e)
             {
-                Log.Write(e.ToString());
+                Log.Write(e.ToString(), Log.LogTypes.p2pOutgoingException);
             }
 
         }

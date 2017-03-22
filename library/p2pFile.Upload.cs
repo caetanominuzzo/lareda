@@ -58,7 +58,7 @@ namespace library
                             tags = TagLib.File.Create(paths[0]);
                     }
                     catch (Exception e) {
-                        Log.Write("Fileupload error: " + e.ToString());
+                        Log.Write("Fileupload error: " + e.ToString(), Log.LogTypes.InterfaceException);
                     }
 
                     var fi = new FileInfo(paths[0]);
@@ -660,7 +660,7 @@ namespace library
                 }
             }
             catch (Exception e) {
-                Log.Write("GeneratePosts:Title error: " + e.ToString());
+                Log.Write("GeneratePosts:Title error: " + e.ToString(), Log.LogTypes.InterfaceException);
             }
 
             if (tags == null || tags.Properties == null)

@@ -26,7 +26,7 @@ namespace windows_desktop
 
         internal static int Timeout = 60000;
 
-        internal static int MaxNonRangeDownloadSize = 1024 * 500;
+        internal static int MaxNonRangeDownloadSize = 1024 * 50;
 
         internal static UIHelper UIHelper;
 
@@ -122,7 +122,7 @@ namespace windows_desktop
             if (Directory.GetCurrentDirectory() != AppDomain.CurrentDomain.BaseDirectory)
                 Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
 
-            Log.Write("[START] " + AppDomain.CurrentDomain.BaseDirectory);
+            Log.Write("[START] " + AppDomain.CurrentDomain.BaseDirectory, Log.LogTypes.Ever);
 
             webCache = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, webCache);
 
@@ -180,7 +180,7 @@ namespace windows_desktop
 
         static bool Install()
         {
-            Log.Write("[INSTALL?] " + AppDomain.CurrentDomain.BaseDirectory);
+            Log.Write("[INSTALL?] " + AppDomain.CurrentDomain.BaseDirectory, Log.LogTypes.Ever);
 
             var appdata = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
@@ -192,7 +192,7 @@ namespace windows_desktop
                 && !AppDomain.CurrentDomain.FriendlyName.Contains("vshost")
                 && !AppDomain.CurrentDomain.BaseDirectory.Contains("debug"))
             {
-                Log.Write("[INSTALL? YES] " + AppDomain.CurrentDomain.BaseDirectory);
+                Log.Write("[INSTALL? YES] " + AppDomain.CurrentDomain.BaseDirectory, Log.LogTypes.Ever);
 
                 try
                 {
@@ -225,7 +225,7 @@ namespace windows_desktop
                 }
             }
 
-            Log.Write("[INSTALL? NO] " + AppDomain.CurrentDomain.BaseDirectory);
+            Log.Write("[INSTALL? NO] " + AppDomain.CurrentDomain.BaseDirectory, Log.LogTypes.Ever);
 
             return false;
         }
@@ -382,7 +382,7 @@ namespace windows_desktop
             if (args[0] != "NETSH")
                 return false;
 
-            Log.Write("[NETSH] " + "http add urlacl url=http://+:" + WebPort + "/ user=" + Environment.UserDomainName + "\\" + Environment.UserName);
+            Log.Write("[NETSH] " + "http add urlacl url=http://+:" + WebPort + "/ user=" + Environment.UserDomainName + "\\" + Environment.UserName, Log.LogTypes.Ever);
 
             Process p = new Process();
            
