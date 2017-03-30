@@ -62,40 +62,29 @@ namespace library
             {
                 try
                 {
-                    IPEndPoint remoteEndPoint = null;
+                IPEndPoint remoteEndPoint = null;
 
-                    byte[] buffer = server.Receive(ref remoteEndPoint);
+                byte[] buffer = server.Receive(ref remoteEndPoint);
 
-                    if (remoteEndPoint != null)
-                    {
-                        var command = (RequestCommand)buffer[0];
+                if (remoteEndPoint != null)
+                {
+                    var command = (RequestCommand)buffer[0];
 
-                        Log.Write(Client.LocalPeer.EndPoint.Port + " <<< " + remoteEndPoint.Port + " [" +
-                           (command).ToString() + "] [" + Utils.ToSimpleAddress(buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray()) + "] [" + Utils.Points(buffer.Skip(pParameters.requestHeaderSize + pParameters.addressSize).Take(128).ToArray()),
-
-                              command == RequestCommand.Packet ? Log.LogTypes.p2pIncomingPackets :
-                                command == RequestCommand.Hashs ? Log.LogTypes.p2pIncomingHash :
-                                    command == RequestCommand.Links ? Log.LogTypes.p2pIncomingMetapackets :
-                                        command == RequestCommand.Peer ? Log.LogTypes.p2pIncomingPeers : Log.LogTypes.None
+                    Log.Add(Log.LogTypes.p2pIncoming | Log.FromCommand(command), new { Port = remoteEndPoint.Port, Address = buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray(), Data = buffer.Length > pParameters.requestHeaderSize + pParameters.addressSize  });
 
 
+                    var r = p2pRequest.CreateRequestFromReceivedBytes(remoteEndPoint, buffer);
 
+                    p2pResponse.Process(r);
 
-                           );
+                    //ThreadPool.QueueUserWorkItem(new WaitCallback(p2pResponse.Process), new p2pRequest(remoteEndPoint, buffer));
 
-
-                        var r = p2pRequest.CreateRequestFromReceivedBytes(remoteEndPoint, buffer);
-
-                        p2pResponse.Process(r);
-
-                        //ThreadPool.QueueUserWorkItem(new WaitCallback(p2pResponse.Process), new p2pRequest(remoteEndPoint, buffer));
-
-                        Client.Stats.Received.Add(buffer.Length);
-                    }
+                    Client.Stats.Received.Add(buffer.Length);
+                }
                 }
                 catch (Exception e)
                 {
-                    Log.Write(e.ToString(), Log.LogTypes.p2pIncomingException);
+                    Log.Add(Log.LogTypes.Application, e.ToString());
                 }
             }
 

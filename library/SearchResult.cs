@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -38,11 +39,13 @@ namespace library
 
         byte[] bTerm = null;
 
+        internal HttpListenerContext Context;
+
         public RenderMode Mode = RenderMode.Main;
 
         List<byte[]> SearchedAddresses = new List<byte[]>();
 
-        public DIV RootResults = new DIV();
+        public DIV RootResults = null;
 
         List<byte[]> AddressestoSearch = new List<byte[]>();
 
@@ -79,10 +82,9 @@ namespace library
             }
         }
 
-        public SearchResult(byte[] contextId, string term, RenderMode mode, SearchResult parent = null)
+        public SearchResult(byte[] contextId, string term, RenderMode mode, HttpListenerContext context, SearchResult parent = null)
         {
-
-
+            Context = context;
 
             Client.OnSearchReturn += Client_OnSearchReturn;
 
@@ -90,6 +92,8 @@ namespace library
 
 
             ContextId = contextId;
+
+            RootResults = new DIV(this);
 
             RootResults.Weight = double.MaxValue;
 
@@ -145,7 +149,7 @@ namespace library
             if (true) //newRoot)
             {
                 lock (RootResults)
-                    RootResults = new DIV();
+                    RootResults = new DIV(this);
 
                 lock (AddressestoSearch)
                     AddressestoSearch.Clear();
@@ -567,7 +571,7 @@ namespace library
                 return result;
             }
 
-            result = new DIV();
+            result = new DIV(this);
 
             result.Address = address;
 
@@ -628,10 +632,12 @@ namespace library
             }
         }
 
-        public string GetResultsResults()
+        public string GetResultsResults(HttpListenerContext context)
         {
             if (Monitor.IsEntered(RootResults))
                 return "[]";
+
+            Context = context;
 
             lock (RootResults)
             {
@@ -672,7 +678,7 @@ namespace library
 
         internal static bool logging = false;
 
-        internal static string FirstContent(DIV item, byte[] marker, bool text = false)
+        internal static string FirstContent(DIV item, byte[] marker, HttpListenerContext context, bool text = false)
         {
             var t = marker == null ? item : ClosestMarker(item, marker);
 
@@ -683,12 +689,12 @@ namespace library
 
             return text ?
 
-                Content(t.Address) :
+                Content(t.Address, context) :
 
                  Utils.ToBase64String(t.Src.LinkAddress);
         }
 
-        internal static IEnumerable<string> FirstContentYield(DIV item, byte[] marker, bool text = false)
+        internal static IEnumerable<string> FirstContentYield(DIV item, byte[] marker, HttpListenerContext context, bool text = false)
         {
             List<string> result = new List<string>();
 
@@ -699,7 +705,7 @@ namespace library
                 if (tt != null)
                     result.Add(text ?
 
-                Content(tt.Src.LinkAddress) :
+                Content(tt.Src.LinkAddress, context) :
 
                  Utils.ToBase64String(tt.Src.LinkAddress));
             }
@@ -711,7 +717,7 @@ namespace library
 
 
 
-        internal static string Content(byte[] address)
+        internal static string Content(byte[] address, HttpListenerContext context)
         {
             var packet = Packets.Get(address);
 
@@ -723,23 +729,23 @@ namespace library
             }
             else
             {
-                p2pFile.Queue.Add(Utils.ToBase64String(address), Utils.ToBase64String(address));
+                p2pFile.Queue.Add(Utils.ToBase64String(address), context, Utils.ToBase64String(address));
             }
 
             return string.Empty;
         }
 
-        internal static string Content(DIV item)
+        internal static string Content(DIV item, HttpListenerContext context)
         {
             if (item == null)
                 return string.Empty;
 
-            return Content(item.Address);
+            return Content(item.Address, context);
 
 
         }
 
-        internal static string FirstContent(DIV item, List<DIV> searched = null, DIV root = null, byte[] MIME_TYPE = null, bool text = true, Stack<DIV> parents = null)
+        internal static string FirstContent(DIV item, HttpListenerContext context, List<DIV> searched = null, DIV root = null, byte[] MIME_TYPE = null, bool text = true, Stack<DIV> parents = null)
         {
             //    if (item.simpleAddress == "552" && text && parents == null)
             //    logging = true;
@@ -797,7 +803,7 @@ namespace library
 
                         return (text) ?
 
-                            Content(content) :
+                            Content(content, context) :
 
                             Utils.ToBase64String(content.Address);
                     }
@@ -823,7 +829,7 @@ namespace library
 
                     foreach (var l in list)
                     {
-                        var s = FirstContent(l, searched, null, MIME_TYPE, text, parents);
+                        var s = FirstContent(l, context, searched, null, MIME_TYPE, text, parents);
 
                         if (!string.IsNullOrEmpty(s))
                         {

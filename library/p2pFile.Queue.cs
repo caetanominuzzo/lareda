@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,21 +14,42 @@ namespace library
     {
         internal static class Queue
         {
-
-            static Cache<p2pFile> queue = null;
-
-            internal static void Add(string base64Address, string filename, string specifFIle = null)
+            static Cache<p2pFile> _queue = null;
+            static Cache<p2pFile> queue
             {
-                if (queue == null)
+                get
                 {
-                    queue = new Cache<p2pFile>(10 * 1000);
+                    if (_queue == null)
+                    {
+                        _queue = new Cache<p2pFile>(10 * 1000);
 
-                    queue.OnCacheExpired += Queue_OnCacheExpired;
+                        _queue.OnCacheExpired += Queue_OnCacheExpired;
+                    }
+
+                    return _queue;
                 }
+            }
+
+            internal static void Add(string base64Address, HttpListenerContext context, string filename, string specifFIle = null)
+            {
+
 
                 byte[] address = Utils.AddressFromBase64String(base64Address);
 
-                Add(address, filename, specifFIle);
+                Add(address, context, filename, specifFIle);
+            }
+
+            internal static p2pFile Get(string filename)
+            {
+                CacheItem<p2pFile> result = null;
+
+                lock (queue)
+                    result = queue.FirstOrDefault(x => x.CachedValue.Filename == filename);
+
+                if (result == null)
+                    return null;
+
+                return result.CachedValue;
             }
 
 
@@ -36,10 +58,8 @@ namespace library
                 return p2pFile.Queue.queue.Items();
             }
 
-            static void Add(byte[] address, string filename, string specifFIle = null)
+            static void Add(byte[] address, HttpListenerContext context, string filename, string specifFIle = null)
             {
-                
-
                 lock (queue)
                 {
                     var item = queue.FirstOrDefault(x => Addresses.Equals(x.CachedValue.Address, address, true) &&
@@ -47,13 +67,15 @@ namespace library
 
                     if (item != null)
                     {
+                        item.CachedValue.AddContext(context);
+
                         item.Reset();
 
                         return;
                     }
                 }
 
-                p2pFile file = new p2pFile(address, filename, specifFIle);
+                p2pFile file = new p2pFile(address, context, filename, specifFIle);
 
                 lock (queue)
                     queue.Add(file);
@@ -74,39 +96,9 @@ namespace library
 
             private static void Queue_OnCacheExpired(CacheItem<p2pFile> item)
             {
-                Log.Write("expire file \t[" + Utils.ToSimpleAddress(item.CachedValue.Address) + "]\t " +  item.CachedValue.Filename, Log.LogTypes.queueExpireFile);
+                Log.Add(Log.LogTypes.queueExpireFile, item.CachedValue);
 
                 item.CachedValue.Dispose();
-            }
-
-            internal static void Print()
-            {
-                Log.Write("### DOWNLOAD QUEUE ###", Log.LogTypes.Ever);
-
-                foreach(var f in queue)
-                {
-                    Log.Write("File:\t[" + Utils.ToSimpleAddress(f.CachedValue.Address) + "]\t[" + f.CachedValue.Filename, Log.LogTypes.Ever, 1);
-
-                    Log.Write("Packets queue:\t" + f.CachedValue.FilePackets.Count(), Log.LogTypes.Ever, 2);
-
-                    Log.Write("Packets arrived:\t" + f.CachedValue.FilePacketsArrived.Count(), Log.LogTypes.Ever, 2);
-
-                    var count = 0;
-
-                    foreach(var t in f.CachedValue.FilePackets)
-                    {
-                        Log.Write("Packet:\t[" + Utils.ToSimpleAddress(t.Address) , Log.LogTypes.Ever, 2);
-
-                        if (count++ > 10)
-                        {
-                            Log.Write("...", Log.LogTypes.Ever, 3);
-
-                            Log.Write("Packet:\t[" + Utils.ToSimpleAddress(f.CachedValue.FilePackets.Last().Address), Log.LogTypes.Ever, 3);
-
-                            break;
-                        }
-                    }
-                }
             }
 
             internal static void QueueComplete(p2pFile file)
@@ -123,7 +115,7 @@ namespace library
                     }
                 }
 
-                if(file.Success)
+                if (file.Success)
                     Client.DownloadComplete(file.Address, file.Filename, file.SpecifFilename);
             }
 
@@ -175,7 +167,7 @@ namespace library
 
                     offset += 4 + filename.Length;
 
-                    Add(address, Encoding.Unicode.GetString(filename));
+                    Add(address, null, Encoding.Unicode.GetString(filename));
                 }
             }
         }

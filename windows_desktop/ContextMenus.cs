@@ -22,15 +22,20 @@ namespace windows_desktop
             item.Click += new System.EventHandler(Print_Click);
             menu.Items.Add(item);
 
-            // Print
+            // Separator
+            sep = new ToolStripSeparator();
+            menu.Items.Add(sep);
+
+            // Log
             item = new ToolStripMenuItem();
-            item.Text = "Print Queue";
-            item.Click += new System.EventHandler(PrintQueue_Click);
+            item.Text = "Log";
+            item.Click += new System.EventHandler(Log_Click);
             menu.Items.Add(item);
 
             // Separator
             sep = new ToolStripSeparator();
             menu.Items.Add(sep);
+
 
             // Exit
             item = new ToolStripMenuItem();
@@ -48,17 +53,17 @@ namespace windows_desktop
             Application.Exit();
         }
 
-
-
-        void PrintQueue_Click(object sender, EventArgs e)
-        {
-            Client.QueuePrint();
-        }
-
-
+        
         void Print_Click(object sender, EventArgs e)
         {
             Print p = new Print();
+
+            p.Show();
+        }
+
+        void Log_Click(object sender, EventArgs e)
+        {
+            fmLog p = new fmLog();
 
             p.Show();
         }

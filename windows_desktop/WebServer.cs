@@ -71,7 +71,7 @@ namespace windows_desktop
             server = new HttpListener();
 
             server.Prefixes.Add("http://+:" + Program.WebPort + "/");
-            
+
 
             try
             {
@@ -97,7 +97,7 @@ namespace windows_desktop
                 {
                     if (server.IsListening)
                         ThreadPool.QueueUserWorkItem(ProcessReceive, server.GetContext());
-         
+
                     //ProcessReceive(server.GetContext());
                 }
                 catch { }
@@ -118,7 +118,7 @@ namespace windows_desktop
 
                 return;
             }
-            
+
             var response = context.Response;
 
             context.Response.AddHeader("Access-Control-Allow-Origin", "*");
@@ -268,7 +268,7 @@ namespace windows_desktop
                 }
 
                 if (search != null)
-                    result = search.GetResultsResults();//search.Mode);
+                    result = search.GetResultsResults(context);//search.Mode);
             }
 
             if (string.IsNullOrEmpty(result))
@@ -348,10 +348,10 @@ namespace windows_desktop
 
             CloseResponse(context);
 
-            Search(contextId, term, mode, parentContextId);
+            Search(contextId, term, mode, parentContextId, context);
         }
 
-        static void Search(string contextId, string term, RenderMode mode, string parentContextID)
+        static void Search(string contextId, string term, RenderMode mode, string parentContextID, HttpListenerContext context)
         {
             var bContextId = Utils.AddressFromBase64String(contextId);
 
@@ -381,7 +381,7 @@ namespace windows_desktop
                         parentContext.Reset();
                 }
 
-                search = new SearchResult(bContextId, term, mode, parentContext == null ? null : parentContext.CachedValue);
+                search = new SearchResult(bContextId, term, mode, context, parentContext == null ? null : parentContext.CachedValue);
 
 
                 searchs.Add(search);
@@ -424,8 +424,6 @@ namespace windows_desktop
                     //var t = new CacheItem<FileDownloadObject>
 
                     ProcessSeek(downloads.Add(new FileDownloadObject(address, context, path)));
-
-
 
                     return true;
                 }
@@ -495,7 +493,7 @@ namespace windows_desktop
                 //precisa setar alguma coisa no response pra ele nao morrer.
                 context.Response.StatusCode = 666;
 
-                Client.Download(Utils.ToBase64String(address), Program.webCache + "/" + Utils.ToBase64String(address));
+                Client.Download(Utils.ToBase64String(address), context, Program.webCache + "/" + Utils.ToBase64String(address));
             }
 
 
@@ -566,7 +564,9 @@ namespace windows_desktop
 
         private static void ProcessSeek(CacheItem<FileDownloadObject> cache)
         {
-            
+
+
+
             var download = cache.CachedValue;
 
             var context = download.Context;
@@ -589,7 +589,7 @@ namespace windows_desktop
 
                 var file = download.FileStream;
 
-
+                long position = file.GetPosition(source);
 
                 context.Response.StatusCode = 200;
 
@@ -607,11 +607,11 @@ namespace windows_desktop
 
                     range2 = long.Parse(ranges[1]);
 
-                    
 
-                    Thread.Sleep(6000);
                 }
                 catch { }
+
+                Log.Add(Log.LogTypes.streamSeek, new { File = cache.CachedValue, Range1 = range1, Range2 = range2, RequestTraceIdentifier = context.Request.RequestTraceIdentifier });
 
                 context.Response.AddHeader("Content-Length", (range2 - range1).ToString());
 
@@ -628,63 +628,59 @@ namespace windows_desktop
                 var buffer = new byte[bufferSize];
 
                 var read = 0;
+
+                var waitMoreData = false;
+
                 try
                 {
-                    while ((read = file.Read(buffer, 0, (int)bufferSize, source)) > 1)
+
+
+                    while (true)
                     {
-                        int attempts = 0;
+                        read = file.Read(buffer, 0, (int)bufferSize, source);
 
-                        while (attempts < 5)
+                        if (read == 0)
+                            break;
+
+                        if (read == -1)
                         {
-                            try
-                            {
-                                context.Response.OutputStream.Write(buffer, 0, read);
+                            waitMoreData = true;
 
-                                context.Response.OutputStream.Flush();
-
-
-                                //if (!context.Response.OutputStream.CanWrite)
-                                //    break;
-
-                                cache.Reset();
-
-                                break;
-                            }
-                            catch(HttpListenerException e)
-                            {
-                                Thread.Sleep(50);
-
-                                Log.Write("SeekHttpListenerException: " + file.Filename + "\tattempt: " + attempts + " " + e.ToString(), Log.LogTypes.InterfaceException);
-                            }
-
-                            attempts++;
+                            break;
                         }
 
+                        lock(context)
+                            context.Response.OutputStream.Write(buffer, 0, read);
+
+                        //context.Response.OutputStream.Flush();
+
+                        Log.Add(Log.LogTypes.streamWrite, new { File = cache.CachedValue, Read = read, Position = position, Range1 = range1, Range2 = range2, RequestTraceIdentifier = context.Request.RequestTraceIdentifier });
+
+                        position += read;
+
+                        cache.Reset();
                     }
                 }
-                catch (Exception e)
+                catch (HttpListenerException e)
                 {
-                    Log.Write("SeekException: " + file.Filename + "\tellapsed: " + DateTime.Now.Subtract(cache.CreateTime).TotalSeconds + " " + e.ToString(), Log.LogTypes.InterfaceException);
+                    Log.Add(Log.LogTypes.Ever, new { File = cache.CachedValue, Read = read, Position = position, Range1 = range1, Range2 = range2, RequestTraceIdentifier = context.Request.RequestTraceIdentifier, Exception = e });
                 }
                 finally
                 {
-                    context.Response.Close();
+                    Log.Add(Log.LogTypes.streamOutputClose, new { File = cache.CachedValue, Read = read, Position = position, Range1 = range1, Range2 = range2, RequestTraceIdentifier = context.Request.RequestTraceIdentifier, CloseStream = !waitMoreData });
+
+                    if (!waitMoreData)
+                        context.Response.Close();
                 }
             }
-            catch (Exception e)
-            {
-                Log.Write("SeekLastException: " + e.ToString(), Log.LogTypes.InterfaceException);
-            }
-
             finally
             {
+                Log.Add(Log.LogTypes.streamInputClose, new { File = cache.CachedValue, RequestTraceIdentifier = context.Request.RequestTraceIdentifier, CloseStream = closeFile && download.FileStream != null });
+
                 if (closeFile && download.FileStream != null)
                     download.FileStream.Dispose(source);
-
             }
         }
-
-
 
 
         private static void ProcessCreateUserAvatar(HttpListenerContext context)
@@ -831,6 +827,9 @@ namespace windows_desktop
 
             if (download != null)
             {
+                if (cache.CachedValue.Filename.Contains("jBx-OWAanol4XmecG1R9hqLDVIrfHDllnS9vwBnejy0="))
+                    Log.Write("OnDownload\t" + download.Context.Request.RequestTraceIdentifier);
+
                 ProcessSeek(cache);
 
                 return;
@@ -963,7 +962,7 @@ namespace windows_desktop
 
             internal HttpListenerContext Context;
 
-            internal string Filename;
+            public string Filename;
 
             internal string Source;
 
@@ -977,7 +976,7 @@ namespace windows_desktop
 
                 Context = context;
 
-                Source = Utils.ToBase64String(Utils.GetAddress()); 
+                Source = Utils.ToBase64String(Utils.GetAddress());
             }
 
             public void Dispose()

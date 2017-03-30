@@ -57,9 +57,7 @@ namespace library
                         if (paths[0] != null)
                             tags = TagLib.File.Create(paths[0]);
                     }
-                    catch (Exception e) {
-                        Log.Write("Fileupload error: " + e.ToString(), Log.LogTypes.InterfaceException);
-                    }
+                    catch { }
 
                     var fi = new FileInfo(paths[0]);
 
@@ -659,9 +657,7 @@ namespace library
                     nameItems = TorrentNameParser.ParseTitle(title);
                 }
             }
-            catch (Exception e) {
-                Log.Write("GeneratePosts:Title error: " + e.ToString(), Log.LogTypes.InterfaceException);
-            }
+            catch { }
 
             if (tags == null || tags.Properties == null)
             {

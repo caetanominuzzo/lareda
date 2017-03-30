@@ -86,6 +86,8 @@ namespace library
         {
             try
             {
+                Log.Add(Log.LogTypes.journalingWrite, item);
+
                 if (item.writeToPacketsDir)
                 {
                     File.WriteAllBytes(item.Filename, item.Data);
@@ -191,7 +193,7 @@ namespace library
 
             string filename;
 
-            internal string Filename
+            public string Filename
             {
                 get
                 {
@@ -205,7 +207,7 @@ namespace library
                 }
             }
 
-            internal int Offset = 1;
+            public int Offset = 1;
 
             internal byte[] Data;
         }

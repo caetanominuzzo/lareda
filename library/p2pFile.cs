@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -14,11 +15,11 @@ namespace library
     {
         internal byte[] Address;
 
-        internal string Filename;
+        public string Filename;
 
         internal string SpecifFilename = string.Empty;
 
-        List<Packet> FilePackets = new List<Packet>();
+        SortedList<int, Packet> FilePackets = new SortedList<int, Packet>();
 
         List<Packet> FilePacketsArrived = new List<Packet>();
 
@@ -30,17 +31,35 @@ namespace library
 
         int dequeueOffset;
 
-        internal bool Success = false;
+        public bool Success = false;
 
-        internal bool Cancel = false;
+        public bool Cancel = false;
 
         Packet Root;
+
+        Packet First;
+
+        Packet SecondLast;
+
+        Packet Last;
+
+        List<HttpListenerContext> Context = new List<HttpListenerContext>();
+
+        public IEnumerable<Guid> RequestTraceIdentifier
+        {
+            get
+            {
+                return Context.Select(x => x.Request.RequestTraceIdentifier);
+            }
+        }
 
         enum FileStatus
         {
             addressStructureIncomplete = 0,
             addressStructureComplete = 1,
-            dataStructureComplete = 2
+            dataStructureComplete = 2,
+            dataComplete = 3
+
         }
 
         FileStatus status = FileStatus.addressStructureIncomplete;
@@ -54,30 +73,39 @@ namespace library
 
             set
             {
-                if (value == FileStatus.dataStructureComplete &&
-                    status != FileStatus.dataStructureComplete)
+                if ((value == FileStatus.dataStructureComplete || value == FileStatus.dataComplete) &&
+                    (status != FileStatus.dataStructureComplete && status != FileStatus.dataComplete))
                 {
-                    Log.Write("file ready:\t[" + Utils.ToSimpleAddress(Address), Log.LogTypes.queue);
+                    Log.Add(Log.LogTypes.queueDataStructureComplete, this.Filename);
 
-                    //OnFileDownload
+                    Client.DownloadComplete(Address, Filename, SpecifFilename);
                 }
 
                 status = value;
             }
         }
 
-        internal p2pFile(byte[] address, string filename = null, string specifFile = null)
+        internal void AddContext(HttpListenerContext context)
+        {
+            lock (Context)
+                Context.Add(context);
+        }
+
+        internal p2pFile(byte[] address, HttpListenerContext context, string filename = null, string specifFile = null)
         {
             Address = address;
 
             Filename = filename;
-            
-            Log.Write("add file \t[" + Utils.ToSimpleAddress(Address) + "]\t " + filename, Log.LogTypes.queueAddFile);
+
+            lock (Context)
+                Context.Add(context);
+
+            Log.Add(Log.LogTypes.queueAddFile, this);
 
             if (!string.IsNullOrEmpty(specifFile))
                 SpecifFilename = specifFile;
 
-            Root = AddPacket(address, null, filename);
+            Root = AddPacket(address, null, 0, filename);
 
             Thread thread = new Thread(Refresh3);
 
@@ -87,127 +115,59 @@ namespace library
         enum RefreshSteps
         {
             Initial = 0,
-            Final = 1,
-            Sequencial = 2
+            FinalMinusOne = 1,
+            Final = 2,
+            Sequencial = 3
         }
 
-        RefreshSteps step = RefreshSteps.Initial;
-
-
-        void Refresh2()
-        {
-
-        }
-
-        void Refresh()
-        {
-            while (!Client.Stop && !Cancel)
-            {
-                Packet packet = null;
-
-                var end_of_packets = false;
-
-                lock (FilePackets)
-                    end_of_packets = dequeueOffset == FilePackets.Count();
-
-                Log.Write("Queue Item Refresh: [" + Utils.ToSimpleAddress(Address) + "]\tPackets: " + FilePackets.Count() + "\tOffset: " + dequeueOffset + "\tArrived: " + FilePacketsArrived.Count(), Log.LogTypes.queue);
-
-                if (end_of_packets)
-                {
-
-                    newPacketEvent.Reset();
-
-                    Log.Write("end of packets:\t[" + Utils.ToSimpleAddress(Address), Log.LogTypes.queueEndOfPackets);
-
-                    if (newPacketEvent.WaitOne(pParameters.restart_requesting_packets_from_coda_timeout))
-                    {
-                        end_of_packets = false;
-
-                        Log.Write("new packets arrived t[" + Utils.ToSimpleAddress(Address), Log.LogTypes.queueAddPacket);
-                    }
-                    else
-                    {
-
-                        Log.Write("timeout: no new packets arrived t[" + Utils.ToSimpleAddress(Address), Log.LogTypes.queueLastPacketTimeout);
-
-                        lock (FilePackets)
-                        {
-                            IEnumerable<Packet> arrived = FilePackets.Where(x => x.Arrived);
-
-                            if (arrived.Count() == FilePackets.Count())
-                                Success = true;
-
-                            FilePackets.RemoveAll(x => x.Arrived);
-
-                            FilePacketsArrived.AddRange(arrived);
-                        }
-
-                        dequeueOffset = 0;
-
-                        step = RefreshSteps.Initial;
-
-                        if (!Success)
-                            break;
-                    }
-                }
-
-                lock (FilePackets)
-                {
-                    if (Root != null && !FilePackets.Any())
-                    {
-                        Queue.QueueComplete(this);
-
-                        Log.Write("file end:\t[" + Utils.ToSimpleAddress(Address) + "]\t " + Filename, Log.LogTypes.queueFileComplete);
-
-                        break;
-
-                    }
-
-                    switch (step)
-                    {
-                        case RefreshSteps.Sequencial:
-                        case RefreshSteps.Initial:
-
-                            packet = FilePackets[dequeueOffset++];
-
-                            if (step == RefreshSteps.Initial)
-                                step = RefreshSteps.Final;
-
-                            break;
-
-                        case RefreshSteps.Final:
-
-                            packet = FilePackets[FilePackets.Count() - 1];
-
-                            step = RefreshSteps.Sequencial;
-
-                            break;
-
-                    }
-
-                    packet.Get();
-
-                    p2pFile.Queue.Reset(this);
-
-                }
-            }
-
-            stoppedEvent.Set();
-        }
-
+        RefreshSteps step = RefreshSteps.Sequencial;
         bool Ended
         {
             get
             {
                 lock (FilePackets)
-                    return Cancel || Success || !FilePackets.Any() || FilePackets.All(x => x.Arrived);
+                    return Cancel || Success || !FilePackets.Any() || FilePackets.All(x => x.Value.Arrived);
             }
+        }
+
+        bool AnyContext()
+        {
+            lock (Context)
+            {
+                for (var i = Context.Count() - 1; i >= 0; i--)
+                {
+                    var c = Context[i];
+
+                    try
+                    {
+                        lock (c)
+                            if (!c.Response.OutputStream.CanWrite)
+                                Context.RemoveAt(i);
+                    }
+                    catch
+                    {
+                        Context.RemoveAt(i);
+                    }
+                }
+            }
+
+            return Context.Any();
         }
 
         void Refresh3()
         {
             while (!Client.Stop && !Ended)
             {
+                Log.Add(Log.LogTypes.Ever, new { First = FilePackets.First().Key, Last = FilePackets.Last().Key });
+
+
+                if (!AnyContext())
+                {
+                    Cancel = true;
+
+                    break;
+                }
+
                 Packet packet = null;
 
                 var end_of_packets = false;
@@ -215,20 +175,25 @@ namespace library
                 lock (FilePackets)
                     end_of_packets = dequeueOffset == FilePackets.Count();
 
-                Log.Write("Queue Item Refresh: [" + Utils.ToSimpleAddress(Address) + "]\tPackets: " + FilePackets.Count() + "\tOffset: " + dequeueOffset + "\tArrived: " + FilePacketsArrived.Count(), Log.LogTypes.queue);
+                Log.Add(Log.LogTypes.queueRefresh, this);
+
+                var resetDequeueOffset = false;
 
                 lock (FilePackets)
-                    while (dequeueOffset == FilePackets.Count())
+                    resetDequeueOffset = dequeueOffset == FilePackets.Count() || !FilePackets.Any();
+
+
+                if (resetDequeueOffset)
+                {
+                    newPacketEvent.Reset();
+
+                    if (newPacketEvent.WaitOne(pParameters.restart_requesting_packets_from_coda_timeout))
                     {
-                        newPacketEvent.Reset();
-
-                        if (newPacketEvent.WaitOne(pParameters.restart_requesting_packets_from_coda_timeout))
+                        lock (FilePackets)
                         {
-                            IEnumerable<Packet> arrived = FilePackets.Where(x => x.Arrived);
-
-                            FilePackets.RemoveAll(x => x.Arrived);
-
-                            FilePacketsArrived.AddRange(arrived);
+                            for (var i = FilePackets.Count() - 1; i >= 0; i--)
+                                if (FilePackets.ElementAt(i).Value.Arrived)
+                                    FilePackets.RemoveAt(i);
 
                             if (!FilePackets.Any())
                             {
@@ -236,33 +201,20 @@ namespace library
 
                                 break;
                             }
-                        }
-                        else
-                        {
-                            Log.Write("timeout: no new packets arrived t[" + Utils.ToSimpleAddress(Address), Log.LogTypes.queueLastPacketTimeout);
-
-                            dequeueOffset = 0;
-
-                            step = RefreshSteps.Initial;
-
-                            Cancel = true;
-
-                            break;
+                            else
+                                dequeueOffset = 0;
                         }
                     }
+                    else
+                    {
+                        dequeueOffset = 0;
 
-                if (Success)
-                {
-                    Queue.QueueComplete(this);
+                        step = RefreshSteps.Initial;
 
-                    Log.Write("file end:\t[" + Utils.ToSimpleAddress(Address) + "]\t " + Filename, Log.LogTypes.queueFileComplete);
+                        //Cancel = true;
 
-                    break;
-
-                }
-                else if(Cancel)
-                {
-                    break;
+                        //break;
+                    }
                 }
 
 
@@ -271,16 +223,39 @@ namespace library
                     case RefreshSteps.Sequencial:
                     case RefreshSteps.Initial:
 
-                        packet = FilePackets[dequeueOffset++];
+                        lock (FilePackets)
+                            packet = FilePackets.ElementAt(dequeueOffset).Value;
+
+                        dequeueOffset = Math.Min(FilePackets.Count(), dequeueOffset + 1);
 
                         if (step == RefreshSteps.Initial)
+                            step = RefreshSteps.FinalMinusOne;  
+
+                        break;
+
+                    case RefreshSteps.FinalMinusOne:
+
+
+                        if (FilePackets.Count() >= 2)
+                        {
+                            packet = FilePackets.ElementAt(FilePackets.Count() - 2).Value;
+
                             step = RefreshSteps.Final;
+                        }
+                        else
+                        {
+                            packet = FilePackets.ElementAt(FilePackets.Count() - 1).Value;
+
+                            step = RefreshSteps.Sequencial;
+                        }
+
+
 
                         break;
 
                     case RefreshSteps.Final:
 
-                        packet = FilePackets[FilePackets.Count() - 1];
+                        packet = FilePackets.ElementAt(FilePackets.Count() - 1).Value;
 
                         step = RefreshSteps.Sequencial;
 
@@ -294,18 +269,20 @@ namespace library
 
             }
 
+            if (Success)
+            {
+                Queue.QueueComplete(this);
+
+                Log.Add(Log.LogTypes.queueFileComplete, this);
+            }
+
             stoppedEvent.Set();
         }
 
-        internal IEnumerable<Packet> AddPacketRange(IEnumerable<byte[]> addresses, p2pFile.Packet parent, string filename = null)
-        {
-            foreach (var address in addresses)
-                yield return AddPacket(address, parent, filename);
-        }
 
-        internal Packet AddPacket(byte[] address, p2pFile.Packet parent, string filename = null)
+        internal Packet AddPacket(byte[] address, p2pFile.Packet parent, int offset, string filename = null)
         {
-            Packet p = new Packet(this, parent, address, filename);
+            Packet p = new Packet(this, parent, offset, address, filename);
 
             AddPacket(p);
 
@@ -315,9 +292,9 @@ namespace library
         void AddPacket(Packet packet)
         {
             lock (FilePackets)
-                FilePackets.Add(packet);
+                FilePackets.Add(packet.Offset, packet);
 
-            Log.Write("add packets: [" + Utils.ToSimpleAddress(this.Address) + "] [" + Utils.ToSimpleAddress(packet.Address), Log.LogTypes.queueAddPacket);
+            Log.Add(Log.LogTypes.queueAddPacket, packet);
 
             newPacketEvent.Set();
         }
@@ -325,17 +302,44 @@ namespace library
         bool MayHaveLocalData()
         {
             lock (FilePackets)
-                return FilePackets.Any(x => x.MayHaveLocalData);
+                return FilePackets.Any(x => x.Value.MayHaveLocalData);
         }
+
+        internal bool Seek(long position)
+        {
+            int newOffset = 0;
+
+            lock (FilePackets)
+            {
+                for (var i = 0; i < FilePackets.Count(); i++)
+                {
+                    newOffset = i;
+
+                    if (FilePackets[i].Offset * pParameters.packetSize > position)
+                        break;
+
+                }
+
+                if (newOffset != FilePackets.Count())
+                {
+                    dequeueOffset = newOffset;
+
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
 
         public void Dispose()
         {
-            Log.Write("file disposed: [" + Utils.ToSimpleAddress(this.Address), Log.LogTypes.queueFileDisposed);
+            Log.Add(Log.LogTypes.queueFileDisposed, this);
 
             this.Cancel = true;
 
-            lock (FilePackets)
-                FilePackets.Clear();
+            //lock (FilePackets)
+            //    FilePackets.Clear();
         }
     }
 

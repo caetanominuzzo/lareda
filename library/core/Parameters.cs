@@ -60,7 +60,7 @@ namespace library
 
         public static int time_out = 4000;
 
-        public static int restart_requesting_packets_from_coda_timeout = 2000;
+        public static int restart_requesting_packets_from_coda_timeout = 500;
 
         public static int peers_interval = 10000;
         

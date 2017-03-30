@@ -63,9 +63,18 @@ namespace windows_desktop
 
             Client.OnFileUpload += Client_OnFileUpload;
 
-            Client.Upload(dropFiles, user);
+            ThreadPool.QueueUserWorkItem(ThreadUpload, new object[2] { dropFiles, user });
+
+            
 
            // Client.OnFileUpload -= Client_OnFileUpload;
+        }
+
+        void ThreadUpload(object o)
+        {
+            var list = (object[])o;
+
+            Client.Upload((string[])list[0], (byte[])list[1]);
         }
 
         void ThreadDiscover(object o)

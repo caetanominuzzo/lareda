@@ -36,7 +36,7 @@ namespace library
                     ProcessPacket();
                     break;
 
-                case RequestCommand.Links:
+                case RequestCommand.Metapackets:
                 case RequestCommand.Hashs:
                     ProcessMetadata();
                     break;

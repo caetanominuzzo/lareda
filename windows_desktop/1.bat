@@ -25,6 +25,3 @@ cd ..
 cd cache
 del *.* /q
 cd ..
-
-
-start la-red

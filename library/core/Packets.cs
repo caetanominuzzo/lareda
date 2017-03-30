@@ -183,6 +183,7 @@ namespace library
                 return data;
             try
             {
+                //Thread.Sleep(100);
                 if (File.Exists(filename))
                     return File.ReadAllBytes(filename);
             }

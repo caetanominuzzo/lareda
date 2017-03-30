@@ -13,17 +13,22 @@ namespace library
 
         static Dictionary<string, long> source_position = new Dictionary<string, long>();
 
-        public long Length { get { return _stream.Length; } }
+        public long Length { get { if (_stream != null && _stream.CanRead) return _stream.Length; else return 0; } }
 
         public string Filename;
 
         Stream _stream;
+
+        p2pFile P2pFile;
+
 
         p2pStream(string filename, string source)
         {
             Filename = filename;
 
             _stream = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+
+            P2pFile = p2pFile.Queue.Get(Filename);
 
             lock(source_position)
                 source_position.Add(source + Filename, 0);
@@ -58,6 +63,12 @@ namespace library
             item.CachedValue.Dispose();
         }
 
+        public long GetPosition(string source)
+        {
+            lock (source_position)
+                return source_position[source + Filename];
+        }
+
         public long Seek(long offset, SeekOrigin origin, string source)
         {
             var result = _stream.Seek(offset, origin);
@@ -73,6 +84,11 @@ namespace library
             if(source_position[source + Filename] != _stream.Position)
                 lock(source_position)
                     source_position[source + Filename] = _stream.Seek(source_position[source + Filename], SeekOrigin.Begin);
+
+            //if(P2pFile != null && !P2pFile.Seek(source_position[source + Filename]))
+            //{
+            //    return -1;
+            //}
 
             var result = _stream.Read(buffer, offset, count);
 

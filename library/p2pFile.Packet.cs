@@ -17,9 +17,19 @@ namespace library
 
             internal byte[] Address;
 
-            string Filename;
+            public string Filename;
 
-            internal PacketTypes PacketType;
+            public PacketTypes PacketType;
+
+            public int Offset;
+
+            public IEnumerable<Guid> RequestTraceIdentifier
+            {
+                get
+                {
+                    return File.Context.Select(x => x.Request.RequestTraceIdentifier);
+                }
+            }
 
             void ProcessPacketPriority()
             {
@@ -34,42 +44,71 @@ namespace library
 
                 if (root.Arrived && root.PacketType != PacketTypes.Addresses)
                 {
-                    File.Status = FileStatus.dataStructureComplete;
+                    File.Status = FileStatus.dataComplete;
+
+                    File.Success = true;
 
                     return;
                 }
 
-                if (root.Children.All(x => !x.Arrived))
+                if (root.Children.All(x => !x.Value.Arrived))
                 {
                     File.Status = FileStatus.addressStructureIncomplete;
 
                     return;
                 }
 
-                if (root.Children.Any(x => x.Arrived && x.PacketType != PacketTypes.Addresses))
+                if (root.Children.Any(x => x.Value.Arrived && x.Value.PacketType != PacketTypes.Addresses))
                 {
-                    if (root.Children.First().Arrived &&
-                        root.Children.Last().Arrived)
-                        File.Status = FileStatus.dataStructureComplete;
+                    //if (File.FilePackets[0].Arrived &&
+                    //    File.FilePackets[File.FilePackets.Count() - 1].Arrived &&
+                    //    File.FilePackets[File.FilePackets.Count() - 2].Arrived)
+                    if (root.Children.First().Value.Arrived &&
+                        root.Children.ElementAt(root.Children.Count() - 1).Value.Arrived &&
+                        root.Children.ElementAt(root.Children.Count() - 2).Value.Arrived)
+                    {
+                        if (root.Children.All(x => x.Value.Arrived))
+                        {
+                            File.Status = FileStatus.dataComplete;
 
+                            File.Success = true;
+                        }
+                        else
+                            File.Status = FileStatus.dataStructureComplete;
+                    }
                     else
                         File.Status = FileStatus.addressStructureComplete;
                 }
 
-                if (root.Children.All(x => x.Arrived && x.PacketType == PacketTypes.Addresses
-                        && x.Children.All(y => !y.Arrived)))
+                if (root.Children.All(x => x.Value.Arrived && x.Value.PacketType == PacketTypes.Addresses
+                        && x.Value.Children.All(y => !y.Value.Arrived)))
                 {
                     File.Status = FileStatus.addressStructureIncomplete;
 
                     return;
                 }
 
-                if (root.Children.All(x => x.Arrived && x.PacketType == PacketTypes.Addresses
-                        && x.Children.Any(y => y.Arrived && y.PacketType != PacketTypes.Addresses)))
+                if (root.Children.All(x => x.Value.Arrived && x.Value.PacketType == PacketTypes.Addresses
+                        && x.Value.Children.Any(y => y.Value.Arrived && y.Value.PacketType != PacketTypes.Addresses)))
                 {
-                    if (root.Children.First().Children.First().Arrived &&
-                        root.Children.Last().Children.Last().Arrived)
-                        File.Status = FileStatus.dataStructureComplete;
+                    if (root.Children.First().Value.Children.First().Value.Arrived &&
+                        root.Children.Last().Value.Children.Last().Value.Arrived &&
+                            ((root.Children.Last().Value.Children.Count() >= 2 && root.Children.Last().Value.Children[root.Children.Last().Value.Children.Count() - 2].Arrived) ||
+                            (root.Children.Last().Value.Children.Count() < 2 && root.Children[root.Children.Count() - 2].Children.Last().Value.Arrived)
+                            )
+                        )
+                    {
+
+                        if (root.Children.All(x => x.Value.Children.All(y => y.Value.Arrived)))
+                        {
+                            File.Status = FileStatus.dataComplete;
+
+                            File.Success = true;
+                        }
+                        else
+                            File.Status = FileStatus.dataStructureComplete;
+                    }
+
                     else
                         File.Status = FileStatus.addressStructureComplete;
 
@@ -97,19 +136,21 @@ namespace library
 
             object dataArrivedObjectLocker = new object();
 
-            List<p2pFile.Packet> Children = new List<Packet>();
+            SortedList<int, p2pFile.Packet> Children = new SortedList<int, Packet>();
 
             p2pFile.Packet Parent = null;
 
-            internal Packet(p2pFile file, p2pFile.Packet parent, byte[] address, string filename = null)
+            internal Packet(p2pFile file, p2pFile.Packet parent, int offset, byte[] address, string filename = null)
             {
                 File = file;
 
                 Address = address;
 
                 Filename = filename;
-                
+
                 Parent = parent;
+
+                Offset = offset;
             }
 
             internal void VerifyDataArrived(byte[] address, byte[] data)
@@ -126,7 +167,12 @@ namespace library
             {
                 lock (dataArrivedObjectLocker)
                 {
-                    Log.Write("packet arrived:\t[" + Utils.ToSimpleAddress(File.Address) + "]\t[" + Utils.ToSimpleAddress(Address), Log.LogTypes.queueGetPacket);
+                    PacketType = (PacketTypes)data[0];
+
+                    if (PacketType == PacketTypes.Content)
+                        Offset = BitConverter.ToInt32(data, 1);
+
+                    Log.Add(Log.LogTypes.queuePacketArrived, this);
 
                     this.data = data;
 
@@ -135,75 +181,105 @@ namespace library
                     if (Arrives != 0)
                         return;
 
-                    PacketType = (PacketTypes)data[0];
-
-                    switch (PacketType)
-                    {
-                        case PacketTypes.Addresses:
-
-                            List<byte[]> addresses = Addresses.ToAddresses(data.Skip(pParameters.packetHeaderSize));
-
-                            var count = addresses.Count();
-
-                            //if (count > 0)
-                            //    Children.Add(File.AddPacket(addresses[0], this, Filename));
-
-                            //if (count > 2)
-                            //    Children.Add(File.AddPacket(addresses[count - 2], this, Filename));
-
-                            //if (count > 1)
-                            //    Children.Add(File.AddPacket(addresses[count - 1], this, Filename));
-
-                            //if(count > 3)
-                            //    Children.AddRange(File.AddPacketRange(addresses.Skip(1).Take(count -3), this, Filename));
-
-                            foreach (byte[] addr in addresses)
-                                Children.Add(File.AddPacket(addr, this, Filename));
-
-                            break;
-
-                        case PacketTypes.Directory:
-
-                            Directory.CreateDirectory(File.Filename);
-
-                            Dictionary<byte[], string> files =
-                                Addresses.ToDirectories(data.Skip(pParameters.packetHeaderSize).ToArray());
-
-                            foreach (byte[] addr in files.Keys)
-                                File.AddPacket(addr, this, Path.Combine(File.Filename, files[addr]));
-
-                            break;
-
-                        case PacketTypes.Content:
-
-                            var buffer = data.Skip(pParameters.packetHeaderSize).ToArray();
-
-                            var offset = BitConverter.ToInt32(data, 1);
-
-                            //Log.Write("OFFSET " + offset.ToString());
-
-                            DelayedWrite.Add(Filename ?? File.Filename, buffer, offset);
-
-                            break;
-
-                        case PacketTypes.Metapacket:
-
-                            DelayedWrite.Add(Filename, data, 0);
-
-                            break;
-                    }
-
-                    Arrives++;
                 }
+
+
+                switch (PacketType)
+                {
+                    case PacketTypes.Addresses:
+
+                        List<byte[]> addresses = Addresses.ToAddresses(data.Skip(pParameters.packetHeaderSize));
+
+                        var count = addresses.Count();
+
+                        var baseOffset = (Parent == null ? 0 : Parent.Offset) * pParameters.packetSize / pParameters.addressSize;
+
+                        baseOffset++;
+
+                        //two items to the main thread
+                        ProcessAddPackets(new object[] { addresses.Take(1), baseOffset++ });
+
+                        ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(2), baseOffset + count - 3 });
+
+                        ProcessAddPackets(new object[] { addresses.Skip(1).Take(count - 3), baseOffset });
+
+                        //ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] { addresses.Skip(1).Take(count - 3), baseOffset });
+
+                        //ProcessAddPackets(addresses);
+
+                        break;
+
+                    case PacketTypes.Directory:
+
+                        Directory.CreateDirectory(File.Filename);
+
+                        Dictionary<byte[], string> files =
+                            Addresses.ToDirectories(data.Skip(pParameters.packetHeaderSize).ToArray());
+
+                        var offset = 1;
+
+                        foreach (byte[] addr in files.Keys)
+                            File.AddPacket(addr, this, offset++, Path.Combine(File.Filename, files[addr]));
+
+                        break;
+
+                    case PacketTypes.Content:
+
+                        var buffer = data.Skip(pParameters.packetHeaderSize).ToArray();
+
+                        if (Offset != BitConverter.ToInt32(data, 1))
+                            Offset = BitConverter.ToInt32(data, 1);
+
+                        //Log.Write("OFFSET " + offset.ToString());
+
+                        DelayedWrite.Add(Filename ?? File.Filename, buffer, Offset);
+
+                        break;
+
+                    case PacketTypes.Metapacket:
+
+                        DelayedWrite.Add(Filename, data, 0);
+
+                        break;
+                }
+
+                lock (dataArrivedObjectLocker)
+                    Arrives++;
+
+                if(this.Offset == 199 || this.Offset == 198)
+                { }
 
                 ProcessPacketPriority();
 
-                File.newPacketEvent.Set();
+                //File.newPacketEvent.Set();
+            }
+
+            private void ProcessAddPackets(object data)
+            {
+                var datas = (object[])data;
+
+                var addresses = (IEnumerable<byte[]>)datas[0];
+
+                var offset = (int)datas[1];
+
+                if(offset == 198 || offset == 199)
+                {
+
+                }
+
+                foreach (byte[] addr in addresses)
+                {
+                    var p = File.AddPacket(addr, this, offset, Filename);
+                    
+                    Children.Add(p.Offset, p);
+
+                    offset++;
+                }
             }
 
             internal void Get()
             {
-                Log.Write("packet get: \t[" + Utils.ToSimpleAddress(File.Address) + "]\t [" + Utils.ToSimpleAddress(Address) + "]\t " + Filename, Log.LogTypes.queueGetPacket);
+                Log.Add(Log.LogTypes.queueGetPacket, this);
 
 
                 byte[] data = null;

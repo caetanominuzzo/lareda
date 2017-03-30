@@ -217,7 +217,9 @@ namespace library
             var metapackets = MetaPackets.LocalSearch(address, type);
 
             if (metapackets.Any())
+            {
                 SearchReturn(address, type, metapackets);
+            }
 
             if (VirtualAttributes.IsVirtualAttribute(address))
                 return;
@@ -233,7 +235,7 @@ namespace library
 
             while (requisitions < pParameters.propagation)
             {
-                var s = new p2pRequest(type == MetaPacketType.Hash ? RequestCommand.Hashs : RequestCommand.Links, null, Client.LocalPeer, Client.LocalPeer, Peers.GetPeer(address), address);
+                var s = new p2pRequest(type == MetaPacketType.Hash ? RequestCommand.Hashs : RequestCommand.Metapackets, null, Client.LocalPeer, Client.LocalPeer, Peers.GetPeer(address), address);
 
                 var sent = s.Send();
 
@@ -398,10 +400,10 @@ namespace library
             return null;
         }
 
-        public static void Download(string base64Address, string filename, string specifItem = null)
+        public static void Download(string base64Address, HttpListenerContext context, string filename, string specifItem = null)
         {
             if (Connected())
-                p2pFile.Queue.Add(base64Address, filename, specifItem);
+                p2pFile.Queue.Add(base64Address, context, filename, specifItem);
         }
 
         private static bool Connected()
@@ -419,7 +421,7 @@ namespace library
 
         }
 
-        public static void BootStrap()
+        public static void BootStrap(object state)
         {
             VirtualAttributes.BootStrap();
 
@@ -538,11 +540,7 @@ namespace library
 
             return result;
         }
-
-        public static void QueuePrint()
-        {
-            p2pFile.Queue.Print();
-        }
+        
         
 
         public static string Print()

@@ -186,7 +186,7 @@ namespace library
             if (peer != null)
             {
                 p2pRequest request = new p2pRequest(
-                    command: stats.Type == MetaPacketType.Hash ? RequestCommand.Hashs : RequestCommand.Links,
+                    command: stats.Type == MetaPacketType.Hash ? RequestCommand.Hashs : RequestCommand.Metapackets,
                     address: toSincronize[0].Address, 
                     originalPeer: Client.LocalPeer, 
                     senderPeer: Client.LocalPeer,

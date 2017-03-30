@@ -74,6 +74,16 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugClean|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Frapper">
       <HintPath>..\packages\Frapper.1.0.4\lib\net35\Frapper.dll</HintPath>
@@ -114,6 +124,12 @@
     <Compile Include="fmLoad.Designer.cs">
       <DependentUpon>fmLoad.cs</DependentUpon>
     </Compile>
+    <Compile Include="fmLog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="fmLog.Designer.cs">
+      <DependentUpon>fmLog.cs</DependentUpon>
+    </Compile>
     <Compile Include="Print.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -137,6 +153,9 @@
     <EmbeddedResource Include="fmLoad.resx">
       <DependentUpon>fmLoad.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="fmLog.resx">
+      <DependentUpon>fmLog.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Print.resx">
       <DependentUpon>Print.cs</DependentUpon>
     </EmbeddedResource>
@@ -150,6 +169,9 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <None Include="1.bat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="2.bat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -221,6 +243,8 @@ $(SolutionDir)windows_desktop_installer/bin/$(ConfigurationName)/windows_desktop
 ) else if $(ConfigurationName) == DebugNetwork ( 
 powershell Stop-Process -processname la-red
 powershell start-process 2.bat
+)  else if $(ConfigurationName) == DebugClean ( 
+powershell start-process 1.bat
 )</PostBuildEvent>
   </PropertyGroup>
   <Import Project="..\packages\Accord.3.0.2\build\Accord.targets" Condition="Exists('..\packages\Accord.3.0.2\build\Accord.targets')" />

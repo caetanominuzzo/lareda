@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -50,6 +51,13 @@ namespace library
         internal bool IsVirtualAttribute = false;
 
         internal bool IsReseted = false;
+
+        SearchResult Result;
+
+        internal DIV(SearchResult result)
+        {
+            Result = result;
+        }
 
         internal Dictionary<byte[], int> Distances = new Dictionary<byte[], int>(new ByteArrayComparer());
 
@@ -268,7 +276,7 @@ namespace library
 
                 var pic = string.Empty;
 
-                var picAddress = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_IMAGE_THUMB);
+                var picAddress = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_IMAGE_THUMB, Result.Context);
 
                 var videoStream = string.Empty;
 
@@ -293,19 +301,19 @@ namespace library
                     videoStream = "\"video\": \"" + videoStreamAddres + "\"";
 
                     if (picAddress.Length == 0 && videoStreamAddres.Length == 0 && firstauthor != null)
-                        picAddress = SearchResult.FirstContent(firstauthor, VirtualAttributes.MIME_TYPE_IMAGE_THUMB);
+                        picAddress = SearchResult.FirstContent(firstauthor, VirtualAttributes.MIME_TYPE_IMAGE_THUMB, Result.Context);
 
                     pic = "\"pic\": \"" + picAddress + "\"";
 
                     audioStream = string.Empty;
 
-                    var audioStreamAddres = SearchResult.FirstContent(videoDiv == null ? this : videoDiv, VirtualAttributes.MIME_TYPE_AUDIO_STREAM);
+                    var audioStreamAddres = SearchResult.FirstContent(videoDiv == null ? this : videoDiv, VirtualAttributes.MIME_TYPE_AUDIO_STREAM, Result.Context);
 
                     audioStream = "\"audio\": \"" + audioStreamAddres + "\"";
 
                     subtitleStream = string.Empty;
 
-                    var subtitleStreamAddres = SearchResult.FirstContent(videoDiv == null ? this : videoDiv, VirtualAttributes.MIME_TYPE_TEXT_STREAM);
+                    var subtitleStreamAddres = SearchResult.FirstContent(videoDiv == null ? this : videoDiv, VirtualAttributes.MIME_TYPE_TEXT_STREAM, Result.Context);
 
                     subtitleStream = "\"subtitle\": \"" + subtitleStreamAddres + "\"";
                     
@@ -319,17 +327,17 @@ namespace library
 
                     download = string.Empty;
 
-                    var downloadAddress = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_DOWNLOAD);
+                    var downloadAddress = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_DOWNLOAD, Result.Context);
 
                     download = "\"download\": \"" + downloadAddress + "\"";
 
                 }
 
-                var text = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_TEXT, true);
+                var text = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_TEXT, Result.Context, true);
 
                 text = "\"text\": \"" + text + "\"";
 
-                var thumb_text = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_TEXT_THUMB, true);
+                var thumb_text = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
                 thumb_text = "\"thumb_text\": \"" + thumb_text + "\"";
 
@@ -413,13 +421,13 @@ namespace library
 
                 if (validChildren != null)
                 {
-                    var xxx = SearchResult.FirstContent(validChildren, VirtualAttributes.MIME_TYPE_TEXT_THUMB, true);
+                    var xxx = SearchResult.FirstContent(validChildren, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
                     var linkDoValidChildren = DIV.Find(validChildren.Children, validChildren.Src.LinkAddress);
 
                     if (linkDoValidChildren != null)
                     {
-                        var xx = SearchResult.FirstContent(linkDoValidChildren, VirtualAttributes.MIME_TYPE_TEXT_THUMB, true);
+                        var xx = SearchResult.FirstContent(linkDoValidChildren, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
                         legendaResultAddress.Add(string.Format("{{\"thumb_text\": \"{0}\", \"address\": \"{1}\"}}", xx, Utils.ToBase64String(DIVSubtitle.Address)));
                     }

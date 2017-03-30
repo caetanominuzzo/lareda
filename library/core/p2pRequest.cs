@@ -189,18 +189,20 @@ namespace library
             }
 
             var data = ToBytes().
-               // Concat(Address).
+                // Concat(Address).
                 Concat(Data ?? bytes_empty).ToArray();
 
-            Log.Write(Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
-                Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0 ? Address : Data), 
-                
-                Command == RequestCommand.Packet? Log.LogTypes.p2pOutgoingPackets :
-                    Command == RequestCommand.Hashs ? Log.LogTypes.p2pOutgoingHash :
-                        Command == RequestCommand.Links ? Log.LogTypes.p2pOutgoingMetapackets :
-                            Command == RequestCommand.Peer ? Log.LogTypes.p2pOutgoingPeers : Log.LogTypes.None
+            Log.Add(Log.LogTypes.p2pOutgoing | Log.FromCommand(Command), new { Port = DestinationPeer.EndPoint.Port, Address = Address ?? Data, Data = Data.Length > 0 });
 
-                );
+            //Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
+            //    Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0 ? Address : Data), 
+
+            //    Command == RequestCommand.Packet? Log.LogTypes.p2pOutgoingPackets :
+            //        Command == RequestCommand.Hashs ? Log.LogTypes.p2pOutgoingHash :
+            //            Command == RequestCommand.Metapackets ? Log.LogTypes.p2pOutgoingMetapackets :
+            //                Command == RequestCommand.Peer ? Log.LogTypes.p2pOutgoingPeers : Log.LogTypes.None
+
+            //    );
 
             ThreadSend(DestinationPeer.EndPoint, data);
 
@@ -232,13 +234,16 @@ namespace library
 
             Client.Stats.Sent.Add(data.Length);
 
+            
             try
             {
+
                 u.Send(data, data.Length, remoteEndPoint);
+
             }
             catch (Exception e)
             {
-                Log.Write(e.ToString(), Log.LogTypes.p2pOutgoingException);
+                Log.Add(Log.LogTypes.Application, e.ToString());
             }
 
         }
@@ -248,7 +253,7 @@ namespace library
     {
         None = 0,
         Packet = 1,
-        Links = 2,
+        Metapackets = 2,
         Hashs = 3,
         Peer = 4
     }

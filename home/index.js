@@ -34,7 +34,7 @@ $(function()
 
 			$.nav.top = 100;
 		});
-
+	
 	$.ajax({
 		url: "createUserAvatar/" + "aaa",
 		success: function(data)
