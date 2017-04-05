@@ -209,8 +209,6 @@ namespace library
 
         internal static void Load(MetaPacketType type)
         {
-            return;
-
             string filename = type.ToString() + ".bin";
 
             if (!File.Exists(filename))

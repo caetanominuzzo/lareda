@@ -34,7 +34,7 @@ $(function()
 
 			$.nav.top = 100;
 		});
-	
+	/*
 	$.ajax({
 		url: "createUserAvatar/" + "aaa",
 		success: function(data)
@@ -56,10 +56,10 @@ $(function()
 
 			$.input.post ("eee", null);
 			$.input.post ("eee", null);
-*/
+
 		},
 		dataType: "text"});
-
+*/
 
 
 	$.mouse = { x: -1, y: -1 };

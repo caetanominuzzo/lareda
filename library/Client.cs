@@ -400,7 +400,7 @@ namespace library
             return null;
         }
 
-        public static void Download(string base64Address, HttpListenerContext context, string filename, string specifItem = null)
+        public static void Download(string base64Address, p2pContext context, string filename, string specifItem = null)
         {
             if (Connected())
                 p2pFile.Queue.Add(base64Address, context, filename, specifItem);
@@ -423,6 +423,11 @@ namespace library
 
         public static void BootStrap(object state)
         {
+#if !BOOTSTRAP
+
+            return;
+#endif
+
             VirtualAttributes.BootStrap();
 
             //VirtualAttributes.CONCEITO = Utils.GetAddress();

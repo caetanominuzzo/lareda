@@ -9,7 +9,7 @@ body
 	margin: 0px;
 	font-size: 16px;
 	font-family: trebuchet ms;
-	color: #333;
+	ccolor: #333;
 	background-color: #050505 !important;
 	overflow-y: hidden;
 }
@@ -44,7 +44,7 @@ b
 
 #head #logo
 {
-	background-image: url(images/logo3.png);
+	bbackground-image: url(images/logo3.png);
 	background-size: 83%;
 	height: 57px;
 	width: 90px;

@@ -21,7 +21,7 @@ namespace library
                 {
                     if (_queue == null)
                     {
-                        _queue = new Cache<p2pFile>(10 * 1000);
+                        _queue = new Cache<p2pFile>(160 * 1000);
 
                         _queue.OnCacheExpired += Queue_OnCacheExpired;
                     }
@@ -30,7 +30,7 @@ namespace library
                 }
             }
 
-            internal static void Add(string base64Address, HttpListenerContext context, string filename, string specifFIle = null)
+            internal static void Add(string base64Address, p2pContext context, string filename, string specifFIle = null)
             {
 
 
@@ -58,8 +58,13 @@ namespace library
                 return p2pFile.Queue.queue.Items();
             }
 
-            static void Add(byte[] address, HttpListenerContext context, string filename, string specifFIle = null)
+            static void Add(byte[] address, p2pContext context, string filename, string specifFIle = null)
             {
+                if(filename.EndsWith("cache/"))
+                {
+
+                }
+
                 lock (queue)
                 {
                     var item = queue.FirstOrDefault(x => Addresses.Equals(x.CachedValue.Address, address, true) &&
@@ -71,11 +76,15 @@ namespace library
 
                         item.Reset();
 
+                        Log.Add(Log.LogTypes.queueAddFile, new { RESET = 1, item.CachedValue});
+
                         return;
                     }
                 }
 
                 p2pFile file = new p2pFile(address, context, filename, specifFIle);
+
+                Log.Add(Log.LogTypes.queueAddFile, file);
 
                 lock (queue)
                     queue.Add(file);

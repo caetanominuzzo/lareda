@@ -129,7 +129,7 @@ namespace library
         {
             DateTime = System.DateTime.Now;
         }
-        internal CacheItem(T value)
+        public CacheItem(T value)
         {
             CachedValue = value;
 

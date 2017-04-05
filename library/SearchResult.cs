@@ -39,7 +39,7 @@ namespace library
 
         byte[] bTerm = null;
 
-        internal HttpListenerContext Context;
+        internal p2pContext Context;
 
         public RenderMode Mode = RenderMode.Main;
 
@@ -82,7 +82,7 @@ namespace library
             }
         }
 
-        public SearchResult(byte[] contextId, string term, RenderMode mode, HttpListenerContext context, SearchResult parent = null)
+        public SearchResult(byte[] contextId, string term, RenderMode mode, p2pContext context, SearchResult parent = null)
         {
             Context = context;
 
@@ -632,7 +632,7 @@ namespace library
             }
         }
 
-        public string GetResultsResults(HttpListenerContext context)
+        public string GetResultsResults(p2pContext context)
         {
             if (Monitor.IsEntered(RootResults))
                 return "[]";
@@ -678,7 +678,7 @@ namespace library
 
         internal static bool logging = false;
 
-        internal static string FirstContent(DIV item, byte[] marker, HttpListenerContext context, bool text = false)
+        internal static string FirstContent(DIV item, byte[] marker, p2pContext context, bool text = false)
         {
             var t = marker == null ? item : ClosestMarker(item, marker);
 
@@ -694,7 +694,7 @@ namespace library
                  Utils.ToBase64String(t.Src.LinkAddress);
         }
 
-        internal static IEnumerable<string> FirstContentYield(DIV item, byte[] marker, HttpListenerContext context, bool text = false)
+        internal static IEnumerable<string> FirstContentYield(DIV item, byte[] marker, p2pContext context, bool text = false)
         {
             List<string> result = new List<string>();
 
@@ -717,7 +717,7 @@ namespace library
 
 
 
-        internal static string Content(byte[] address, HttpListenerContext context)
+        internal static string Content(byte[] address, p2pContext context)
         {
             var packet = Packets.Get(address);
 
@@ -735,7 +735,7 @@ namespace library
             return string.Empty;
         }
 
-        internal static string Content(DIV item, HttpListenerContext context)
+        internal static string Content(DIV item, p2pContext context)
         {
             if (item == null)
                 return string.Empty;
@@ -745,7 +745,7 @@ namespace library
 
         }
 
-        internal static string FirstContent(DIV item, HttpListenerContext context, List<DIV> searched = null, DIV root = null, byte[] MIME_TYPE = null, bool text = true, Stack<DIV> parents = null)
+        internal static string FirstContent(DIV item, p2pContext context, List<DIV> searched = null, DIV root = null, byte[] MIME_TYPE = null, bool text = true, Stack<DIV> parents = null)
         {
             //    if (item.simpleAddress == "552" && text && parents == null)
             //    logging = true;

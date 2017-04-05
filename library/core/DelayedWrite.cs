@@ -103,7 +103,7 @@ namespace library
 
                     try
                     {
-                        stream = p2pStream.GetStream(item.Filename, typeof(DelayedWrite).Name);
+                        stream = p2pStream.GetStream(item.Filename, typeof(DelayedWrite).Name, 0);
 
                         DelayedWriteItem[] same_file;
 

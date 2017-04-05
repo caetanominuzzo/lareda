@@ -163,7 +163,7 @@ namespace library
 
                                 var tmp = Path.Combine(pParameters.localTempDir, Utils.ToBase64String(Utils.GetAddress())) + format.FileExtension;
 
-                                ffmpegProcess.ExecuteAsync(string.Format(@"-ss 00:00:00 -i ""{0}"" -t 00:02:10  -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
+                                ffmpegProcess.ExecuteAsync(string.Format(@"-ss 00:04:00 -i ""{0}"" -t 00:08:10  -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
                                         file.Paths[0],
                                         format.FfmpegSelector,
                                         streamNumber++,

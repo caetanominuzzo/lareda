@@ -10,7 +10,9 @@ namespace library
 {
     public static class Log
     {
-        public static LogTypes filter = LogTypes.stream | LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
+        public static string filters_ = null;//"jBx-OWAanol4XmecG1R9hqLDVIrfHDllnS9vwBnejy0=";
+
+        public static LogTypes filter = LogTypes.None;// LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
         internal static LogTypes FromCommand(RequestCommand command)
         {
             switch (command)
@@ -77,7 +79,7 @@ namespace library
             queueGetPacket = 1 << 29,
             queuePacketArrived = 1 << 30,
 
-            queue = queueAddFile | queueFileComplete | queueAddPacket | queueEndOfPackets | queueExpireFile | queueFileDisposed | queueLastPacketTimeout | queuePacketArrived | queueDataStructureComplete,
+            queue = queueAddFile | queueFileComplete | queueGetPacket | queueEndOfPackets | queueExpireFile | queueFileDisposed | queueLastPacketTimeout | queuePacketArrived | queueDataStructureComplete,
             
             All = Ever << 31,
 
@@ -100,7 +102,7 @@ namespace library
             streamOutputClose = stream | Outgoing | Close,
             streamInputClose = stream | Incoming| Close,
 
-
+            only = Ever << 63
 
         }
 
@@ -149,13 +151,12 @@ namespace library
 
         public static void Add(LogTypes type, params object[] data)
         {
-            if ((type & LogTypes.queue) != LogTypes.None)
-            {
-
-            }
-
-            if (filter != LogTypes.All && type != LogTypes.Ever && (filter & type) == LogTypes.None)
+            if (filter == LogTypes.None || (filter != LogTypes.All && type != LogTypes.Ever && (filter & type) == LogTypes.None))
                 return;
+
+            if (filter == LogTypes.only && type != LogTypes.only)
+                return;
+            
 
             lock ("data.txt")
             {
@@ -164,6 +165,16 @@ namespace library
                 log.Enqueue(s);
 
                 var i = new LogItem(type, data);
+
+                var json = string.Empty;
+                   
+                lock(data)
+                    json = Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented);
+
+                if (filters_ != null && !json.Contains(filters_))
+                    return;
+                
+                Log.Write(type + "\r\n\r\n" + json + "\r\n\r\n----------------------------------------------------------------------------\r\n");
 
                 if (OnLog != null)
                     OnLog(i);
@@ -186,6 +197,8 @@ namespace library
                 }
 
                 //write(sb.ToString() + Environment.NewLine);
+
+                
             }
         }
 

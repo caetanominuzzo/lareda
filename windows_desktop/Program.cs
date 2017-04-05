@@ -26,7 +26,7 @@ namespace windows_desktop
 
         internal static int Timeout = 60000;
 
-        internal static int MaxNonRangeDownloadSize = 1024 * 300;
+        internal static int MaxNonRangeDownloadSize = 1024 * 600;
 
         internal static UIHelper UIHelper;
 
@@ -75,10 +75,7 @@ namespace windows_desktop
                         if(Install())
                             return;
 
-#if BOOTSTRAP
 
-                        Client.BootStrap();
-#endif
 
 #endif
 

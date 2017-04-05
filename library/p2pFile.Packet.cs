@@ -23,26 +23,23 @@ namespace library
 
             public int Offset;
 
+            public int FilePacketOffset;
+
             public IEnumerable<Guid> RequestTraceIdentifier
             {
                 get
                 {
-                    return File.Context.Select(x => x.Request.RequestTraceIdentifier);
+                    return File.Context.Select(x => x.HttpContext.Request.RequestTraceIdentifier);
                 }
             }
+
+
 
             void ProcessPacketPriority()
             {
                 var root = File.Root;
 
-                if (!root.Arrived)
-                {
-                    File.Status = FileStatus.addressStructureIncomplete;
-
-                    return;
-                }
-
-                if (root.Arrived && root.PacketType != PacketTypes.Addresses)
+                if (this == root && this.PacketType == PacketTypes.Content)
                 {
                     File.Status = FileStatus.dataComplete;
 
@@ -51,70 +48,47 @@ namespace library
                     return;
                 }
 
-                if (root.Children.All(x => !x.Value.Arrived))
-                {
-                    File.Status = FileStatus.addressStructureIncomplete;
+                if (File.Levels == 0)
+                    File.Levels = 1;
 
-                    return;
-                }
-
-                if (root.Children.Any(x => x.Value.Arrived && x.Value.PacketType != PacketTypes.Addresses))
-                {
-                    //if (File.FilePackets[0].Arrived &&
-                    //    File.FilePackets[File.FilePackets.Count() - 1].Arrived &&
-                    //    File.FilePackets[File.FilePackets.Count() - 2].Arrived)
-                    if (root.Children.First().Value.Arrived &&
-                        root.Children.ElementAt(root.Children.Count() - 1).Value.Arrived &&
-                        root.Children.ElementAt(root.Children.Count() - 2).Value.Arrived)
+                lock (root.Children)
+                    if (root.Children.All(x => !x.Value.Arrived))
                     {
-                        if (root.Children.All(x => x.Value.Arrived))
-                        {
-                            File.Status = FileStatus.dataComplete;
+                        File.Status = FileStatus.addressStructureIncomplete;
 
-                            File.Success = true;
+                        return;
+                    }
+
+                lock (root.Children)
+                    if (root.Children.Any(x => x.Value.Arrived && x.Value.PacketType == PacketTypes.Content))
+                    {
+                        if (root.Children.First().Value.Arrived &&
+                            root.Children.ElementAt(root.Children.Count() - 1).Value.Arrived)
+                        {
+                            if (root.Children.All(x => x.Value.Arrived))
+                            {
+                                File.Status = FileStatus.dataComplete;
+
+                                File.Success = true;
+                            }
+                            else
+                                File.Status = FileStatus.dataStructureComplete;
                         }
                         else
-                            File.Status = FileStatus.dataStructureComplete;
+                            File.Status = FileStatus.addressStructureComplete;
                     }
-                    else
-                        File.Status = FileStatus.addressStructureComplete;
-                }
 
-                if (root.Children.All(x => x.Value.Arrived && x.Value.PacketType == PacketTypes.Addresses
+                lock (root.Children)
+                    if (root.Children.All(x => x.Value.Arrived && x.Value.PacketType == PacketTypes.Addresses
                         && x.Value.Children.All(y => !y.Value.Arrived)))
-                {
-                    File.Status = FileStatus.addressStructureIncomplete;
-
-                    return;
-                }
-
-                if (root.Children.All(x => x.Value.Arrived && x.Value.PacketType == PacketTypes.Addresses
-                        && x.Value.Children.Any(y => y.Value.Arrived && y.Value.PacketType != PacketTypes.Addresses)))
-                {
-                    if (root.Children.First().Value.Children.First().Value.Arrived &&
-                        root.Children.Last().Value.Children.Last().Value.Arrived &&
-                            ((root.Children.Last().Value.Children.Count() >= 2 && root.Children.Last().Value.Children[root.Children.Last().Value.Children.Count() - 2].Arrived) ||
-                            (root.Children.Last().Value.Children.Count() < 2 && root.Children[root.Children.Count() - 2].Children.Last().Value.Arrived)
-                            )
-                        )
                     {
+                        File.Status = FileStatus.addressStructureIncomplete;
 
-                        if (root.Children.All(x => x.Value.Children.All(y => y.Value.Arrived)))
-                        {
-                            File.Status = FileStatus.dataComplete;
+                        if (File.Levels == 1)
+                            File.Levels = 2;
 
-                            File.Success = true;
-                        }
-                        else
-                            File.Status = FileStatus.dataStructureComplete;
+                        return;
                     }
-
-                    else
-                        File.Status = FileStatus.addressStructureComplete;
-
-                    return;
-                }
-
             }
 
             internal bool Arrived
@@ -136,11 +110,11 @@ namespace library
 
             object dataArrivedObjectLocker = new object();
 
-            SortedList<int, p2pFile.Packet> Children = new SortedList<int, Packet>();
+            internal SortedList<int, p2pFile.Packet> Children = new SortedList<int, Packet>();
 
             p2pFile.Packet Parent = null;
 
-            internal Packet(p2pFile file, p2pFile.Packet parent, int offset, byte[] address, string filename = null)
+            internal Packet(p2pFile file, p2pFile.Packet parent, int filePacketsOffset, int offset, byte[] address, string filename = null)
             {
                 File = file;
 
@@ -151,6 +125,8 @@ namespace library
                 Parent = parent;
 
                 Offset = offset;
+
+                FilePacketOffset = filePacketsOffset;
             }
 
             internal void VerifyDataArrived(byte[] address, byte[] data)
@@ -163,6 +139,11 @@ namespace library
                 ProcessDataArrived(data);
             }
 
+            bool isRoot()
+            {
+                return Parent == null;
+            }
+
             void ProcessDataArrived(byte[] data)
             {
                 lock (dataArrivedObjectLocker)
@@ -170,7 +151,10 @@ namespace library
                     PacketType = (PacketTypes)data[0];
 
                     if (PacketType == PacketTypes.Content)
-                        Offset = BitConverter.ToInt32(data, 1);
+                    {
+                        if (Offset != BitConverter.ToInt32(data, 1))
+                            Offset = BitConverter.ToInt32(data, 1);
+                    }
 
                     Log.Add(Log.LogTypes.queuePacketArrived, this);
 
@@ -192,18 +176,21 @@ namespace library
 
                         var count = addresses.Count();
 
-                        var baseOffset = (Parent == null ? 0 : Parent.Offset) * pParameters.packetSize / pParameters.addressSize;
+                        var FilePacketsOffset = (Parent == null ? 0 : Parent.Offset) * pParameters.packetSize / pParameters.addressSize; //:todo:#1: = 0;
 
-                        baseOffset++;
+                        var baseOffset = 0;
 
-                        //two items to the main thread
-                        ProcessAddPackets(new object[] { addresses.Take(1), baseOffset++ });
+                        FilePacketsOffset++;
 
-                        ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(2), baseOffset + count - 3 });
+                        //first ant last items to the main thread
+                        ProcessAddPackets(new object[] { addresses.Take(1).ToArray(), FilePacketsOffset++, baseOffset++ });
 
-                        ProcessAddPackets(new object[] { addresses.Skip(1).Take(count - 3), baseOffset });
+                        ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(1).ToArray(), count, count - 1 });
 
-                        //ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] { addresses.Skip(1).Take(count - 3), baseOffset });
+
+                        //ProcessAddPackets(new object[] { addresses.Skip(1).Take(count - 2).ToArray(), baseOffset });
+
+                        ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] { addresses.Skip(1).Take(count - 2).ToArray(), FilePacketsOffset, baseOffset });
 
                         //ProcessAddPackets(addresses);
 
@@ -219,18 +206,13 @@ namespace library
                         var offset = 1;
 
                         foreach (byte[] addr in files.Keys)
-                            File.AddPacket(addr, this, offset++, Path.Combine(File.Filename, files[addr]));
+                            File.AddPacket(addr, this, offset, offset++, Path.Combine(File.Filename, files[addr]));
 
                         break;
 
                     case PacketTypes.Content:
 
                         var buffer = data.Skip(pParameters.packetHeaderSize).ToArray();
-
-                        if (Offset != BitConverter.ToInt32(data, 1))
-                            Offset = BitConverter.ToInt32(data, 1);
-
-                        //Log.Write("OFFSET " + offset.ToString());
 
                         DelayedWrite.Add(Filename ?? File.Filename, buffer, Offset);
 
@@ -246,34 +228,31 @@ namespace library
                 lock (dataArrivedObjectLocker)
                     Arrives++;
 
-                if(this.Offset == 199 || this.Offset == 198)
-                { }
-
                 ProcessPacketPriority();
 
-                //File.newPacketEvent.Set();
+                File.packetEvent.Set();
             }
 
             private void ProcessAddPackets(object data)
             {
                 var datas = (object[])data;
 
-                var addresses = (IEnumerable<byte[]>)datas[0];
+                var addresses = (byte[][])datas[0];
 
-                var offset = (int)datas[1];
+                var filePacketsOffset = (int)datas[1];
 
-                if(offset == 198 || offset == 199)
-                {
-
-                }
+                var baseOffset = (int)datas[2];
 
                 foreach (byte[] addr in addresses)
                 {
-                    var p = File.AddPacket(addr, this, offset, Filename);
-                    
-                    Children.Add(p.Offset, p);
+                    var p = File.AddPacket(addr, this, filePacketsOffset, baseOffset, Filename);
 
-                    offset++;
+                    lock (Children)
+                        Children.Add(p.Offset, p);
+
+                    filePacketsOffset++;
+
+                    baseOffset++;
                 }
             }
 

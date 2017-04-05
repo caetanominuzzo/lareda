@@ -71,6 +71,10 @@
     <Reference Include="Identicon">
       <HintPath>..\packages\IdenticonHandler.1.1.0\lib\Identicon.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="policy.2.0.taglib-sharp">
       <HintPath>..\packages\taglib.2.1.0.0\lib\policy.2.0.taglib-sharp.dll</HintPath>
     </Reference>
@@ -94,6 +98,8 @@
     <Compile Include="core\Cache.cs" />
     <Compile Include="core\Counter.cs" />
     <Compile Include="core\ffmpegProcess.cs" />
+    <Compile Include="FileDownloadObject.cs" />
+    <Compile Include="p2pContext.cs" />
     <Compile Include="core\TimeCounter.cs" />
     <Compile Include="core\DelayedWrite.cs" />
     <Compile Include="core\DIV.cs" />

@@ -75,6 +75,9 @@ namespace windows_desktop
                 {
                     //int caretPos = textBox1.Text.Length;
                     textBox1.AppendText(string.Concat(item.DateTime.ToString("HH:mm:ss.fff"), "\t", item.Type, "\t", s, Environment.NewLine));
+
+                    
+
                     //textBox1.Select(caretPos, 0);
                  //   textBox1.ScrollToLine(textBox1.GetLineIndexFromCharacterIndex(caretPos));
                 }
