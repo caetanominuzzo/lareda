@@ -419,6 +419,9 @@ namespace windows_desktop
 
                 var d = new FileDownloadObject(address, context, path);
 
+
+
+                
                 ProcessSeek(new CacheItem<FileDownloadObject>(d));
 
                 return true;
@@ -429,6 +432,13 @@ namespace windows_desktop
 
         static void ProcessGet(p2pContext context)
         {
+
+            var sAddress = GetSegment(context.HttpContext, 2);
+
+            var address = Utils.AddressFromBase64String(sAddress);
+
+            Log.Add(Log.LogTypes.WebServerGet, new { address, Range = context.HttpContext.Request.Headers["Range"], RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier });
+
             if (ProcessCache(context))
                 return;
 
@@ -440,12 +450,6 @@ namespace windows_desktop
 
                 return;
             }
-
-            //var sAddress = HttpUtility.UrlDecode(GetSegment(context, 2));
-
-            var sAddress = GetSegment(context.HttpContext, 2);
-
-            var address = Utils.AddressFromBase64String(sAddress);
 
             if (address == null)
                 return;
@@ -472,80 +476,15 @@ namespace windows_desktop
                 Client.Download(Utils.ToBase64String(address), context, Program.webCache + "/" + Utils.ToBase64String(address));
             }
 
-
-
-            #region old 
-
-            //var address = Utils.FromBase64String(command);
-
-            //if (address != null)
-            //{
-            //    filename = Path.Combine(Program.webCache, command);
-
-            //    if (path != "index.html" || context.Request.QueryString["type"] != null)
-            //    {
-            //        if (context.Request.QueryString["type"] == "download")
-            //        {
-            //            filename = context.Request.QueryString["name"];
-
-            //            filename = Program.UIHelper.SaveAs(filename);
-
-            //            if (!string.IsNullOrEmpty(filename))
-            //                Client.Download(command, filename);
-
-            //            context.Response.Close();
-
-            //            return;
-            //        }
-            //        else if (commands.Length > 1 || context.Request.QueryString["type"] == "web")
-            //        {
-            //            if (!string.IsNullOrEmpty(filename))
-            //            {
-            //                Client.Download(command, Path.Combine(Program.webCache, command), path);
-
-            //                getResults.Add(new GetReturnObject(command, context, path));
-            //            }
-
-            //            return;
-            //        }
-
-            //        context.Response.ContentType = context.Request.QueryString["type"];
-            //    }
-            //    else
-            //        context.Response.ContentType = "application/octet-stream";
-
-            //    if (context.Request.Headers["Range"] != null || context.Request.Headers["If-None-Match"] != null)
-            //        ProcessSeek(context, command);
-
-            //    byte[] buffer = Client.GetPost(address);
-
-            //    if (buffer != null)
-            //    {
-            //        context.Response.OutputStream.Write(buffer, 0, buffer.Length);
-            //    }
-            //    else
-            //    {
-            //        getResults.Add(new GetReturnObject(command, context));
-
-            //        Client.Download(command, filename);
-
-            //        return;
-            //    }
-
-            //    context.Response.Close();
-            //}
-
-            #endregion
         }
 
         private static void ProcessSeek(CacheItem<FileDownloadObject> cache)
         {
+            Log.Add(Log.LogTypes.streamSeek, new { File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], RequestTraceIdentifier = cache.CachedValue.Context.HttpContext.Request.RequestTraceIdentifier });
 
             var download = cache.CachedValue;
 
             var context = download.Context;
-
-
 
             var closeFile = download.FileStream == null;
 
@@ -582,7 +521,7 @@ namespace windows_desktop
 
                 if (file.Length == -1)
                 {
-                    Log.Add(Log.LogTypes.Ever, new { READ_MENOS_UM = 1, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Position = file.GetPosition(source), file });
+                    //Log.Add(Log.LogTypes.Ever, new { READ_MENOS_UM = 1, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Position = file.GetPosition(source), file });
 
                     var address = download.Address;
 
@@ -614,7 +553,7 @@ namespace windows_desktop
 
                 //Log.Add(Log.LogTypes.Ever, new { HEADERS = 1, responseSize, context.headerAlreadySent, context.HttpContext.Response.Headers });
 
-                Log.Add(Log.LogTypes.streamSeek, new { File = cache.CachedValue, Range1 = range1, Range2 = range2, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier });
+                
 
                 if (!context.headerAlreadySent)
                 {
@@ -651,7 +590,7 @@ namespace windows_desktop
 
                         if (read == -1)
                         {
-                            Log.Add(Log.LogTypes.Ever, new { READ_MENOS_UM = 1, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Position = file.GetPosition(source), file });
+                            //Log.Add(Log.LogTypes.Ever, new { READ_MENOS_UM = 1, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Position = file.GetPosition(source), file });
 
                             var address = download.Address;
 
@@ -677,7 +616,7 @@ namespace windows_desktop
                             }
                             catch (HttpListenerException e)
                             {
-                                Log.Add(Log.LogTypes.Ever, new { Exception_ZERO = 1, attempts, File = cache.CachedValue, Read = read, Position = position, Range1 = range1, Range2 = range2, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Exception = e });
+                                //Log.Add(Log.LogTypes.Ever, new { Exception_ZERO = 1, attempts, File = cache.CachedValue, Read = read, Position = position, Range1 = range1, Range2 = range2, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Exception = e });
 
                                 Thread.Sleep(1);
                             }
@@ -699,7 +638,7 @@ namespace windows_desktop
                 {
                     waitMoreData = false;
 
-                    Log.Add(Log.LogTypes.Ever, new { Exception_Um = 1, File = cache.CachedValue, Read = read, Position = position, Range1 = range1, Range2 = range2, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Exception = e });
+                    //Log.Add(Log.LogTypes.Ever, new { Exception_Um = 1, File = cache.CachedValue, Read = read, Position = position, Range1 = range1, Range2 = range2, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Exception = e });
                 }
                 finally
                 {
@@ -711,11 +650,11 @@ namespace windows_desktop
             }
             catch (ObjectDisposedException e)
             {
-                Log.Add(Log.LogTypes.Ever, new { Exception_Um = 2, File = cache.CachedValue, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Exception = e });
+                //Log.Add(Log.LogTypes.Ever, new { Exception_Um = 2, File = cache.CachedValue, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Exception = e });
             }
             catch (HttpListenerException e)
             {
-                Log.Add(Log.LogTypes.Ever, new { Exception_Um = 3, File = cache.CachedValue, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Exception = e });
+                //Log.Add(Log.LogTypes.Ever, new { Exception_Um = 3, File = cache.CachedValue, RequestTraceIdentifier = context.HttpContext.Request.RequestTraceIdentifier, Exception = e });
             }
             finally
             {
@@ -869,8 +808,7 @@ namespace windows_desktop
             lock (download_items)
                 foreach (var cache in download_items)
                 {
-                    if (cache.CachedValue.Filename.Contains("jBx-OWAanol4XmecG1R9hqLDVIrfHDllnS9vwBnejy0="))
-                        Log.Write("OnDownload\t" + cache.CachedValue.Context.HttpContext.Request.RequestTraceIdentifier);
+                    Log.Add(Log.LogTypes.queueFileComplete, cache);
 
                     ProcessSeek(cache);
                 }

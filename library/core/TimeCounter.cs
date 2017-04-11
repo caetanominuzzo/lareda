@@ -41,15 +41,24 @@ namespace library
             Period = period;
         }
 
+        DateTime last_refresh = DateTime.MinValue;
+
         new void Refresh()
         {
+            var now = DateTime.Now;
+
+            if (now.Subtract(last_refresh).TotalMilliseconds < 20)
+                return;
+
+            last_refresh = now;
+
             base.Refresh();
 
             lock (Data)
             {
                 TotalLastTimeout = Data.Sum(x => x.Value);
 
-                _lastPeriod = Data.Where(x => DateTime.Now.Subtract(x.DateTime).TotalSeconds < Period)
+                _lastPeriod = Data.Where(x => now.Subtract(x.DateTime).TotalSeconds < Period)
                     .Sum(x => x.Value);
 
 

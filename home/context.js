@@ -2,7 +2,7 @@ $(function () {
 
 $.context = {};
 
-$.context.minInterval = 50;
+$.context.minInterval = 50; //50
 
 $.context.maxInterval = 20000; //bound to the time of the search results cache
 
@@ -62,7 +62,8 @@ $.context.create = function ($target, mode, parent)
             {
                 target.context.interval = $.context.minInterval;
 
-                target.context.process();
+                target.context.process(); //todo: alternar com a linha de baixo
+                //target.context.timeoutObject = setTimeout(target.context.process, target.context.interval);            
 
                 $.input.searchCallback(data, target);
             }
@@ -74,18 +75,19 @@ $.context.create = function ($target, mode, parent)
             clearTimeout(target.context.timeoutObject);
         },
 
-        start: function (term, filter) {
+        start: function (term, mode) {
             target.context.stop();
 
             target.context.interval = $.context.minInterval;
 
             target.text = term;
 
-            target.filter = filter;
+            if(typeof mode != 'undefined')
+                target.context.mode = mode;
 
             $.input.search(target);
 
-            target.context.process();
+            setTimeout(target.context.process, target.context.minInterval);
 
             if(target.parent)
             {

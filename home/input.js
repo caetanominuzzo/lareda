@@ -49,7 +49,7 @@ $.input.monitorChanges = function()
 
 			if(txt.innerText.length > 0)
 			{
-				txt.context.start(txt.innerText);
+				txt.context.start(txt.innerText, 'main');
 			}
 		})
 	}, 100);

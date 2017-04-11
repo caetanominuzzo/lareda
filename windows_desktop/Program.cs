@@ -26,7 +26,7 @@ namespace windows_desktop
 
         internal static int Timeout = 60000;
 
-        internal static int MaxNonRangeDownloadSize = 1024 * 600;
+        internal static int MaxNonRangeDownloadSize = 1024 * 60;
 
         internal static UIHelper UIHelper;
 

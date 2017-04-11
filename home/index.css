@@ -11,7 +11,7 @@ body
 	font-family: trebuchet ms;
 	ccolor: #333;
 	background-color: #050505 !important;
-	overflow-y: hidden;
+	flow-y: hidden;
 }
 
 input, textarea

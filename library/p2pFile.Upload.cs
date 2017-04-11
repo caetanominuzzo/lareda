@@ -163,11 +163,12 @@ namespace library
 
                                 var tmp = Path.Combine(pParameters.localTempDir, Utils.ToBase64String(Utils.GetAddress())) + format.FileExtension;
 
-                                ffmpegProcess.ExecuteAsync(string.Format(@"-ss 00:04:00 -i ""{0}"" -t 00:08:10  -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
                                         file.Paths[0],
                                         format.FfmpegSelector,
                                         streamNumber++,
                                         tmp));
+
+                                //-ss 00:04:00 -i ""{0}"" -t 00:08:10  -map 0:{1}:{2} -codec copy -y ""{3}"""  --with time interval
 
                                 if (format.MediaTypes == MediaTypes.Text)
                                     tmp = Subtitles.ConvertSrtToVtt(tmp);
@@ -687,9 +688,13 @@ namespace library
             {
                 rootProperty = VirtualAttributes.ROOT_STREAM;
             }
-            
+
             if (rootProperty != null)
-                Metapacket.Create(conceptAddress, rootProperty);            
+            {
+                var m = Metapacket.Create(conceptAddress, rootProperty);
+
+                Metapacket.Create(m.Address, VirtualAttributes.ROOT_TYPE);
+            }
 
             if (!string.IsNullOrWhiteSpace(tags.Tag.Title))
             {

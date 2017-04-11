@@ -130,11 +130,14 @@ $.nav.parentsItemClick = function(e)
 
 	var $this = $(this);
 
+	if(this.className.indexOf('parents') == -1)
+		$this = $(this).closest('.layout');
+
 	var text = $this.attr("address");
 
 	$.nav.items.empty();
 
-	$.searchInput[0].context.start(text);
+	$.searchInput[0].context.start(text, 'nav');
 }
 
 

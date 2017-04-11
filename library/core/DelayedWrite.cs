@@ -16,7 +16,7 @@ namespace library
                 DelayedWriteItem item = queue.FirstOrDefault(x => x.Filename == filename);
 
                 if (item != null)
-                    return item.Data;
+                    return item.Data.Skip(item.ReadOffset).ToArray();
             }
 
             return null;
@@ -164,13 +164,13 @@ namespace library
 
         #endregion
 
-        internal static void Add(string filename, byte[] data, int offset = 1)
+        internal static void Add(string filename, byte[] data, int offset = 1, int readOffset = 0)
         {
             var count = 0;
 
             lock (queue)
             {
-                queue.Add(new DelayedWriteItem { Filename = filename, Data = data, Offset = offset });
+                queue.Add(new DelayedWriteItem { Filename = filename, Data = data, Offset = offset, ReadOffset = readOffset });
 
                 count = queue.Count();
             }
@@ -208,6 +208,8 @@ namespace library
             }
 
             public int Offset = 1;
+
+            public int ReadOffset = 0;
 
             internal byte[] Data;
         }

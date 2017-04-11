@@ -42,6 +42,8 @@ namespace library
 
         public static byte[] MIME_TYPE_DOWNLOAD = Utils.GetAddress();
 
+        public static byte[] ROOT_TYPE = Utils.GetAddress();
+
         public static byte[] ROOT_STREAM = Utils.GetAddress();
 
         public static byte[] ROOT_IMAGE = Utils.GetAddress();

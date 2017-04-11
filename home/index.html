@@ -8,21 +8,17 @@
     <link rel="stylesheet" type="text/css" href="usermenu.css">
     <link rel="stylesheet" type="text/css" href="login.css">
 
-    <link rel="stylesheet" type="text/css" href="video-js.css">
+
+    <link rel="stylesheet" type="text/css" href="3rd/video-js.css">
     <link rel="stylesheet" type="text/css" href="menu.css">
 
+    <script src="3rd/jquery-2.1.4.min.js"></script>
+    <script src="3rd/isotope.pkgd.min.js"></script>
+    <script src="3rd/diff_match_patch.js"></script>
+    <script src="3rd/jquery.timeago.js"></script>
+    <script src="3rd/synchronize-min.js"></script>
+    <script src="3rd/audio.js"></script>
 
-    <script src="jquery-2.1.4.min.js"></script>
-
-     <script src="isotope.pkgd.min.js"></script>
-
-     <script src="diff_match_patch.js"></script>
-
-     <script src="jquery.timeago.js"></script>
-
-     
-
-     <script src="audio.js"></script>
 
     <script src="utils.js"></script>
 
@@ -369,6 +365,109 @@
 </div>
 
 
+<div class="layout anchor root_tile" address="" id='render_master_tile'>
+    <div class="cards">
+        <div class="clip">
+            <div class="rootitem content">
+                <div class="firstpic_container">
+
+
+
+                    <div class="menu">
+                        <div class="top visible">
+                            <div class="parents"></div>
+                            <div class="thumb_text"></div>
+                            <div class="firstauthor subresults"></div>
+                            <div class="firstdate subresults"></div>
+                                          
+
+                        </div>
+
+                        <div class="right">
+                            <center>
+
+                                <div class="button bad"></div>
+                                <div class="button good"></div>
+                            </center>
+                        </div>
+                        <div class="bottom">
+                            
+                            <div class="timeline">
+
+                                <div class="progress_bar">
+                                    <span class="progress_bar_played"></span>
+                                    <span class="progress_bar_loaded"></span>
+                                    <span class="progress_bar_toplay"></span>
+                                </div>
+                                <div class="lasting_time">00:00:00</div>                    
+                            </div>
+                            <div class="buttons">
+                                <div class="left_buttons">
+                                    <div class="button play"></div>
+                                    <div class="volume_container">
+                                        <div class="button volume volume_0"></div>
+                                        <div class="inline_volume_bar">
+                                             <div class="volume_bar">
+                                                <span class="volume_bar_left"></span>
+                                                <span class="volume_bar_current"></span>
+                                                <span class="volume_bar_right"></span>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                    
+                                    
+                                </div>
+                                <div class="right_buttons">
+                                    
+                                    <div class="button full "></div>
+                                    <div class="button language">
+                                        <div class="language_options">
+                                            <div><div class="language_options_title">Audio</div>
+                                                <div class="audio_options"></div>
+                                            </div>
+                                            
+                                            <div><div class="language_options_title">Legendas</div>
+                                                <div class="subtitle_options"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="button more "></div>
+                                    <div class="button play_next"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <video id='vidd1' class="firstpic firstaudio video-js222" preload="metadata" poster="">
+                        <source src="">
+                        <track kind="subtitles" src="" srclang="en" label="English" default>
+                    </video>
+                    <audio class="firstpic firstaudio video-js222   " preload="metadata"><source src=""></audio>
+                </div>
+                <div class="text subresults"></div>  
+                <div class="subinput">
+                    <div class="textarea_padding">
+                        <div class="searchInput" contentEditable="true"></div>
+                    </div>
+                    <div class="buttons"><input type="button" value="Post"></div>
+                </div>
+                
+                <div class="subitems subresults"></div>
+
+                
+                
+            </div>
+            
+           
+        </div>
+    </div>
+</div>
+
+
+
 
 <div class="layout anchor" address=""  id='render_children'>
     <div class="cards">
@@ -414,7 +513,7 @@
 
 <div id='render_list' class='listitem subresults' contentEditable="false"><div class="cards"><div class="clip"><div class="rootitem content"><img class="firstpic" /><div class="thumb_text"></div><div class="firstauthor subresults"></div><div class="firstdate subresults"></div></div></div></div></div>
 
-    <script src="video.js"></script>
+    <script src="3rd/video.js"></script>
 
 </body>
 </html>

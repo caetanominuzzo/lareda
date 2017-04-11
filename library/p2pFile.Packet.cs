@@ -24,7 +24,7 @@ namespace library
             public int Offset;
 
             public int FilePacketOffset;
-
+            
             public IEnumerable<Guid> RequestTraceIdentifier
             {
                 get
@@ -144,6 +144,20 @@ namespace library
                 return Parent == null;
             }
 
+            internal int Level
+            {
+                get { return this.Parent == null ? 0 : this.Parent.Level + 1; }
+            }
+
+            IEnumerable<Packet> Parents()
+            {
+                yield return this;
+
+                if (this.Parent != null)
+                    foreach (var p in this.Parent.Parents())
+                        yield return p;
+            }
+
             void ProcessDataArrived(byte[] data)
             {
                 lock (dataArrivedObjectLocker)
@@ -165,6 +179,7 @@ namespace library
                     if (Arrives != 0)
                         return;
 
+                    Arrives++;
                 }
 
 
@@ -176,21 +191,30 @@ namespace library
 
                         var count = addresses.Count();
 
-                        var FilePacketsOffset = (Parent == null ? 0 : Parent.Offset) * pParameters.packetSize / pParameters.addressSize; //:todo:#1: = 0;
+                        var last_offset = count - 1;
 
-                        var baseOffset = 0;
+                        var FilePacketsOffset = (Parent == null ? 0 : Parent.Children.Last().Value.FilePacketOffset + this.Offset * (pParameters.packetSize / pParameters.addressSize));
+                        
+                        FilePacketsOffset++;
+
+                        //first item to the main thread
+                        //ProcessAddPackets(new object[] { addresses.Take(1).ToArray(), FilePacketsOffset, 0});
+                        ProcessAddPackets(new object[] { data.Skip(pParameters.packetHeaderSize).Take(pParameters.addressSize), FilePacketsOffset, 0 });
+
+                        //last item to the main thread
+                        //ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(1).ToArray(), FilePacketsOffset + last_offset, last_offset });
+                        ProcessAddPackets(new object[] { data.Skip( data.Length - pParameters.addressSize).Take(pParameters.addressSize), FilePacketsOffset + last_offset, last_offset });
+
+                        if (Parent == null || Offset == Parent.Children.Keys.Max())
+                            File.GetLastPacket = true;
 
                         FilePacketsOffset++;
 
-                        //first ant last items to the main thread
-                        ProcessAddPackets(new object[] { addresses.Take(1).ToArray(), FilePacketsOffset++, baseOffset++ });
-
-                        ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(1).ToArray(), count, count - 1 });
-
-
-                        //ProcessAddPackets(new object[] { addresses.Skip(1).Take(count - 2).ToArray(), baseOffset });
-
-                        ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] { addresses.Skip(1).Take(count - 2).ToArray(), FilePacketsOffset, baseOffset });
+                        //ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] { addresses.Skip(1).Take(count - 2).ToArray(), FilePacketsOffset, 1 });
+                        ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] {
+                            data.Skip(pParameters.packetHeaderSize + pParameters.addressSize).Take(data.Length - pParameters.packetHeaderSize - (pParameters.addressSize * 2)), FilePacketsOffset, 1 });
+                        
+                        //ProcessAddPackets(new object[] { addresses.Take(count - 1).ToArray(), FilePacketsOffset, 0 });  
 
                         //ProcessAddPackets(addresses);
 
@@ -211,10 +235,21 @@ namespace library
                         break;
 
                     case PacketTypes.Content:
-
+                        
                         var buffer = data.Skip(pParameters.packetHeaderSize).ToArray();
 
                         DelayedWrite.Add(Filename ?? File.Filename, buffer, Offset);
+
+                        lock(File.FilePackets)
+                        if (File.Status == FileStatus.dataStructureComplete || this.FilePacketOffset == File.FilePackets.Keys.Max())
+                        {
+                            File.Status = FileStatus.dataStructureComplete;
+
+                            File.Levels = this.Level;
+                        }
+
+                        if (this.Offset == 0 && this.Parents().All(x => x.Offset == 0))
+                            File.FirstContentFilePacketOffset = this.FilePacketOffset;
 
                         break;
 
@@ -225,10 +260,9 @@ namespace library
                         break;
                 }
 
-                lock (dataArrivedObjectLocker)
-                    Arrives++;
+                
 
-                ProcessPacketPriority();
+                //ProcessPacketPriority();
 
                 File.packetEvent.Set();
             }
@@ -237,21 +271,27 @@ namespace library
             {
                 var datas = (object[])data;
 
-                var addresses = (byte[][])datas[0];
+                var addresses = (IEnumerable<byte>)datas[0];
 
                 var filePacketsOffset = (int)datas[1];
 
                 var baseOffset = (int)datas[2];
 
-                foreach (byte[] addr in addresses)
+                var count = addresses.Count();
+
+                for (var i = 0; i < count; i += pParameters.addressSize)
+                //foreach (byte[] addr in addresses)
                 {
+
+                    byte[] addr = addresses.Skip(i).Take(pParameters.addressSize).ToArray();
+
                     var p = File.AddPacket(addr, this, filePacketsOffset, baseOffset, Filename);
 
                     lock (Children)
                         Children.Add(p.Offset, p);
 
                     filePacketsOffset++;
-
+                    
                     baseOffset++;
                 }
             }
@@ -259,7 +299,6 @@ namespace library
             internal void Get()
             {
                 Log.Add(Log.LogTypes.queueGetPacket, this);
-
 
                 byte[] data = null;
 

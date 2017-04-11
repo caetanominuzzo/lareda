@@ -36,7 +36,6 @@ namespace library
                     source_position.Add(source + Filename, initial_position);
             }
 
-            Log.Add( Log.LogTypes.stream, new { data = "Add Source Position:", source, filename });
         }
 
         public static p2pStream GetStream(string filename, string source, long initial_position)
@@ -60,20 +59,14 @@ namespace library
                 if(!source_position.ContainsKey(source + filename))
                     source_position.Add(source + filename, initial_position);
 
-                Log.Add(Log.LogTypes.stream, new { GET_STREAM = "RESET", filename, source, position = source_position[source + filename] });
-
                 return stream.CachedValue;
             }
-
-            Log.Add(Log.LogTypes.stream, new { GET_STREAM = "ADD", filename, source, initial_position });
 
             return new p2pStream(filename, source, initial_position);
         }
 
         private static void Streams_OnCacheExpired(CacheItem<p2pStream> item)
         {
-            Log.Add(Log.LogTypes.stream, new { EXPIRED = "1", item.CachedValue });
-
             item.CachedValue.Dispose();
         }
 
@@ -97,8 +90,6 @@ namespace library
             lock(source_position)
                 source_position[source + Filename] = result;
 
-            Log.Add(Log.LogTypes.stream, new { STREAM_SEEK = 1, this.Filename, source, original_position, offset });
-
             return result;
         }
 
@@ -110,17 +101,13 @@ namespace library
             {
                 lock (source_position)
                     source_position[source + Filename] = _stream.Seek(source_position[source + Filename], SeekOrigin.Begin);
-
-                Log.Add(Log.LogTypes.stream, new { READ = "SETTING STREAM POSITION", this.Filename, source, original_position, _stream.Position});
             }
 
             lock (source_position)
                 source_position[source + Filename] = _stream.Position;
 
-            if (P2pFile != null && !P2pFile.CanReadFromLocalStream(source_position[source + Filename], count, source))
+            if (P2pFile != null && !P2pFile.CanReadFromLocalStream(source_position[source + Filename], count))
             {
-                Log.Add(Log.LogTypes.stream, new { STREAM_SEEK = "-1", this.Filename, source, original_position, offset });
-
                 return -1;
             }
 
@@ -128,8 +115,6 @@ namespace library
 
             lock (source_position)
                 source_position[source + Filename] = _stream.Position;
-
-            Log.Add(Log.LogTypes.stream, new { READ = "SETTING STREAM POSITION", this.Filename, source, original_position, _stream.Position });
 
             return result;
         }
@@ -152,8 +137,6 @@ namespace library
         {
             lock (source_position)
             {
-                Log.Add(Log.LogTypes.stream, new { data = "Remove Source Position:", source, Filename });
-
                 source_position.Remove(source + Filename);
 
                 if (!source_position.Any() && _stream != null)

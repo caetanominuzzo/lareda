@@ -217,9 +217,18 @@ namespace library
 
         }
 
+        int itemCount = 0;
 
-        public string Serialize(int parentCount = 0, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
+        public void ResetItemCount()
         {
+            itemCount = 0;
+        }
+
+        public string Serialize(RenderMode mode, int parentCount = 0, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
+        {
+            if (this.ToString() == "393")
+            { }
+
             if (IsRendered)
                 return string.Empty;
 
@@ -229,22 +238,25 @@ namespace library
             var maxDeepness = 1;// Client.MaxDeepness;
 
             if (childrenFilter == GettingChildrenFilter.Superior)
-                maxDeepness = 3;
+                maxDeepness = 0;
 
 
 
             if (parentCount > maxDeepness)
                 return string.Empty;
 
-           
+
 
             IsRendered = true;
-            
-            if (SearchResult.GetDeepDistance(this, VirtualAttributes.CONCEITO) == 0 && 
+
+            if (SearchResult.GetDeepDistance(this, VirtualAttributes.CONCEITO) == 0 &&
                 SearchResult.GetDeepDistance(this, VirtualAttributes.CONTEUDO) == 0)
             {
                 if (childrenFilter == GettingChildrenFilter.Inferior)
                     parentCount++;
+
+                if (childrenFilter == GettingChildrenFilter.Inferior)
+                    itemCount++;
 
                 string address = "\"address\": \"" + Utils.ToBase64String(this.Address) + "\"";
 
@@ -252,6 +264,23 @@ namespace library
 
                 string date = this.Src == null ? string.Empty : "\"date\": \"" + this.Src.Creation.ToUniversalTime().ToLongDateString() + "\"";
 
+                //var root_type = SearchResult.ClosestMarker(this, VirtualAttributes.ROOT_TYPE);
+
+                var root_type = SearchResult.ClosestMarker(this, VirtualAttributes.ROOT_TYPE);
+
+                var root_stype = "stream";
+
+                if (root_type != null)
+                    if (Addresses.Equals(VirtualAttributes.ROOT_IMAGE, root_type.Address, false))
+                    {
+                        root_stype = "image";
+                    }
+                    else if (Addresses.Equals(VirtualAttributes.ROOT_STREAM, root_type.Address, false))
+                    {
+                        root_stype = "stream";
+                    }
+
+                var root = "\"root\": \"" + root_stype + "\"";
 
                 #region AUTHOR
 
@@ -263,7 +292,9 @@ namespace library
                 {
                     if (!Addresses.Equals(this.Address, firstauthor.Address))
                     {
-                        var a = firstauthor.Serialize(parentCount);
+                        //var a = firstauthor. Serialize(mode, parentCount, GettingChildrenFilter.Inferior);
+
+                        var a = SearchResult.FirstContent(firstauthor, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
                         if (!string.IsNullOrWhiteSpace(a))
                             author = "\"author\": " + a + "";
@@ -291,8 +322,10 @@ namespace library
 
                 pic = "\"pic\": \"" + picAddress + "\"";
 
+                if(this.ToString() == "419" || this.ToString() == "390")
+                { }
 
-                if (parentCount <= 1)
+                if (parentCount <= 1 && itemCount <= 1 && true)
                 {
                     var videoDiv = SearchResult.ClosestMarker(this, VirtualAttributes.MIME_TYPE_VIDEO_STREAM);
 
@@ -316,7 +349,7 @@ namespace library
                     var subtitleStreamAddres = SearchResult.FirstContent(videoDiv == null ? this : videoDiv, VirtualAttributes.MIME_TYPE_TEXT_STREAM, Result.Context);
 
                     subtitleStream = "\"subtitle\": \"" + subtitleStreamAddres + "\"";
-                    
+
                     subtitleStreamList = string.Format("\"subtitles\": [{0}]", SerializeChildren(videoDiv, VirtualAttributes.MIME_TYPE_TEXT_STREAM));
 
                     audioStreamList = string.Format("\"audios\": [{0}]", SerializeChildren(videoDiv, VirtualAttributes.MIME_TYPE_AUDIO_STREAM));
@@ -339,6 +372,11 @@ namespace library
 
                 var thumb_text = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
+                if (thumb_text.Length > 100)
+                {
+
+                }
+
                 thumb_text = "\"thumb_text\": \"" + thumb_text + "\"";
 
                 var weight = "\"weight\": \"" + this.Weight.ToString("n2") + "\"";
@@ -350,6 +388,8 @@ namespace library
 
                 var collapsed = "\"collapsed\": \"" + CollapsedWeight(this).ToString("n2") + "\"";
 
+                itemCount++;
+
 
                 var inferiorChildren = string.Empty;
 
@@ -357,7 +397,7 @@ namespace library
 
                 if (childrenFilter == GettingChildrenFilter.Inferior)
                 {
-                    var inferiorChildrenList = SerializeChildren(parentCount, true, GettingChildrenFilter.Inferior);
+                    var inferiorChildrenList = SerializeChildren(mode, parentCount, true, GettingChildrenFilter.Inferior);
 
                     if (inferiorChildrenList.Any())
                         inferiorChildren = string.Format("\"children\": [{0}]", string.Join(", ", inferiorChildrenList));
@@ -365,13 +405,13 @@ namespace library
 
                 if (this.Index)
                 {
-                    var superiorChildrenList = SerializeChildren(parentCount, true, GettingChildrenFilter.Superior);
+                    var superiorChildrenList = SerializeChildren(mode, parentCount, true, GettingChildrenFilter.Superior);
 
                     if (superiorChildrenList.Any())
                         superiorChildren = string.Format("\"superiorchildren\": [{0}]", string.Join(", ", superiorChildrenList));
                 }
 
-                var results = new string[] { audioStreamList, subtitleStreamList, thumb_text, address, index, weight, date, text, pic, videoStream, audioStream, subtitleStream, author, download, inferiorChildren, superiorChildren }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                var results = new string[] { audioStreamList, subtitleStreamList, thumb_text, address, index, weight, date, root, text, pic, videoStream, audioStream, subtitleStream, author, download, inferiorChildren, superiorChildren }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
 
                 if (results.Any())
                 {
@@ -380,8 +420,6 @@ namespace library
                     results.Insert(0, average);
 
                     results.Insert(0, collapsed);
-
-                    results.Insert(0, "\"root\": \"post\"");
 
                     //results.Add(average);
 
@@ -394,7 +432,7 @@ namespace library
             {
                 if (true)
                 {
-                    var inferiorChildrenList = SerializeChildren(parentCount, false, childrenFilter);
+                    var inferiorChildrenList = SerializeChildren(mode, parentCount, false, childrenFilter);
 
                     if (inferiorChildrenList.Any())
                         return string.Join(", ", inferiorChildrenList);
@@ -458,7 +496,7 @@ namespace library
             }
         }
 
-        private string[] SerializeChildren(int parentCount, bool onChildren, GettingChildrenFilter childrenFilter)
+        private string[] SerializeChildren(RenderMode mode, int parentCount, bool onChildren, GettingChildrenFilter childrenFilter)
         {
             var ttt = getChildren(parentCount, onChildren, childrenFilter: childrenFilter);
 
@@ -466,7 +504,7 @@ namespace library
 
             foreach (var tttt in ttt)
             {
-                var ssss = tttt.Serialize(parentCount, childrenFilter);
+                var ssss = tttt.Serialize(mode, parentCount, childrenFilter);
 
                 if (!string.IsNullOrEmpty(ssss))
                     ar.Add(ssss);
@@ -495,7 +533,7 @@ namespace library
                             x.CollapsedWeight(this) <= this.Weight)) &&
 
                         !x.IsRendered &&
-                        (parentCount != 0 || x.Index) &&
+                        //(parentCount != 0 || x.Index) &&
                         not != x &&
                         SearchResult.GetDeepDistance(x, VirtualAttributes.MIME_TYPE_DIRECTORY) != 0
                         ).
@@ -520,7 +558,7 @@ namespace library
 
         double LogAndReturnWeight(DIV item)
         {
-            var w = 
+            var w =
                 SearchResult.GetDeepDistance(item, VirtualAttributes.CONCEITO) == 0 &&
                 SearchResult.GetDeepDistance(item, VirtualAttributes.CONTEUDO) == 0 ?
                 item.CollapsedWeight(this) : item.AverageChildrenWeight;

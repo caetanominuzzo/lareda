@@ -22,11 +22,6 @@ namespace library
 
         internal MetaPacketType Type;
 
-        internal string Base64LinkAddress
-        {
-            get { return Utils.ToBase64String(LinkAddress); }
-            set { LinkAddress = Utils.AddressFromBase64String(value); }
-        }
 
         internal string Base64Hash
         {
@@ -34,16 +29,32 @@ namespace library
             set { Hash = Utils.AddressFromBase64String(value); }
         }
 
+        internal string Base64LinkAddress
+        {
+            get { return Utils.ToBase64String(LinkAddress); }
+            set { LinkAddress = Utils.AddressFromBase64String(value); }
+        }
+
+
         internal string Base64Address
         {
             get { return Utils.ToBase64String(Address); }
             set { Address = Utils.AddressFromBase64String(value); }
         }
 
-        internal string TargetBase64Address
+        public string TargetBase64Address
         {
-            get { return Utils.ToBase64String(TargetAddress); }
-            set { TargetAddress = Utils.AddressFromBase64String(value); }
+            get { return Utils.ToSimpleAddress(TargetAddress); }
+        }
+
+        public string SimpleLinkAddress
+        {
+            get { return Utils.ToSimpleAddress(LinkAddress); }
+        }
+        
+        public string SimpleAddress
+        {
+            get { return Utils.ToSimpleAddress(Address); }
         }
 
         internal byte[] Marker = null;
@@ -84,13 +95,15 @@ namespace library
                 DistancesItems.Add(VirtualAttributes.MIME_TYPE_IMAGE);
 
                 DistancesItems.Add(VirtualAttributes.MIME_TYPE_IMAGE_THUMB);
+
+                DistancesItems.Add(VirtualAttributes.ROOT_TYPE);
             }
 
             Creation = creation;
 
             Address = address ?? Utils.GetAddress();
 
-            this.TargetAddress = targetAddress ?? Address; 
+            this.TargetAddress = targetAddress ?? Address;
 
             this.Hash = hashContent;
 

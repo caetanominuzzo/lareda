@@ -21,12 +21,18 @@ $.input.models =
 {
 	master_stream : $("#render_master_stream"),
 	master_post : $("#render_master_post"),
+	master_tile : $("#render_master_tile"),
 	children : $("#render_children"),
 	text	: $("#render_text"),
 	parents	: $("#render_parents"),
 	list	: $("#render_list")
 }
 
+$(".thumb_text:first", $.input.models.master_stream).click($.nav.parentsItemClick);
+
+$(".thumb_text:first", $.input.models.master_post).click($.nav.parentsItemClick);
+
+$.input.models.master_tile.click($.nav.parentsItemClick);
 
 $.input.models.children.click($.nav.parentsItemClick);
 
@@ -50,7 +56,7 @@ for (var model in $.input.models)
 {
     if ( $.input.models.hasOwnProperty(model))
     {
-		if(model == 'master_stream' || model == 'master_post')
+		if(model == 'master_stream' || model == 'master_post' || model == 'master_tile')
 			continue;
 
 		var $thumb = $('.thumb_text:first', $.input.models[model]);
@@ -71,6 +77,8 @@ $('input[type=button]', $.input.models.master_post).click($.nav.post);
 
 $.input.searchCallback = function(data, target)
 {
+	//data = '[{"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "wA08ZlhXpGhS0qO3Xx7XgdyPgZjBWQSdiKsez4_hmY4=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "727"}, {"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "-vulMifhA5fMzdx5AT3G_coJ4ime2yZvZkcrKXIa1cM=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "734"}, {"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "uhZqrmTdHoo9mGMiwfBGB2egEP_eNjBpQGjT1rcKGQY=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "758"}, {"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "dSMRDLDF1CZb9GPYC1UiP7BIHyBWP8wsVd3siMeI1XA=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "768"}, {"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "9Hh_qJk2V4kmmzZxjen0yxnYEAjSC5oRJ4j14bsKQB4=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "783"}, {"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "UUkLuHRf81IEejvelG0Izv0lJFy2ItL9ALv7-ALCPUo=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "793"}, {"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "tdNHWGhh2Dr2Wp-7S0E6xZsQ1nLn1efTuCN_vYQCc9U=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "802"}, {"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "bLiay5t4uItTcPuEmM9Xw7z06dyrzUYIn3VugRBANys=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "809"}, {"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "IHPPNTGWuo0SDe-1pP666r-I0SxYaWFWerl7OLyCUZc=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "816"}, {"root": "post", "collapsed": "4.00", "average": "2.50", "thumb_text": "ccc10", "address": "BX-NkbLDXccmVic6x5y7xkw1KHzaslaL5Q1pi18H2K0=", "index": "0", "weight": "4.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "826"}, {"root": "post", "collapsed": "3.00", "average": "2.67", "thumb_text": "ddd10", "address": "iIG1801PafGy_IJ5er7tPQ-_JtoGh4h7ScpqlQDtzHM=", "index": "0", "weight": "3.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "741"}, {"root": "post", "collapsed": "3.00", "average": "2.67", "thumb_text": "eee10", "address": "G6tE_mp-m7BRWhtl8dfql0E93_K-te4uQyh7RE2vr7A=", "index": "0", "weight": "3.00", "date": "Sunday, April 9, 2017", "text": "", "pic": "7w-hwlmw4LNtkY2WedxKJJmQGhFE25KJnhjnlOGsQ5M=", "simple": "748"}]';
+
 	var items = data;
 
 	var parent = $.nav.search;
@@ -83,7 +91,7 @@ $.input.searchCallback = function(data, target)
 	}
 	else if(target.context.mode == 'nav')
 	{
-		parent = $.nav.items;
+		//parent = $.nav.items;
 	}
 	
 
@@ -91,7 +99,7 @@ $.input.searchCallback = function(data, target)
 	{
 		if(parent == $.nav.search)
 		{
-			parent.empty(); //todo:temp
+			if(target.context.mode != 'nav') parent.empty(); //todo:temp
 
 			if(parent.children('.layout-sizer').length == 0)
 				parent.append('<div class="layout-sizer"></div>');
@@ -102,20 +110,18 @@ $.input.searchCallback = function(data, target)
 				  transitionDuration: 0,
 				  masonry: {
 					columnWidth: '.layout-sizer'
-				  }
+				  },
+				  getSortData: {
+		    		index: '[data-index]'
+				}
 				});
 		}
-
 		
-		items[0].root = 'stream';
+		//items[1].root = 'stream';
+		//items[0].root = 'stream';
 
-		$.input.updateItems(parent, items, target.context.mode);
+		$.input.updateItems(parent, items, target.context.mode, 0);
 
-		
-
-		//items[0].address = 'k5c0241K9ckEw3ruLh2ZTUppkFtTurVikZJTuMn8UX8_';
-
-		//$.input.updateItems(parent, items, target.context.mode);
 	}
 
 	if(target.context.mode == 'list' )
@@ -132,7 +138,9 @@ $.input.searchCallback = function(data, target)
 			parent.css('display', 'none');
 	}
 
-	$("#searchResults").isotope();
+	$("#searchResults").isotope({getSortData: {
+		    		index: '[data-index]'
+				}});
 
 	return;
 
@@ -147,36 +155,39 @@ $.input.searchCallback = function(data, target)
 	});
 }
 
-$.input.updateItems = function($parent, items, mode)
+$.input.updateItems = function($parent, items, mode, deepness)
 {
-	if(mode == 'post')
-	{
-		debugger;
-	}
+	if(typeof deepness == 'undefined') deepness = 0;
 
 	$locals = $parent.children("div");
 	
 	for(var i = 0; i < items.length; i++)
 	{
 		var item = items[i];
-
-		var	$item = $parent.children("div[address='" + item.address + "']");
-	
+		
 		if(item.index != -1)
 			item.index = i;
-				
+		
+		var	$item = $parent.children("div[address='" + item.address + "']");
+	
+		var old_index = $item.attr("index");
+
 		if($item.length == 0)
 		{
 			$item = $.input.cloneModel(
 						mode == 'list'? $.input.models.list : 
 							mode == 'children'? $.input.models.children :
 								mode == 'parents'? $.input.models.parents :
-									mode == 'text'? $.input.models.text :
+									mode == 'text'? $.input.models.text : //(nav or main)
+										item.index > 0 || deepness > 0? $.input.models.master_tile :
 										item.root == 'post' ? $.input.models.master_post :
 											$.input.models.master_stream,
 						item.address);
 
-			$parent.append($item)
+			if(mode == 'nav')
+				$parent.prepend($item);
+			else
+				$parent.append($item);
 
 			if($parent[0] == $.nav.search[0])
 				$parent.isotope('addItems', $item );
@@ -189,20 +200,45 @@ $.input.updateItems = function($parent, items, mode)
 			$item.remove();	
 		}
 
+		
 		$.input.bindItem($item, item);
+
+		if(mode == 'nav')
+		{
+			if(old_index != 0)
+			{
+				$('.layout:first', $parent).attr("index", old_index);
+
+				var sizer = $('.layout-sizer', $parent);
+
+				$('.layout[index=0]', $parent).attr('index', 99);
+
+				$item.attr('index', 0);
+
+				$item.prependTo($parent);
+
+				$parent.isotope('reloadItems').isotope({ sortBy: 'index'});
+
+			}
+
+
+		}
+
 
 		if(item.children && item.children.length > 0)
 		{
 			var $subresults = $item.find("div.subitems:first");
 
-			$.input.updateItems($subresults, item.children, 'children');
+			$.input.updateItems($subresults, item.children, 'children', deepness);
 		}
 	}
 
+/*
 	$.nav.search.children(".layout").sortElements(function(a, b)
 	{
 		return $(a).attr('index') - $(b).attr('index');
 	});
+	*/
 }
 
 $.input.bindItem = function($item, item)
@@ -240,7 +276,7 @@ $.input.bindItem = function($item, item)
 	{
 		for(var i = 0; i < item.superiorchildren.length; i++)	
 		{
-			$.input.updateItems(parents, item.superiorchildren, 'parents');
+			$.input.updateItems(parents, item.superiorchildren, 'parents', 0);
 
 		}
 	}
@@ -301,9 +337,20 @@ $.input.bindItem = function($item, item)
 		
 	}
 
+	if((typeof audio != 'undefined' &&  typeof item.audio != 'undefined') &&
+		(img && img.tagName == "VIDEO" && typeof item.video != 'undefined') &&
+		img.duration > 0 && audio.duration > 0)
+	{
+		img.id = "aa1";
+
+		audio.id = "aa2";
+
+		$.synchronizeVideos(0, "aa1", "aa2");
+	}
+	
 
 	if(item.author)
-		$.input.updateItems(author, [item.author], 'text');
+		$.input.updateItems(author, [item.author], 'text', 0);
 
 	//if(author.text() != item.author)
 	//	author.text(item.author);
@@ -327,7 +374,11 @@ $.input.bindItem = function($item, item)
 
 
 	if($item.attr('index') != item.index)
+	{
 		$item.attr("index", item.index);
+
+		$item.attr("data-index", item.index);
+	}
 
 	if(item.index == 0)
 	{

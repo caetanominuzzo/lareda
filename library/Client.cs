@@ -210,8 +210,18 @@ namespace library
 
         internal static void Search(byte[] address, MetaPacketType type)
         {
+            if (VirtualAttributes.IsVirtualAttribute(address))
+            {
+                if(!Addresses.Equals(VirtualAttributes.ROOT_STREAM, address) && !Addresses.Equals(VirtualAttributes.ROOT_POST, address))
+                    return;
+            }
 
-            
+            if (Utils.ToSimpleAddress(address) == "001")
+            { }
+
+
+            Log.Add(Log.LogTypes.Search, Utils.ToSimpleAddress(address));
+
             //Log.Write("Pesquisando local: " + Utils.ToSimpleAddress(address) + " - " + type.ToString() + "  " + Utils.ToSimpleAddress(address));
 
             var metapackets = MetaPackets.LocalSearch(address, type);
@@ -221,9 +231,7 @@ namespace library
                 SearchReturn(address, type, metapackets);
             }
 
-            if (VirtualAttributes.IsVirtualAttribute(address))
-                return;
-
+            
 
             //Log.Write(metapackets.Count() + " encontrado(s).", 1);
 
@@ -267,6 +275,8 @@ namespace library
 
         public static byte[] Post(string title = null, byte[] parentConceptAddress = null, string target = null, string userAddressBase64 = null, string[] refs = null, string content = null)
         {
+            
+
             var linkAddress = Utils.AddressFromBase64String(title);
 
             if (linkAddress != null)
@@ -291,6 +301,10 @@ namespace library
                 conceptAddress = Utils.GetAddress();
 
                 Metapacket.Create(conceptAddress, VirtualAttributes.CONCEITO);
+
+                var m = Metapacket.Create(conceptAddress, VirtualAttributes.ROOT_STREAM);
+
+                Metapacket.Create(m.Address, VirtualAttributes.ROOT_TYPE);
 
                 //if (parentConceptAddress != null)
                 //    Metapacket.Create(conceptAddress, parentConceptAddress);
@@ -425,7 +439,7 @@ namespace library
         {
 #if !BOOTSTRAP
 
-            return;
+         //   return;
 #endif
 
             VirtualAttributes.BootStrap();
@@ -571,8 +585,8 @@ namespace library
 
                     var addresss = int.Parse(Utils.ToSimpleAddress(y.Address));
 
-                    // if (addresss < 351)
-                     //  continue;
+                    if (addresss < 369)
+                        continue;
 
                     var s = Utils.ToSimpleAddress(y.TargetAddress) + "->" + Utils.ToSimpleAddress(y.Address);
 

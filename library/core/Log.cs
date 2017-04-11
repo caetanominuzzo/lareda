@@ -12,7 +12,6 @@ namespace library
     {
         public static string filters_ = null;//"jBx-OWAanol4XmecG1R9hqLDVIrfHDllnS9vwBnejy0=";
 
-        public static LogTypes filter = LogTypes.None;// LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
         internal static LogTypes FromCommand(RequestCommand command)
         {
             switch (command)
@@ -25,7 +24,7 @@ namespace library
 
             return LogTypes.None;
         }
-        
+
         [Flags]
         public enum LogTypes : UInt64
         {
@@ -33,80 +32,81 @@ namespace library
 
             Ever = 1,
 
-            Application = 1 << 1,
+            Add         = Ever << 1,
+            Get         = Ever << 2,
+            Complete    = Ever << 3,
+            Arrived     = Ever << 4,
+            Expire      = Ever << 5,
+            Refresh     = Ever << 6,
+            Seek        = Ever << 7,
+            Ready       = Ever << 8,
 
-            Read   =1 << 4,
-            Write = 1 << 5,
-            Start = 1 << 6,
-            Configure = 1 << 7,
-            Stop = 1 << 8,
-            Close = 1 << 9,
+            Read        = Ever << 9,
+            Write       = Ever << 10,
+            Start       = Ever << 11,
+            Configure   = Ever << 12,
+            Stop        = Ever << 13,
+            Close 		= Ever << 14,
+            Incoming    = Ever << 15,
+            Outgoing 	= Ever << 16,
+
+            Packets 	= Ever << 20,
+            Metapackets = Ever << 21,
+            Hash 		= Ever << 22,
+            Peers 		= Ever << 23,
+            File 		= Ever << 24,
 
 
-            p2p = 1 << 10,
+            Application = Ever << 30,
+            P2p 		= Ever << 31,
+            Queue       = Ever << 32,
+            Journaling  = Ever << 40,
+            Stream      = Ever << 41,
+            WebServer   = Ever << 42,
+            Search      = Ever << 43,
 
-            Packets = 1 << 11,
-            Metapackets = 1 << 12,
-            Hash = 1 << 13,
-            Peers = 1 << 14,
 
-            Incoming = 1 << 15,
-            Outgoing = 1 << 16,
+            p2pIncoming 		    = P2p | Incoming,
+            p2pOutgoing 		    = P2p | Outgoing,
 
-            p2pIncoming = p2p | Incoming,
-            p2pOutgoing = p2p | Outgoing,
+            p2pIncomingPackets 		= p2pIncoming | Packets,
+            p2pIncomingMetapackets 	= p2pIncoming | Metapackets,
+            p2pIncomingHash 		= p2pIncoming | Hash,
+            p2pIncomingPeers 		= p2pIncoming | Peers,
 
-            p2pIncomingPackets = p2pIncoming | Packets,
-            p2pIncomingMetapackets = p2pIncoming | Metapackets,
-            p2pIncomingHash = p2pIncoming | Hash,
-            p2pIncomingPeers = p2pIncoming | Peers,
-
-            p2pOutgoingPackets = p2pOutgoing | Packets,
-            p2pOutgoingMetapackets = p2pOutgoing | Metapackets,
-            p2pOutgoingHash = p2pOutgoing | Hash,
-            p2pOutgoingPeers = p2pOutgoing | Peers,
-
-            //Journaling
-
-            //Queue
-            queueAddFile = 1 << 22,
-            queueFileComplete = 1 << 23,
-            queueAddPacket = 1 << 24,
-            queueEndOfPackets = 1 << 25,
-            queueExpireFile = 1 << 26,
-            queueFileDisposed = 1 << 27,
-            queueLastPacketTimeout = 1 << 28,
-            queueGetPacket = 1 << 29,
-            queuePacketArrived = 1 << 30,
-
-            queue = queueAddFile | queueFileComplete | queueGetPacket | queueEndOfPackets | queueExpireFile | queueFileDisposed | queueLastPacketTimeout | queuePacketArrived | queueDataStructureComplete,
+            p2pOutgoingPackets 		= p2pOutgoing | Packets,
+            p2pOutgoingMetapackets 	= p2pOutgoing | Metapackets,
+            p2pOutgoingHash 		= p2pOutgoing | Hash,
+            p2pOutgoingPeers 		= p2pOutgoing | Peers,
             
-            All = Ever << 31,
-
-            queueDataStructureComplete = Ever << 32,
-            queueRefresh = Ever << 33,
-
-            //SearchResult
-
-            journaling = Ever << 40,
-
-            journalingWrite = journaling | Write,
-            journalingRead = journaling | Read,
+            queueAddFile 		    = Queue | Add | File,
+            queueFileComplete 		= Queue | Complete | File,
+            queueAddPacket 		    = Queue | Add | Packets,
+            queueExpireFile 		= Queue | Expire | File,
+            queueGetPacket 		    = Queue | Get | Packets,
+            queuePacketArrived 		= Queue | Arrived | Packets,
 
 
-            //Stream
-            stream  = Ever << 41,
-            seek    = Ever << 42,
-            streamSeek = stream | seek,
-            streamWrite = stream | Write,
-            streamOutputClose = stream | Outgoing | Close,
-            streamInputClose = stream | Incoming| Close,
+            queueFileReady    		= Queue | Ready | File,
+            queueRefresh 	        = Queue | Refresh,
 
-            only = Ever << 63
+            journalingWrite 		= Journaling | Write,
+            journalingRead 		    = Journaling | Read,
 
+
+            streamSeek 		        = Stream | Seek,
+            streamWrite 		    = Stream | Write,
+            streamOutputClose 		= Stream | Outgoing | Close,
+            streamInputClose 		= Stream | Incoming | Close,
+
+            WebServerGet            = WebServer | Get,
+
+            Nears 		= Ever << 61,
+            All 		= Ever << 62,
+            Only 		= Ever << 63
         }
 
-        
+
 
         static Queue<string> log = new Queue<string>();
 
@@ -124,7 +124,7 @@ namespace library
         {
             s = DateTime.Now.ToString("HH:mm:ss.fff") + " \t" + s + "\r\n";
 
-            lock("data.txt")
+            lock ("data.txt")
                 File.AppendAllText("data.txt", s);
         }
 
@@ -147,18 +147,18 @@ namespace library
         }
 
         public static List<LogItem> Items = new List<LogItem>();
-        
+
 
         public static void Add(LogTypes type, params object[] data)
         {
-            if (filter == LogTypes.None || (filter != LogTypes.All && type != LogTypes.Ever && (filter & type) == LogTypes.None))
+            if (filter == LogTypes.None || (filter != LogTypes.All && type != LogTypes.Ever && (filter & type) != type))
                 return;
 
-            if (filter == LogTypes.only && type != LogTypes.only)
+            if (filter == LogTypes.Only && type != LogTypes.Only)
                 return;
-            
 
-            lock ("data.txt")
+
+            //lock ("data.txt")
             {
                 var s = data[0].ToString();
 
@@ -167,38 +167,24 @@ namespace library
                 var i = new LogItem(type, data);
 
                 var json = string.Empty;
-                   
-                lock(data)
-                    json = Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented);
+
+                lock (data)
+                    json = Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.None);
 
                 if (filters_ != null && !json.Contains(filters_))
                     return;
-                
-                Log.Write(type + "\r\n\r\n" + json + "\r\n\r\n----------------------------------------------------------------------------\r\n");
+
+                //Log.Write(type + "\r\n\r\n" + json + "\r\n\r\n----------------------------------------------------------------------------\r\n");
+
+                Log.Write(type + "\t" + json + "\t\r\n");
+
+                return;
 
                 if (OnLog != null)
                     OnLog(i);
 
                 Items.Add(i);
 
-                if (log.Count() > 2000)
-                    log.Dequeue();
-
-                var ss = s.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
-
-                StringBuilder sb = new StringBuilder();
-
-                //   if(tabs == 0)
-                //     sb.AppendLine(DateTime.Now.ToString());
-
-                foreach (var sss in ss)
-                {
-                    sb.AppendLine(sss + ']');
-                }
-
-                //write(sb.ToString() + Environment.NewLine);
-
-                
             }
         }
 

@@ -476,7 +476,7 @@ namespace library
 
         internal static IEnumerable<Metapacket> LocalSearch(byte[] address, MetaPacketType type)
         {
-            if(Utils.ToSimpleAddress(address) == "129")
+            if(Utils.ToSimpleAddress(address) == "001")
             {
 
             }

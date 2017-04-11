@@ -51,6 +51,8 @@ namespace library
 
         internal void AddToSearch(IEnumerable<byte[]> addresses)
         {
+            Log.Add(Log.LogTypes.Search | Log.LogTypes.Add, addresses.Select(x => Utils.ToSimpleAddress(x)));
+
             lock (AddressestoSearch)
             {
                 foreach (var b in addresses)
@@ -67,15 +69,22 @@ namespace library
 
         byte[] GetToSearch()
         {
+
+
             lock (AddressestoSearch)
             {
                 byte[] result = null;
 
                 if (AddressestoSearch.Any())
                 {
+                    Log.Add(Log.LogTypes.Search | Log.LogTypes.Get, AddressestoSearch.Select(x => Utils.ToSimpleAddress(x)).Aggregate((x, y) => string.Concat(x, "-", y)));
+
                     result = AddressestoSearch[0];
 
                     AddressestoSearch.RemoveAt(0);
+
+                    if (Utils.ToSimpleAddress(result) == "001")
+                    { }
                 }
 
                 return result;
@@ -176,6 +185,8 @@ namespace library
 
         bool Search(byte[] address, MetaPacketType type)
         {
+
+
             var searched = true;
 
             lock (SearchedAddresses)
@@ -338,14 +349,6 @@ namespace library
         internal void SetDeepDistance(DIV item, int source, byte[] distanceMarker)
         {
             //Log.Write(item.ToString() + "  " + Utils.ToSimpleAddress(distanceMarker), 10+(source * 2));
-
-            if (Utils.ToSimpleAddress(Utils.ToSimpleName(item.Address)) == "084")
-            {
-                if (distanceMarker[0] == 172)
-                {
-
-                }
-            }
 
             var current = 0;
 
@@ -525,14 +528,6 @@ namespace library
             if (ChildrenAdd(address, target))
                 anyInvalidation = true;
 
-            if (metapacket.Marker != null && Utils.ToSimpleAddress(Utils.ToSimpleName(target.Address)) == "084")
-            {
-                if (metapacket.Marker[0] == 172)
-                {
-
-                }
-            }
-
             if (metapacket.Marker != null)
                 SetDeepDistance(target, 0, metapacket.Marker);
 
@@ -557,7 +552,7 @@ namespace library
 
         internal DIV RootAddItem(byte[] address, byte[] hash, Metapacket metapacket)
         {
-            if (Utils.ToSimpleAddress(address) == "362")
+            if (Utils.ToSimpleAddress(address) == "001")
             { }
 
             var result = Find(address);
@@ -609,17 +604,25 @@ namespace library
 
         void Client_OnSearchReturn(byte[] search, MetaPacketType type, IEnumerable<Metapacket> metapackets)
         {
+            Log.Add(Log.LogTypes.Search | Log.LogTypes.Incoming, new { search = Utils.ToSimpleAddress(search), metapackets });
+
+            if (Utils.ToSimpleAddress(search) == "380")
+            { }
+
             if (Searched(search))
             {
+
+
                 var anyInvalidation = AddSearchResults(search, type, metapackets);
 
                 var toSearch = GetToSearch();
 
                 if (toSearch == null)
+                {
                     PrepareToRender(RootResults);
 
-                toSearch = GetToSearch();
-
+                    toSearch = GetToSearch();
+                }
                 while (toSearch != null)
                 {
                     Search(toSearch, MetaPacketType.Link);
@@ -666,7 +669,20 @@ namespace library
 
                 //         ));
 
-                var ar1 = root.Serialize();
+                if (root.Children.Count() > 4)
+                { }
+
+                root.ResetItemCount();
+
+                var ar1 = string.Empty;
+
+                if (Mode == RenderMode.Nav && Find(bTerm) != null)
+                    ar1 = Find(bTerm).Serialize(Mode);
+                else
+                    ar1 = root.Serialize(Mode);
+
+                //if(ar1.Length > 0)
+                //    ar1 = "{\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"wA08ZlhXpGhS0qO3Xx7XgdyPgZjBWQSdiKsez4_hmY4=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"727\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"-vulMifhA5fMzdx5AT3G_coJ4ime2yZvZkcrKXIa1cM=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"734\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"uhZqrmTdHoo9mGMiwfBGB2egEP_eNjBpQGjT1rcKGQY=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"758\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"dSMRDLDF1CZb9GPYC1UiP7BIHyBWP8wsVd3siMeI1XA=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"768\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"9Hh_qJk2V4kmmzZxjen0yxnYEAjSC5oRJ4j14bsKQB4=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"783\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"UUkLuHRf81IEejvelG0Izv0lJFy2ItL9ALv7-ALCPUo=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"793\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"tdNHWGhh2Dr2Wp-7S0E6xZsQ1nLn1efTuCN_vYQCc9U=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"802\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"bLiay5t4uItTcPuEmM9Xw7z06dyrzUYIn3VugRBANys=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"809\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"IHPPNTGWuo0SDe-1pP666r-I0SxYaWFWerl7OLyCUZc=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"816\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"BX-NkbLDXccmVic6x5y7xkw1KHzaslaL5Q1pi18H2K0=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"826\"}, {\"root\": \"stream\", \"collapsed\": \"3.00\", \"average\": \"2.67\", \"thumb_text\": \"ddd10\", \"address\": \"iIG1801PafGy_IJ5er7tPQ-_JtoGh4h7ScpqlQDtzHM=\", \"index\": \"0\", \"weight\": \"3.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"741\"}, {\"root\": \"stream\", \"collapsed\": \"3.00\", \"average\": \"2.67\", \"thumb_text\": \"eee10\", \"address\": \"G6tE_mp-m7BRWhtl8dfql0E93_K-te4uQyh7RE2vr7A=\", \"index\": \"0\", \"weight\": \"3.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"748\"}";
 
                 return "[" + ar1 + "]";
 
@@ -904,6 +920,11 @@ namespace library
 
                     foreach (var l in list)
                     {
+                        if (l.ToString() == "377")
+                        {
+
+                        }
+
                         var s = ClosestMarker(l, marker, searched, root, predicate, parents);
 
                         if (s != null)

@@ -34,35 +34,91 @@ $(function()
 
 			$.nav.top = 100;
 		});
-	/*
-	$.ajax({
-		url: "createUserAvatar/" + "aaa",
-		success: function(data)
-		{
-			var address = data;
 
-			$.utils.cookies.create("user", address);
+	var count  = 0;
 
-			$.user.userAddress = address;
+	var i = 0;
 
-			$.user.createUserAvatarOrSingup();
+	//$.ajax({
+	//url: "createUserAvatar/" + "aaa" + (i == 0 ? "" : i),
+	//success: function(data)
+	//{
+
+		var address = null;//data;
+
+				var f = function() { 
+			
+				$.input.post ("Filme" + count, address, function(id)
+				{
+					//$.input.post("home", id);
+
+						if(count++ < max)
+							f();
+						else
+						{
+
+								{
+									var count2  = 0;
+
+									var f2 = function() { 
+										{
+										
+										});
+
+									};
+
+									f2();
 
 
-/*
-			$.input.post ("bbb ccc", null, function(id)
+								});
+						}
+				});
+
+			};
+			
+			f();
+
+
+
+
+	//},
+	//dataType: "text"});
+
+
+			
+
+	
+
+	if(false)
+	{
+		$.ajax({
+			url: "createUserAvatar/" + "aaa" + (i == 0 ? "" : i),
+			success: function(data)
 			{
-				$.input.post("ddd", id);
-			});
+				var address = data;
 
-			$.input.post ("eee", null);
-			$.input.post ("eee", null);
+				$.utils.cookies.create("user", address);
 
-		},
-		dataType: "text"});
-*/
+				$.user.userAddress = address;
 
+				$.user.createUserAvatarOrSingup();
+
+				$.input.post ("bbb" + i, null, function(id)
+				{
+					$.input.post("ccc" + i, id);
+				});
+
+				$.input.post ("ddd" + i, null);
+
+				$.input.post ("eee" + i, null);
+
+			},
+			dataType: "text"});
+	
+	}
 
 	$.mouse = { x: -1, y: -1 };
+
     $(document).mousemove(function(event) {
         $.mouse.x = event.pageX;
         $.mouse.y = event.pageY;
