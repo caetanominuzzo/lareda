@@ -36,13 +36,12 @@ $(function()
 		});
 
 	var count  = 0;
+	var max = 3;
 
 	var i = 0;
 
-	//$.ajax({
-	//url: "createUserAvatar/" + "aaa" + (i == 0 ? "" : i),
-	//success: function(data)
-	//{
+	$.ajax({
+	url: "createUserAvatar/" + "aaa" + (i == 0 ? "" : i) });
 
 		var address = null;//data;
 
@@ -57,10 +56,14 @@ $(function()
 						else
 						{
 
+								for(var k = 0; k < 2; k++)
+								$.input.post ("Seriado" + k, address, function(id)
 								{
 									var count2  = 0;
+									var max2 = 20;
 
 									var f2 = function() { 
+										$.input.post ("Ep" + k + "." + count2, id, function(id2)
 										{
 										
 										});
@@ -72,11 +75,12 @@ $(function()
 
 								});
 						}
+
 				});
 
 			};
 			
-			f();
+//f();
 
 
 
@@ -90,6 +94,7 @@ $(function()
 	
 
 	if(false)
+	for(var i = 0; i < 0; i++)
 	{
 		$.ajax({
 			url: "createUserAvatar/" + "aaa" + (i == 0 ? "" : i),

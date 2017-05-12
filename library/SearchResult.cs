@@ -47,6 +47,8 @@ namespace library
 
         public DIV RootResults = null;
 
+        public static String LockRootResults = "lockRootResults";
+
         List<byte[]> AddressestoSearch = new List<byte[]>();
 
         internal void AddToSearch(IEnumerable<byte[]> addresses)
@@ -127,7 +129,7 @@ namespace library
 
             if (tmpbTerm != null)
             {
-                lock (RootResults)
+                lock (LockRootResults)
                     bTerm = MetaPackets.LocalizeAddress(tmpbTerm);
 
                 Search(bTerm, MetaPacketType.Link);
@@ -157,7 +159,7 @@ namespace library
 
             if (true) //newRoot)
             {
-                lock (RootResults)
+                lock (LockRootResults)
                     RootResults = new DIV(this);
 
                 lock (AddressestoSearch)
@@ -167,7 +169,7 @@ namespace library
             }
             else
             {
-                lock (RootResults)
+                lock (LockRootResults)
                 {
                     RootResults.IsRendered = false;
 
@@ -230,24 +232,16 @@ namespace library
 
             if (parentCount > maxDeepness)
                 return;
-            if (item.simpleAddress == "552")
-            {
-
-            }
 
             if (parentCount > 0 && item.AverageChildrenWeight < item.Weight / 100)
                 return;
 
-
-            //if(item.Src.Marker == -1 || !Addresses.Equals(item.Address, item.Src.LinkAddress))
             if (!Searched(item.Address))
                 AddToSearch(new byte[][] { item.Address });
 
-            //    Log.Write("TO SEARCH: " + Utils.ToSimpleAddress(item.Address));
-
             DIV[] children = null;
 
-            lock (item)
+            lock (LockRootResults)
                 children = item.Children.
                 Where(
                     x => !x.IsValid // && (x.Weight == 1 || x.AverageChildrenWeight / x.Weight > .5)
@@ -256,10 +250,7 @@ namespace library
 
                 x =>
                       SearchResult.GetDeepDistance(x, VirtualAttributes.CONCEITO) == 0 &&
-                        SearchResult.GetDeepDistance(x, VirtualAttributes.CONTEUDO) == 0
-
-                //x.Distances[(int)DIV.DISTANCE_MARKERS.Concept] == 0
-                //&& x.Distances[(int)DIV.DISTANCE_MARKERS.Content] == 0
+                      SearchResult.GetDeepDistance(x, VirtualAttributes.CONTEUDO) == 0
 
                 ).ThenByDescending(
 
@@ -296,7 +287,7 @@ namespace library
             if (Monitor.IsEntered(RootResults))
                 return false;
 
-            lock (RootResults)
+            lock (LockRootResults)
             {
                 foreach (var m in metapackets)
                 {
@@ -308,40 +299,18 @@ namespace library
                 {
                     foreach (var r in RootResults.Children)
                     {
-
                         if (!r.Children.Any())
                             continue;
 
                         ConceptInvalidate(r);
-
-
                     }
 
                     return true;
-
-                    toSearch = GetToSearch();
-
-                    if (toSearch == null)
-                        PrepareToRender(RootResults);
                 }
 
             }
 
             return false;
-
-            if (toSearch == null)
-                toSearch = GetToSearch();
-
-            while (toSearch != null)
-            {
-                Search(toSearch, MetaPacketType.Link);
-
-                toSearch = GetToSearch();
-            }
-
-            if (anyInvalidation)
-                PrepareToRender(RootResults);
-
         }
 
 
@@ -364,7 +333,7 @@ namespace library
 
             source++;
 
-            lock (item.Parents)
+            lock (SearchResult.LockRootResults)
                 foreach (var p in item.Parents)
                     SetDeepDistance(p, source, distanceMarker);
         }
@@ -396,7 +365,8 @@ namespace library
 
             //newWeight = item.Children.Sum(x => x.Children.Any() ? x.Weight / x.Children.Count() : (double)1);// / item.Children.Count(); //item.Children.Sum(x => x.Weight) /
 
-            newWeight = item.Children.Sum(x => x.RelativeWeight);
+            lock (LockRootResults)
+                newWeight = item.Children.Sum(x => x.RelativeWeight);
 
             //if(item.Children.Count() > 1)// && invalidator.Children.Count() > 1)
 
@@ -439,7 +409,7 @@ namespace library
             parents.Push(item);
 
 
-            lock (item.Parents)
+            lock (SearchResult.LockRootResults)
                 foreach (var p in item.Parents)
                 {
                     // if(p.Weight > item.Weight)
@@ -464,13 +434,12 @@ namespace library
 
         internal bool ChildrenAdd(DIV t, DIV item)
         {
-            lock (t)
+            lock (LockRootResults)
                 if (!t.Children.Any(x => Addresses.Equals(x.Address, item.Address)))
                 {
                     t.Children.Add(item);
 
-                    lock (item.Parents)
-                        item.Parents.Add(t);
+                    item.Parents.Add(t);
 
                     if (item.Src != null && t.Src == null)
                         t.Src = item.Src;
@@ -590,7 +559,7 @@ namespace library
 
         DIV Find(byte[] address)
         {
-            lock (RootResults)
+            lock (LockRootResults)
                 foreach (var c in RootResults.Children)
                     if (Addresses.Equals(c.Address, address))
                         return c;
@@ -609,30 +578,23 @@ namespace library
             if (Utils.ToSimpleAddress(search) == "380")
             { }
 
-            if (Searched(search))
-            {
+            lock (LockRootResults)
 
-
-                var anyInvalidation = AddSearchResults(search, type, metapackets);
-
-                var toSearch = GetToSearch();
-
-                if (toSearch == null)
+                if (Searched(search))
                 {
+                    var anyInvalidation = AddSearchResults(search, type, metapackets);
+
                     PrepareToRender(RootResults);
 
-                    toSearch = GetToSearch();
-                }
-                while (toSearch != null)
-                {
-                    Search(toSearch, MetaPacketType.Link);
+                    byte[] toSearch = GetToSearch();
 
-                    toSearch = GetToSearch();
-                }
+                    while (toSearch != null)
+                    {
+                        Search(toSearch, MetaPacketType.Link);
 
-                if (anyInvalidation)
-                    PrepareToRender(RootResults);
-            }
+                        toSearch = GetToSearch();
+                    }
+                }
         }
 
         public string GetResultsResults(p2pContext context)
@@ -642,7 +604,7 @@ namespace library
 
             Context = context;
 
-            lock (RootResults)
+            lock (LockRootResults)
             {
 
                 var root = RootResults;
@@ -741,7 +703,9 @@ namespace library
 
             if (packet != null)
             {
-                return Encoding.Unicode.GetString(packet.Skip(pParameters.packetHeaderSize).ToArray()).Replace("\\", "\\\\").Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"").Trim();
+                var s = Encoding.Unicode.GetString(packet.Skip(pParameters.packetHeaderSize).ToArray()).Replace("\\", "\\\\").Replace(Environment.NewLine, "\\n").Replace("\"", "\\\"").Trim();
+
+                return s == null ? string.Empty : s;
             }
             else
             {
@@ -794,14 +758,14 @@ namespace library
 
             DIV content = null;
 
-            lock (item)
+            lock (SearchResult.LockRootResults)
                 content = item.Children.FirstOrDefault(x => x.Hash != null);
 
             if (content != null)
             {
                 var any = false;
 
-                lock (item)
+                lock (SearchResult.LockRootResults)
                     any = MIME_TYPE == null || (text ? item : item).Children.Any(x => x.Children.Any(y => Addresses.Equals(y.Address, MIME_TYPE)));
 
                 if (any)
@@ -829,14 +793,14 @@ namespace library
             {
                 IEnumerable<DIV> list = null;
 
-                lock (item)
+                lock (SearchResult.LockRootResults)
                     list = item.Children;
 
                 if (list.Any())
                 {
                     parents.Push(item);
 
-                    lock (item)
+                    lock (SearchResult.LockRootResults)
                         list = item.Children.
                             Where(x => !searched.Any(y => Addresses.Equals(x.Address, y.Address))).
                             OrderBy(x => x.Hash == null).
@@ -907,14 +871,14 @@ namespace library
             {
                 List<DIV> list = null;
 
-                lock (item)
+                lock (SearchResult.LockRootResults)
                     list = item.Children.OrderBy(x => 1).ToList();
 
                 if (list.Any())
                 {
                     parents.Push(item);
 
-                    lock (item)
+                    lock (SearchResult.LockRootResults)
                         list = item.Children.
                             OrderBy(x => SearchResult.GetDeepDistance(x, marker)).ToList();
 
@@ -986,14 +950,14 @@ namespace library
                     {
                         IOrderedEnumerable<DIV> list = null;
 
-                        lock (item)
+                        lock (SearchResult.LockRootResults)
                             list = item.Children.OrderBy(x => 1);
 
                         if (list.Any())
                         {
                             parents.Push(item);
 
-                            lock (item)
+                            lock (SearchResult.LockRootResults)
                                 list = item.Children.
                                     OrderBy(x => SearchResult.GetDeepDistance(x, marker));
 

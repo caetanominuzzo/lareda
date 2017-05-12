@@ -9,7 +9,7 @@ namespace library
 {
     public class DIV
     {
-        internal string simpleAddress
+        public string simpleAddress
         {
             get { return Utils.ToSimpleAddress(Address); }
         }
@@ -34,7 +34,7 @@ namespace library
 
         bool isRendered = false;
 
-        internal bool IsRendered
+        public bool IsRendered
         {
             get { return isRendered; } // IsVirtualAttribute || 
             set { isRendered = value; }
@@ -94,10 +94,10 @@ namespace library
                 var link = Find(this.Children, Src.LinkAddress);
 
                 if (target == parent)
-                    return link.Weight;
+                    return link == null ? Weight : link.Weight;
 
                 if (link == parent)
-                    return target.Weight;
+                    return target == null ? Weight : target.Weight;
 
                 return Weight;
 
@@ -145,7 +145,7 @@ namespace library
                 {
                     parents.Enqueue(this.Address);
 
-                    lock (this)
+                    lock (SearchResult.LockRootResults)
                         foreach (var child in Children)
                         {
                             result.AddRange(child.FindAll(address, parents));
@@ -170,7 +170,7 @@ namespace library
             if (Addresses.Equals(this.Address, address))
                 return true;
 
-            lock (this)
+            lock (SearchResult.LockRootResults)
                 foreach (var child in Children)
                 {
                     if (child.FindAny(address))
@@ -226,7 +226,8 @@ namespace library
 
         public string Serialize(RenderMode mode, int parentCount = 0, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
         {
-            if (this.ToString() == "393")
+
+            if (this.ToString() == "372")
             { }
 
             if (IsRendered)
@@ -235,12 +236,12 @@ namespace library
             if (this.IsVirtualAttribute)
                 return string.Empty;
 
-            var maxDeepness = 1;// Client.MaxDeepness;
+            var maxDeepness = 10;// Client.MaxDeepness;
 
             if (childrenFilter == GettingChildrenFilter.Superior)
-                maxDeepness = 0;
+                maxDeepness = 10;
 
-
+            Log.Add(Log.LogTypes.SearchSerialize, this);
 
             if (parentCount > maxDeepness)
                 return string.Empty;
@@ -268,7 +269,7 @@ namespace library
 
                 var root_type = SearchResult.ClosestMarker(this, VirtualAttributes.ROOT_TYPE);
 
-                var root_stype = "stream";
+                var root_stype = "post";
 
                 if (root_type != null)
                     if (Addresses.Equals(VirtualAttributes.ROOT_IMAGE, root_type.Address, false))
@@ -282,25 +283,37 @@ namespace library
 
                 var root = "\"root\": \"" + root_stype + "\"";
 
+                var m_order = SearchResult.ClosestMarker(this, VirtualAttributes.ORDER);
+
+                var order = string.Empty;
+
+                if (m_order != null)
+                {
+                    order = "\"order\": \"" + SearchResult.FirstContent(m_order, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true) + "\"";
+                }
+
                 #region AUTHOR
 
-                var firstauthor = SearchResult.ClosestMarker(this, VirtualAttributes.AUTHOR);
+                // var author = string.Empty;
 
-                var author = string.Empty;
+                var author = "\"author\": \"\"";
+
+                /*
+                var firstauthor = SearchResult.ClosestMarker(this, VirtualAttributes.AUTHOR);
 
                 if (firstauthor != null)
                 {
                     if (!Addresses.Equals(this.Address, firstauthor.Address))
                     {
-                        //var a = firstauthor. Serialize(mode, parentCount, GettingChildrenFilter.Inferior);
+                        var a = firstauthor.Serialize(mode, parentCount, GettingChildrenFilter.Inferior);
 
-                        var a = SearchResult.FirstContent(firstauthor, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
+                        //var a = SearchResult.FirstContent(firstauthor, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
                         if (!string.IsNullOrWhiteSpace(a))
                             author = "\"author\": " + a + "";
                     }
                 }
-
+                */
                 #endregion
 
                 #region PIC
@@ -322,10 +335,10 @@ namespace library
 
                 pic = "\"pic\": \"" + picAddress + "\"";
 
-                if(this.ToString() == "419" || this.ToString() == "390")
+                if (this.ToString() == "419" || this.ToString() == "390")
                 { }
 
-                if (parentCount <= 1 && itemCount <= 1 && true)
+                if (mode == RenderMode.Nav && parentCount <= 1)
                 {
                     var videoDiv = SearchResult.ClosestMarker(this, VirtualAttributes.MIME_TYPE_VIDEO_STREAM);
 
@@ -333,8 +346,8 @@ namespace library
 
                     videoStream = "\"video\": \"" + videoStreamAddres + "\"";
 
-                    if (picAddress.Length == 0 && videoStreamAddres.Length == 0 && firstauthor != null)
-                        picAddress = SearchResult.FirstContent(firstauthor, VirtualAttributes.MIME_TYPE_IMAGE_THUMB, Result.Context);
+                    //if (picAddress.Length == 0 && videoStreamAddres.Length == 0 && firstauthor != null)
+                    //    picAddress = SearchResult.FirstContent(firstauthor, VirtualAttributes.MIME_TYPE_IMAGE_THUMB, Result.Context);
 
                     pic = "\"pic\": \"" + picAddress + "\"";
 
@@ -372,11 +385,6 @@ namespace library
 
                 var thumb_text = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
-                if (thumb_text.Length > 100)
-                {
-
-                }
-
                 thumb_text = "\"thumb_text\": \"" + thumb_text + "\"";
 
                 var weight = "\"weight\": \"" + this.Weight.ToString("n2") + "\"";
@@ -395,6 +403,9 @@ namespace library
 
                 var superiorChildren = string.Empty;
 
+                if (this.ToString() == "385")
+                { }
+
                 if (childrenFilter == GettingChildrenFilter.Inferior)
                 {
                     var inferiorChildrenList = SerializeChildren(mode, parentCount, true, GettingChildrenFilter.Inferior);
@@ -411,7 +422,7 @@ namespace library
                         superiorChildren = string.Format("\"superiorchildren\": [{0}]", string.Join(", ", superiorChildrenList));
                 }
 
-                var results = new string[] { audioStreamList, subtitleStreamList, thumb_text, address, index, weight, date, root, text, pic, videoStream, audioStream, subtitleStream, author, download, inferiorChildren, superiorChildren }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                var results = new string[] { audioStreamList, subtitleStreamList, order, thumb_text, address, index, weight, date, root, text, pic, videoStream, audioStream, subtitleStream, author, download, inferiorChildren, superiorChildren }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
 
                 if (results.Any())
                 {
@@ -523,19 +534,22 @@ namespace library
         {
             int maxWideness = 20;
 
-            lock (this)
+            lock (SearchResult.LockRootResults)
             {
 
                 var result = Children.Where(
                     x =>
                         (!onChildrens || (childrenFilter == GettingChildrenFilter.Superior ?
-                            x.CollapsedWeight(this) > this.Weight :
-                            x.CollapsedWeight(this) <= this.Weight)) &&
+
+                            x.CollapsedWeight(x) > this.Weight :
+                            x.CollapsedWeight(x) <= this.Weight
+
+                            )) &&
 
                         !x.IsRendered &&
                         //(parentCount != 0 || x.Index) &&
-                        not != x &&
-                        SearchResult.GetDeepDistance(x, VirtualAttributes.MIME_TYPE_DIRECTORY) != 0
+                        not != x
+                        //&& SearchResult.GetDeepDistance(x, VirtualAttributes.MIME_TYPE_DIRECTORY) != 0
                         ).
 
                     OrderByDescending(

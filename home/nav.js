@@ -4,7 +4,7 @@ $.nav = {};
 
 $.nav.search = $("div#searchResults:first");
 
-$.nav.items = $("div#navItems:first");
+$.nav.items = $("div.navItems:first");
 
 $.nav.searchItemClick = function(e)
 {
@@ -124,22 +124,42 @@ $.nav.listItemClick = function(e)
 }
 
 
-$.nav.parentsItemClick = function(e)
+$.nav.parentsItemFocus = function(e)
 {
 	e.stopPropagation();
 
-	var $this = $(this);
+	var $layout = $(this);
 
-	if(this.className.indexOf('parents') == -1)
-		$this = $(this).closest('.layout');
+	if($("~ .navItems:first", $layout).height() == "548")
+	{
+		$.nav.parentsItemClick(e, this, true);
+	}
+}
+
+$.nav.parentsItemClick = function(e, t, hover)
+{
+	e.stopPropagation();
+
+	if(!t)
+		t = this;
+
+	var $this = $(t);
+
+	if($this.parents(".navItems").length > 0)
+		return;
 
 	var text = $this.attr("address");
 
-	$.nav.items.empty();
+	if(true)
+	{
+		if($.last_selected != t)
+			$.nav.items.children().fadeOut(500, function() { $(this).remove();  });
 
-	$.searchInput[0].context.start(text, 'nav');
+		$.searchInput[0].context.start(text, 'nav');
+
+		$.last_selected = t;
+	}
 }
-
 
 $.nav.mouseenter = function(e)
 {

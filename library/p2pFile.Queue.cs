@@ -21,7 +21,7 @@ namespace library
                 {
                     if (_queue == null)
                     {
-                        _queue = new Cache<p2pFile>(160 * 1000);
+                        _queue = new Cache<p2pFile>(10 * 1000);
 
                         _queue.OnCacheExpired += Queue_OnCacheExpired;
                     }

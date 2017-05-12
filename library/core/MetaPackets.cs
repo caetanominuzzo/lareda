@@ -66,6 +66,19 @@ namespace library
             Save(type);
         }
 
+
+        public static int GetThreads(bool w = true)
+        {
+            var iA = 0;
+            var iW = 0;
+
+            ThreadPool.GetAvailableThreads(out iW, out iA);
+
+            Log.Write(iW.ToString() + "\t" + iA.ToString());
+
+            return w ? iW : iA;
+        }
+
         static void Refresh(object o)
         {
             var c = (Stats)o;
@@ -98,8 +111,13 @@ namespace library
                     c.Event.WaitOne();
                 }
 
+                // GetThreads();
+
                 if (Client.Stop)
                     break;
+
+                if (!c.Queue.Any())
+                    continue;
 
                 byte[] address = c.Queue.Dequeue();
 

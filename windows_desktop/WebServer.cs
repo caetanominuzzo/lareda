@@ -96,9 +96,15 @@ namespace windows_desktop
                 try
                 {
                     if (server.IsListening)
-                        ThreadPool.QueueUserWorkItem(ProcessReceive, new p2pContext(server.GetContext()));
+                    {
+                        var c = new p2pContext(server.GetContext());
 
-                    //ProcessReceive(server.GetContext());
+                        ThreadPool.QueueUserWorkItem(ProcessReceive, c);
+
+                        // Program.GetThreads();
+                    }
+                            
+                    // ProcessReceive(new p2pContext(server.GetContext()));
                 }
                 catch { }
             }

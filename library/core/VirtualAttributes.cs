@@ -23,7 +23,7 @@ namespace library
 
         public static byte[] EN_US = Utils.GetAddress();
 
-
+        public static byte[] ORDER = Utils.GetAddress();
 
 
 

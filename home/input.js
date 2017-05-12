@@ -36,15 +36,13 @@ $.input.monitorChanges = function()
 			{
 				results.empty();
 
-				
-
 				$.nav.items.empty();
 
 				if(txt.context.mode != "main")
 					results.css('display', 'none');
 
-				if(results.hasClass('isotope'))
-					results.isotope('destroy');
+//				if(results.hasClass('isotope'))
+//					results.isotope('destroy');
 			}
 
 			if(txt.innerText.length > 0)

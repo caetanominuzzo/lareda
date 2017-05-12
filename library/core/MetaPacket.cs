@@ -97,6 +97,8 @@ namespace library
                 DistancesItems.Add(VirtualAttributes.MIME_TYPE_IMAGE_THUMB);
 
                 DistancesItems.Add(VirtualAttributes.ROOT_TYPE);
+
+                DistancesItems.Add(VirtualAttributes.ORDER);
             }
 
             Creation = creation;

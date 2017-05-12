@@ -28,9 +28,11 @@ $.input.models =
 	list	: $("#render_list")
 }
 
-$(".thumb_text:first", $.input.models.master_stream).click($.nav.parentsItemClick);
+$.input.models.master_stream.click($.nav.parentsItemClick);
 
-$(".thumb_text:first", $.input.models.master_post).click($.nav.parentsItemClick);
+$.input.models.master_stream.mouseenter($.nav.parentsItemFocus);
+
+$.input.models.master_post.click($.nav.parentsItemClick);
 
 $.input.models.master_tile.click($.nav.parentsItemClick);
 
@@ -91,38 +93,19 @@ $.input.searchCallback = function(data, target)
 	}
 	else if(target.context.mode == 'nav')
 	{
-		//parent = $.nav.items;
+		var $origin = $("div[address='" + target.text + "'] ~ .navItems:first", $.nav.search);
+
+		parent = $origin;
 	}
 	
-
 	if(items.length > 0)
 	{
-		if(parent == $.nav.search)
-		{
-			if(target.context.mode != 'nav') parent.empty(); //todo:temp
-
-			if(parent.children('.layout-sizer').length == 0)
-				parent.append('<div class="layout-sizer"></div>');
-
-			parent.isotope({
-				  itemSelector: '.layout',
-				  percentPosition: true,
-				  transitionDuration: 0,
-				  masonry: {
-					columnWidth: '.layout-sizer'
-				  },
-				  getSortData: {
-		    		index: '[data-index]'
-				}
-				});
-		}
-		
-		//items[1].root = 'stream';
-		//items[0].root = 'stream';
-
 		$.input.updateItems(parent, items, target.context.mode, 0);
-
 	}
+
+
+	
+
 
 	if(target.context.mode == 'list' )
 	{
@@ -137,22 +120,6 @@ $.input.searchCallback = function(data, target)
 		else
 			parent.css('display', 'none');
 	}
-
-	$("#searchResults").isotope({getSortData: {
-		    		index: '[data-index]'
-				}});
-
-	return;
-
-	$(".menu_item").click(function()
-	{
-		var t = $('video:first', $(this).parents('.cards'))[0];
-
-		if(t.paused)
-			t.play();
-		else
-			t.pause();
-	});
 }
 
 $.input.updateItems = function($parent, items, mode, deepness)
@@ -172,57 +139,54 @@ $.input.updateItems = function($parent, items, mode, deepness)
 	
 		var old_index = $item.attr("index");
 
+		var new_item = false;
+
 		if($item.length == 0)
 		{
+			new_item = true;
+			
 			$item = $.input.cloneModel(
 						mode == 'list'? $.input.models.list : 
 							mode == 'children'? $.input.models.children :
 								mode == 'parents'? $.input.models.parents :
 									mode == 'text'? $.input.models.text : //(nav or main)
-										item.index > 0 || deepness > 0? $.input.models.master_tile :
-										item.root == 'post' ? $.input.models.master_post :
+										item.root == 'post666' ? $.input.models.master_post :
 											$.input.models.master_stream,
 						item.address);
 
+			var show = false;
+
 			if(mode == 'nav')
-				$parent.prepend($item);
-			else
-				$parent.append($item);
+			{
+				if($parent.children().length > 0)
+				{
+					$parent.children().fadeOut('fast', function() { $(this).remove() });
+				
+					show = true;
+				}
+			}
 
-			if($parent[0] == $.nav.search[0])
-				$parent.isotope('addItems', $item );
+			$parent.append($item);
 
-			//$parent.isotope( 'addItems', $item );
+			(!$parent.is(":visible"))
+			{
+				$parent.fadeIn('fast');
+
+				$parent.animate({height : 548}, 'fast');
+			}
 
 		}
 		else if(item.index == -1)
 		{
 			$item.remove();	
 		}
+		//else 
+		//if(mode == 'nav')
+		//	return;
+		
 
 		
-		$.input.bindItem($item, item);
-
-		if(mode == 'nav')
-		{
-			if(old_index != 0)
-			{
-				$('.layout:first', $parent).attr("index", old_index);
-
-				var sizer = $('.layout-sizer', $parent);
-
-				$('.layout[index=0]', $parent).attr('index', 99);
-
-				$item.attr('index', 0);
-
-				$item.prependTo($parent);
-
-				$parent.isotope('reloadItems').isotope({ sortBy: 'index'});
-
-			}
-
-
-		}
+		$.input.bindItem($item, item, new_item);
 
 
 		if(item.children && item.children.length > 0)
@@ -233,6 +197,43 @@ $.input.updateItems = function($parent, items, mode, deepness)
 		}
 	}
 
+
+	if(mode == 'main')
+	{
+		$(".navItems", $parent).remove();
+
+		var last_top = -1;
+
+		var last = $parent.children().length - 1;
+		
+		$parent.children().each(function(i, t)
+		{
+			var $t = $(t);
+
+			if(last_top != -1 &&  $t.offset().top != last_top)
+				$t.before("<div class='navItems searchResults'>");
+			else if(i == last)
+				$t.after("<div class='navItems searchResults'>");
+
+			last_top = $t.offset().top;
+		});
+	}
+
+
+	if(mode == 'nav' && new_item)
+	{
+		$item.hide().fadeIn('fast');
+
+		var $card_title = $('.card_title', $item);
+
+		$card_title.hide().css('left', 100);
+
+		$card_title.fadeIn('fast').animate({left: 0}, 'fast');
+	}
+
+
+
+
 /*
 	$.nav.search.children(".layout").sortElements(function(a, b)
 	{
@@ -241,9 +242,11 @@ $.input.updateItems = function($parent, items, mode, deepness)
 	*/
 }
 
-$.input.bindItem = function($item, item)
+$.input.bindItem = function($item, item, new_item)
 {
-	var $content = $item.children('.cards').children('.clip').children('.content');
+	var $cards = $item.children('.cards');
+
+	var $content = $cards.children('.clip').children('.content');
 
 	if($item.is('.parents')) 
 	{
@@ -260,9 +263,9 @@ $.input.bindItem = function($item, item)
 
 	var text =  $('.text:first', $content);
 
-	var thumb_text =  $('.thumb_text:first', $content);
+	var thumb_text =  $('.thumb_text:first', $cards);
 
-	var date =   $('.firstdate:first', $content);
+	var date =   $('.firstdate:first', $cards);
 
 	var img =  $content.find("video:first")[0] ||  $content.find("img:first")[0];	
 
@@ -293,6 +296,7 @@ $.input.bindItem = function($item, item)
 		else
 			img.src = item.pic;
 	}
+
 
 	if(img && (img.tagName == "VIDEO" && (typeof item.video != 'undefined')))
 	{
@@ -369,6 +373,9 @@ $.input.bindItem = function($item, item)
 	if(thumb_text.text() != item.thumb_text)
 		thumb_text.text(item.thumb_text);
 
+	if(thumb_text.text().length == 0)
+		thumb_text.text("teste");
+	
 
 	$.menu.bind($item, item, img);
 
@@ -380,17 +387,6 @@ $.input.bindItem = function($item, item)
 		$item.attr("data-index", item.index);
 	}
 
-	if(item.index == 0)
-	{
-		//if(!$item.parent().hasClass('subitems'))
-		//{
-			$('.first').removeClass('first');
-			
-			$item.addClass('first');
-		//}
-
-		$item.removeClass('pure-u-md-1-4');
-	}
 }
 
 
@@ -408,10 +404,22 @@ $.input.cloneModel = function($model, address)
 
 	var colorBytes = $.utils.addressToColorBytes(address);
 
+	var colorBytesShadow = [colorBytes[0]-50, colorBytes[1]-50, colorBytes[2]-50];
 	
-	$('.cards', $clone).css('background-color', 'rgba(' + colorBytes.join(', ') + ', .6)');
+	//$('.cards', $clone).css('background-color', 'rgba(' + colorBytes.join(', ') + ', .6)');
+	//$('.cards', $clone).css('background-color', 'white');
 
-	$('.cards', $clone).css('box-shadow', '0px 0px 100px rgba(' + colorBytes.join(', ') + ', .3)');
+	$('.card_triangle', $clone).css('background-color', 'rgba(' + colorBytesShadow.join(', ') + ', 1)');
+
+	$('.card_title .top', $clone).css('border-left', '1px solid rgba(' + colorBytes.join(', ') + ', 1)');
+
+	//$('.card_title .top', $clone).css('border-right', '1px solid rgba(' + colorBytes.join(', ') + ', .6)');
+
+	$('.card_title .top', $clone).css('border-bottom', '1px solid rgba(' + colorBytes.join(', ') + ', 1)');
+
+	$('.card_title .top', $clone).css('background-color', 'rgba(' + colorBytes.join(', ') + ', 1)');
+
+//	$('.cards', $clone).css('box-shadow', '0px 0px 100px rgba(' + colorBytes.join(', ') + ', .3)');
 
 	return $clone;
 }

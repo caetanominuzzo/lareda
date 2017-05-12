@@ -83,6 +83,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
+    <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Frapper">
@@ -242,7 +243,7 @@
     </PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <PostBuildEvent>if $(ConfigurationName) == Release (
+    <PostBuildEvent>if $(ConfigurationName) == Release3 (
 $(SolutionDir)windows_desktop_installer/bin/$(ConfigurationName)/windows_desktop_installer.exe
 ) else if $(ConfigurationName) == DebugNetwork ( 
 powershell Stop-Process -processname la-red

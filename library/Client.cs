@@ -275,8 +275,6 @@ namespace library
 
         public static byte[] Post(string title = null, byte[] parentConceptAddress = null, string target = null, string userAddressBase64 = null, string[] refs = null, string content = null)
         {
-            
-
             var linkAddress = Utils.AddressFromBase64String(title);
 
             if (linkAddress != null)

@@ -35,24 +35,24 @@ namespace library
 
         void activeTimeoutTimerCallback(object state)
         {
-            activeTimeoutTimer.Change(-1, -1); 
+            activeTimeoutTimer.Change(-1, -1);
 
             refresh();
 
             var any = false;
 
-            lock(this)
+            lock (this)
                 any = this.Any();
 
-            if(any)
+            if (any)
                 activeTimeoutTimer.Change(pParameters.cacheActiveTimeoutInterval, pParameters.cacheActiveTimeoutInterval);
         }
 
         public CacheItem<T> Add(T value)
         {
             CacheItem<T> res;
-            
-            lock(this)
+
+            lock (this)
                 res = this.FirstOrDefault(x => x.CachedValue.Equals(value));
 
             if (res != null)
@@ -74,12 +74,12 @@ namespace library
 
         IEnumerable<CacheItem<T>> refresh()
         {
-            if(Timeout == 60)
+            if (Timeout == 10000)
             {
 
             }
 
-            lock (this)
+            // lock (this)
             {
                 IEnumerable<CacheItem<T>> result = null;
 
@@ -92,17 +92,21 @@ namespace library
 
                     expired.ToList().ForEach(x =>
                         {
-                            this.Remove(x);
+                            lock (this)
+                                this.Remove(x);
 
                             OnCacheExpired(x);
 
-                            if(x is IDisposable)
+                            if (x is IDisposable)
                                 ((IDisposable)x).Dispose();
                         });
                 }
                 else
-                    this.RemoveAll(x => (Timeout > 0 && now.Subtract(x.DateTime).TotalMilliseconds >= Timeout) ||
-                                        (Timeout == -1 && x.DateTime.Equals(DateTime.MinValue)));
+                {
+                    lock (this)
+                        this.RemoveAll(x => (Timeout > 0 && now.Subtract(x.DateTime).TotalMilliseconds >= Timeout) ||
+                                            (Timeout == -1 && x.DateTime.Equals(DateTime.MinValue)));
+                }
 
                 result = this.ToList();
 

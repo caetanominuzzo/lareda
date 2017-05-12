@@ -153,9 +153,11 @@ namespace library
                         Context.RemoveAt(i);
                     }
                 }
+
+                return Context.Any();
             }
 
-            return Context.Any();
+            
         }
 
         internal bool GetLastPacket = false;
@@ -221,6 +223,8 @@ namespace library
 
                         continue;
                     }
+                    else
+                        p2pFile.Queue.Reset(this);
 
                     if (!AnyContext())
                         break;
@@ -281,7 +285,7 @@ namespace library
 
                 packet.Get();
 
-                p2pFile.Queue.Reset(this);
+                
 
             }
 

@@ -12,6 +12,7 @@ namespace library
     {
         public static string filters_ = null;//"jBx-OWAanol4XmecG1R9hqLDVIrfHDllnS9vwBnejy0=";
 
+        public static LogTypes filter = LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
         internal static LogTypes FromCommand(RequestCommand command)
         {
             switch (command)
@@ -49,6 +50,8 @@ namespace library
             Close 		= Ever << 14,
             Incoming    = Ever << 15,
             Outgoing 	= Ever << 16,
+            Serialize   = Ever << 17,
+
 
             Packets 	= Ever << 20,
             Metapackets = Ever << 21,
@@ -100,6 +103,8 @@ namespace library
             streamInputClose 		= Stream | Incoming | Close,
 
             WebServerGet            = WebServer | Get,
+
+            SearchSerialize         = Search | Serialize,
 
             Nears 		= Ever << 61,
             All 		= Ever << 62,

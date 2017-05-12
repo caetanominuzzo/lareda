@@ -74,7 +74,7 @@ namespace library
 
             for (int i = 0; i < pParameters.addressSize; i++)
             {
-                if (s1[i] != s2[i])
+               if (s1[i] != s2[i])
                     return false;
 
             }

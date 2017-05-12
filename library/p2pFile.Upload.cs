@@ -67,7 +67,7 @@ namespace library
                 if (newThread)
                 {
                     ThreadPool.QueueUserWorkItem(ThreadUpload,
-                        //    ThreadUpload(
+                         //    ThreadUpload(
                          new FileUploadItem
                          {
                              Paths = paths,
@@ -141,13 +141,13 @@ namespace library
                                             MIME_TYPE = VirtualAttributes.MIME_TYPE_AUDIO_STREAM,
                                             Max  = 2// file.Tags.Properties.Codecs.Where(x => x.MediaTypes == MediaTypes.Audio).Count()
                                         },
-                               
+
                                         new {
                                             MediaTypes = MediaTypes.Text,
                                             FfmpegSelector = "s",
                                             FileExtension = ".srt",
                                             MIME_TYPE = VirtualAttributes.MIME_TYPE_TEXT_STREAM,
-                                            Max  = file.Tags.Properties.Codecs.Where(x => x.MediaTypes == MediaTypes.Text).Count()
+                                            Max  = file.Tags.Properties.Codecs.Where(x => null != x && x.MediaTypes == MediaTypes.Text).Count()
                                         }};
 
                         byte[] videoConcept = null;
@@ -163,6 +163,7 @@ namespace library
 
                                 var tmp = Path.Combine(pParameters.localTempDir, Utils.ToBase64String(Utils.GetAddress())) + format.FileExtension;
 
+                                ffmpegProcess.ExecuteAsync(string.Format(@"-ss 00:08:00 -i ""{0}"" -t 00:0:11  -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
                                         file.Paths[0],
                                         format.FfmpegSelector,
                                         streamNumber++,
@@ -277,7 +278,7 @@ namespace library
         }
 
 
-      
+
 
         static void DirectoryUpload(byte[] conceptAddress, string[] path, byte[] userAddress)
         {
@@ -614,12 +615,7 @@ namespace library
 
         static byte[] GeneratePosts(string path, byte[] conceptAddress, byte[] userAddress, bool singlePacketFile, TagLib.File tags)
         {
-            if (path != null)
-            {
-                Metapacket.Create(conceptAddress, VirtualAttributes.CONCEITO);
-
-
-            }
+            Metapacket.Create(conceptAddress, VirtualAttributes.CONCEITO);
 
             if (userAddress != null)
             {
@@ -634,20 +630,19 @@ namespace library
 
             if (path != null && Directory.Exists(path))
             {
-                Metapacket.Create(
+                var link = Metapacket.Create(
                        targetAddress: conceptAddress,
                        linkAddress: VirtualAttributes.MIME_TYPE_DIRECTORY);
 
-                // Metapacket.Create(link.Address, VirtualAttributes.CONCEITO);
+                Metapacket.Create(link.Address, VirtualAttributes.CONCEITO);
 
                 //yep, Path.GetFilename to get the name of the directory 
                 Client.Post(Path.GetFileName(path), conceptAddress);
-
+                
                 return conceptAddress;
             }
+
             Dictionary<string, string> nameItems = null;
-
-
 
             try
             {
@@ -659,6 +654,18 @@ namespace library
                 }
             }
             catch { }
+
+            var a_order = new string[] { "1", string.Empty, string.Empty };
+
+            if (nameItems.ContainsKey("season"))
+                a_order[1] = nameItems["season"];
+
+            if (nameItems.ContainsKey("episode"))
+                a_order[2] = nameItems["episode"];
+
+            var order = string.Join(".", a_order);
+
+            CreatePostTuple(conceptAddress, order, VirtualAttributes.ORDER);
 
             if (tags == null || tags.Properties == null)
             {
@@ -710,6 +717,8 @@ namespace library
             {
                 if (nameItems.ContainsKey("title"))
                     Client.Post(nameItems["title"], conceptAddress);
+
+#if COMPLETE
 
                 Metapacket show = null;
 
@@ -776,6 +785,7 @@ namespace library
                 if (nameItems.ContainsKey("episode"))
                     CreatePostTuple(conceptAddress, nameItems["episode"], VirtualAttributes.Episode);
 
+
                 if (nameItems.ContainsKey("year"))
                     CreatePostTuple(conceptAddress, nameItems["year"], VirtualAttributes.Year);
 
@@ -791,9 +801,12 @@ namespace library
                 if (nameItems.ContainsKey("audio"))
                     CreatePostTuple(conceptAddress, nameItems["audio"], VirtualAttributes.AudioCodec);
 
+#endif
+
             }
 
-            
+#if COMPLETE
+
             if (tags.Tag.Performers.Any())
                 foreach (var item in tags.Tag.Performers)
                     CreatePostTupleOrReuse(conceptAddress, item, VirtualAttributes.Artist, rootProperty);
@@ -872,7 +885,9 @@ namespace library
                 CreatePostTuple(conceptAddress, tags.Properties.VideoWidth.ToString(), VirtualAttributes.Width);
             else if (tags.Properties.PhotoWidth > 0)
                 CreatePostTuple(conceptAddress, tags.Properties.PhotoWidth.ToString(), VirtualAttributes.Width);
-            
+
+
+#endif
 
 
             //if (f.GetType().BaseType == typeof(TagLib.Image.ImageBlockFile))

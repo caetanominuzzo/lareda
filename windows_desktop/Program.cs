@@ -72,10 +72,10 @@ namespace windows_desktop
 
 #if !DEBUG
 
-                        if(Install())
-                            return;
+                        //if(Install())
+                        //    return;
 
-
+            
 
 #endif
 
@@ -116,6 +116,18 @@ namespace windows_desktop
 
                 Application.Run();
             }
+        }
+
+        public static int GetThreads(bool w = true)
+        {
+            var iA = 0;
+            var iW = 0;
+
+            ThreadPool.GetAvailableThreads(out iW, out iA);
+
+            Log.Write(iW.ToString() + "\t" + iA.ToString());
+
+            return w ? iW : iA;
         }
 
         public static void Configure()

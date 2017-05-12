@@ -44,7 +44,7 @@ img.userPic
 	right: 20px;
 	top: 14px;
 	display: none;
-	box-shadow: 11px -14px 61px rgba(0,0,0, 1);
+	/* box-shadow: 11px -14px 61px rgba(0,0,0, 1); */
 }
 
 #right > img.userPic:first-child
