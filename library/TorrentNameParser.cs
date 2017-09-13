@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace library
 {
+    /// <summary>
+    /// From https://github.com/jzjzjzj/parse-torrent-name
+    /// </summary>
     class TorrentNameParser
     {
         static Dictionary<string, Regex> patterns = new Dictionary<string, Regex>();
@@ -34,8 +37,9 @@ namespace library
 
         public static Dictionary<string, string> ParseTitle(string title)
         {
-            if (!patterns.Any())
-                Start();
+            lock(patterns)
+                if (!patterns.Any())
+                    Start();
 
             Dictionary<string, string> values = new Dictionary<string, string>();
 
@@ -93,6 +97,9 @@ namespace library
 
                 foreach (var key in patterns.Keys)
                 {
+                    //Log.Write(key);
+
+
                     if (values.ContainsKey(key))
                         continue;
 

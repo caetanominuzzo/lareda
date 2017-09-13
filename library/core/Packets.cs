@@ -169,13 +169,12 @@ namespace library
                 //LocalIndex. AddAddress();    
             }
 
-            if (OnPacketArrived != null)
-                OnPacketArrived(address, data);
+            OnPacketArrived?.Invoke(address, data);
         }
 
         internal static byte[] Get(byte[] address)
         {
-            string filename = Path.Combine(pParameters.localPacketsDir, Utils.ToBase64String(address));
+            string filename = Path.Combine(pParameters.localPacketsDir, Utils.ToBase64String(address)); 
 
             byte[] data = DelayedWrite.Get(filename);
 

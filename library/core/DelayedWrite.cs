@@ -86,7 +86,7 @@ namespace library
         {
             try
             {
-                Log.Add(Log.LogTypes.journalingWrite, item);
+                Log.Add(Log.LogTypes.Journaling, Log.LogOperations.Write, item);
 
                 if (item.writeToPacketsDir)
                 {
@@ -101,9 +101,13 @@ namespace library
 
                     p2pStream stream = null;
 
+                    var context = new p2pContext(null , true);
+
                     try
                     {
-                        stream = p2pStream.GetStream(item.Filename, typeof(DelayedWrite).Name, 0);
+                        
+
+                        stream = p2pStreamManager.GetStream(item.Filename, context, 0);
 
                         DelayedWriteItem[] same_file;
 
@@ -116,9 +120,9 @@ namespace library
 
                             foreach (DelayedWriteItem writeItem in same_file)
                             {
-                                stream.Seek(writeItem.Offset * pParameters.packetSize, 0, typeof(DelayedWrite).Name);
+                                stream.Seek(writeItem.Offset * pParameters.packetSize, 0, context);
 
-                                stream.Write(writeItem.Data, 0, writeItem.Data.Length, typeof(DelayedWrite).Name);
+                                stream.Write(writeItem.Data, 0, writeItem.Data.Length, context);
 
                                 toRemove.Add(writeItem);
                             }
@@ -134,7 +138,7 @@ namespace library
                     }
                     finally
                     {
-                        stream.Dispose(typeof(DelayedWrite).Name);
+                        stream.Dispose(context);
                     }
                 }
             }

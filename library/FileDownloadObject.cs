@@ -3,12 +3,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace library
 {
     public class FileDownloadObject : IDisposable
     {
+        public ManualResetEvent packetArrivedEvent = new ManualResetEvent(false);
+
         public byte[] Address;
 
         [JsonIgnore]
@@ -18,8 +21,6 @@ namespace library
         public p2pContext Context;
 
         public string Filename;
-
-        public String Source;
 
         public FileDownloadObject(byte[] address, p2pContext context, string filename, p2pStream fileStream = null)
         {
@@ -31,14 +32,22 @@ namespace library
 
             Context = context;
 
-            Source = context.HttpContext.Request.RequestTraceIdentifier.ToString();
-
             Context.Download = this;
         }
 
         public void Dispose()
         {
-            FileStream.Dispose(Source);
+            Log.Add(Log.LogTypes.Stream, Log.LogOperations.Dispose, this);
+
+            //if(null != Context && null != Context.OutputStream)
+            //{
+            //    Context.OutputStream.Close();
+
+            //    Context.HttpContext.Response.Close();
+            //}
+
+            if(FileStream != null)
+                FileStream.Dispose();
         }
     }
 }

@@ -74,16 +74,15 @@ namespace library
 
         IEnumerable<CacheItem<T>> refresh()
         {
-            if (Timeout == 10000)
-            {
-
-            }
+           
 
             // lock (this)
             {
                 IEnumerable<CacheItem<T>> result = null;
 
                 var now = DateTime.Now;
+
+             
 
                 if (OnCacheExpired != null)
                 {
@@ -97,8 +96,15 @@ namespace library
 
                             OnCacheExpired(x);
 
-                            if (x is IDisposable)
-                                ((IDisposable)x).Dispose();
+
+                            if (typeof(T) == typeof(FileDownloadObject))
+                            {
+
+
+                            }
+
+                            if (x.CachedValue is IDisposable)
+                                ((IDisposable)x.CachedValue).Dispose();
                         });
                 }
                 else

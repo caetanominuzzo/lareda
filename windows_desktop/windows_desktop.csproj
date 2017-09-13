@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>windows_desktop</RootNamespace>
     <AssemblyName>la-red</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <NuGetPackageImportStamp>110de2f0</NuGetPackageImportStamp>
@@ -29,6 +29,7 @@
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -43,8 +44,8 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -85,12 +86,26 @@
     <Prefer32Bit>true</Prefer32Bit>
     <Optimize>false</Optimize>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugCleanCache|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Frapper">
       <HintPath>..\packages\Frapper.1.0.4\lib\net35\Frapper.dll</HintPath>
     </Reference>
     <Reference Include="GraphVizWrapper">
       <HintPath>..\packages\GraphViz.NET.1.0.0\lib\net40\GraphVizWrapper.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -102,6 +117,8 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -111,9 +128,29 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
+    <Reference Include="Unosquare.Labs.EmbedIO, Version=1.4.6.18732, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\EmbedIO.1.6.10\lib\net46\Unosquare.Labs.EmbedIO.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Unosquare.Swan, Version=0.14.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Unosquare.Swan.0.14.2\lib\net452\Unosquare.Swan.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ContextMenus.cs" />
+    <Compile Include="ctDownload.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="ctDownload.Designer.cs">
+      <DependentUpon>ctDownload.cs</DependentUpon>
+    </Compile>
+    <Compile Include="fmDownloads.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="fmDownloads.Designer.cs">
+      <DependentUpon>fmDownloads.cs</DependentUpon>
+    </Compile>
     <Compile Include="fmDrag.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -132,6 +169,9 @@
     <Compile Include="fmLog.Designer.cs">
       <DependentUpon>fmLog.cs</DependentUpon>
     </Compile>
+    <Compile Include="GdiProgress.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Print.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -148,6 +188,13 @@
       <DependentUpon>UIHelper.cs</DependentUpon>
     </Compile>
     <Compile Include="WebServer.cs" />
+    <EmbeddedResource Include="ctDownload.resx">
+      <DependentUpon>ctDownload.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="fmDownloads.resx">
+      <DependentUpon>fmDownloads.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <EmbeddedResource Include="fmDrag.resx">
       <DependentUpon>fmDrag.cs</DependentUpon>
       <SubType>Designer</SubType>
@@ -171,6 +218,9 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <None Include="4.bat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="1.bat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -236,6 +286,8 @@
     <Content Include="endereços.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="Resources\bad.png" />
+    <None Include="Resources\close.bmp" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
@@ -250,6 +302,8 @@ powershell Stop-Process -processname la-red
 powershell start-process 2.bat
 )  else if $(ConfigurationName) == DebugClean ( 
 powershell start-process 1.bat
+)  else if $(ConfigurationName) == DebugCleanCache ( 
+powershell start-process 4.bat
 )</PostBuildEvent>
   </PropertyGroup>
   <Import Project="..\packages\Accord.3.0.2\build\Accord.targets" Condition="Exists('..\packages\Accord.3.0.2\build\Accord.targets')" />

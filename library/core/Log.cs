@@ -1,4 +1,5 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,9 +11,12 @@ namespace library
 {
     public static class Log
     {
-        public static string filters_ = null;//"jBx-OWAanol4XmecG1R9hqLDVIrfHDllnS9vwBnejy0=";
+        public static string textFilter =  "N6t4s0kNFXjD";
 
-        public static LogTypes filter = LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
+        public static LogTypes typeFilter = LogTypes.Stream;// | LogTypes.WebServer | LogTypes.Queue;// LogTypes.WebServerGet | LogTypes.streamSeek | LogTypes.DownloadDispose | LogTypes.streamOutputClose;// LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
+
+        public static LogOperations OpFilter = LogOperations.Paint;
+
         internal static LogTypes FromCommand(RequestCommand command)
         {
             switch (command)
@@ -33,87 +37,82 @@ namespace library
 
             Ever = 1,
 
-            Add         = Ever << 1,
-            Get         = Ever << 2,
-            Complete    = Ever << 3,
-            Arrived     = Ever << 4,
-            Expire      = Ever << 5,
-            Refresh     = Ever << 6,
-            Seek        = Ever << 7,
-            Ready       = Ever << 8,
-
-            Read        = Ever << 9,
-            Write       = Ever << 10,
-            Start       = Ever << 11,
-            Configure   = Ever << 12,
-            Stop        = Ever << 13,
-            Close 		= Ever << 14,
-            Incoming    = Ever << 15,
-            Outgoing 	= Ever << 16,
-            Serialize   = Ever << 17,
+            Packets 	= Ever << 01,
+            Metapackets = Ever << 02,
+            Hash 		= Ever << 03,
+            Peers 		= Ever << 04,
+            File 		= Ever << 05,
+            KeepAlive   = Ever << 06,
+            Download    = Ever << 07,
 
 
-            Packets 	= Ever << 20,
-            Metapackets = Ever << 21,
-            Hash 		= Ever << 22,
-            Peers 		= Ever << 23,
-            File 		= Ever << 24,
+            Application = Ever << 08,
+            P2p 		= Ever << 09,
+            Queue       = Ever << 10,
+            Journaling  = Ever << 11,
+            Stream      = Ever << 12,
+            WebServer   = Ever << 13,
+            Search      = Ever << 14,
 
+            StreamKeepAlive = Stream | KeepAlive,
 
-            Application = Ever << 30,
-            P2p 		= Ever << 31,
-            Queue       = Ever << 32,
-            Journaling  = Ever << 40,
-            Stream      = Ever << 41,
-            WebServer   = Ever << 42,
-            Search      = Ever << 43,
-
-
-            p2pIncoming 		    = P2p | Incoming,
-            p2pOutgoing 		    = P2p | Outgoing,
-
-            p2pIncomingPackets 		= p2pIncoming | Packets,
-            p2pIncomingMetapackets 	= p2pIncoming | Metapackets,
-            p2pIncomingHash 		= p2pIncoming | Hash,
-            p2pIncomingPeers 		= p2pIncoming | Peers,
-
-            p2pOutgoingPackets 		= p2pOutgoing | Packets,
-            p2pOutgoingMetapackets 	= p2pOutgoing | Metapackets,
-            p2pOutgoingHash 		= p2pOutgoing | Hash,
-            p2pOutgoingPeers 		= p2pOutgoing | Peers,
             
-            queueAddFile 		    = Queue | Add | File,
-            queueFileComplete 		= Queue | Complete | File,
-            queueAddPacket 		    = Queue | Add | Packets,
-            queueExpireFile 		= Queue | Expire | File,
-            queueGetPacket 		    = Queue | Get | Packets,
-            queuePacketArrived 		= Queue | Arrived | Packets,
-
-
-            queueFileReady    		= Queue | Ready | File,
-            queueRefresh 	        = Queue | Refresh,
-
-            journalingWrite 		= Journaling | Write,
-            journalingRead 		    = Journaling | Read,
-
-
-            streamSeek 		        = Stream | Seek,
-            streamWrite 		    = Stream | Write,
-            streamOutputClose 		= Stream | Outgoing | Close,
-            streamInputClose 		= Stream | Incoming | Close,
-
-            WebServerGet            = WebServer | Get,
-
-            SearchSerialize         = Search | Serialize,
-
-            Nears 		= Ever << 61,
             All 		= Ever << 62,
             Only 		= Ever << 63
         }
 
 
+        [Flags]
+        public enum LogOperations : UInt64
+        {
+            None = 0,
 
-        static Queue<string> log = new Queue<string>();
+            Any = 1,
+
+            Add = Any << 1,
+            Get = Any << 2,
+            Complete = Any << 3,
+            Arrived = Any << 4,
+            Expire = Any << 5,
+            Refresh = Any << 6,
+            Seek = Any << 7,
+            Ready = Any << 8,
+
+            Read = Any << 9,
+            Write = Any << 10,
+            Start = Any << 11,
+            Configure = Any << 12,
+            Stop = Any << 13,
+            Close = Any << 14,
+            Incoming = Any << 15,
+            Outgoing = Any << 16,
+            Serialize = Any << 17,
+
+            Dispose = Any << 18,
+
+            Open = Any << 19,
+
+            Exception = Any << 20,
+
+            IsNear = Any << 21,
+            TimeOut = Any << 22,
+
+            Header = Any << 23,
+
+            ClosingInitialRequest = Any << 24,
+            ClosingContext = Any << 25,
+
+            ClosingResponse = Any << 26,
+
+            Install = Any << 27,
+
+            Paint = Any << 28,
+
+            CantSeek = Cant | Seek,
+
+            Cant = Any << 61,
+            All = Any << 62
+        }
 
         public delegate void LogHandler(LogItem item);
 
@@ -125,12 +124,19 @@ namespace library
             File.WriteAllText("data.txt", string.Empty);
         }
 
+        internal static ILog log = log4net.LogManager.GetLogger(typeof(Log));
+
         public static void Write(string s)
         {
-            s = DateTime.Now.ToString("HH:mm:ss.fff") + " \t" + s + "\r\n";
+#if DEBUG
+            log.Debug(s);
+#endif
 
-            lock ("data.txt")
-                File.AppendAllText("data.txt", s);
+            //s = DateTime.Now.ToString("HH:mm:ss.fff") + " \t" + s + "\r\n";
+
+            //lock ("data.txt")
+            //  s = string.Empty;
+            //File.AppendAllText("data.txt", s);
         }
 
         public class LogItem
@@ -154,20 +160,22 @@ namespace library
         public static List<LogItem> Items = new List<LogItem>();
 
 
-        public static void Add(LogTypes type, params object[] data)
+        public static void Add(LogTypes type, LogOperations operation, params object[] data)
         {
-            if (filter == LogTypes.None || (filter != LogTypes.All && type != LogTypes.Ever && (filter & type) != type))
+            if (typeFilter == LogTypes.None || (typeFilter != LogTypes.All && type != LogTypes.Ever && (typeFilter & type) != type))
                 return;
 
-            if (filter == LogTypes.Only && type != LogTypes.Only)
+            if (typeFilter == LogTypes.Only && type != LogTypes.Only)
                 return;
 
+            if (OpFilter == LogOperations.None || (OpFilter != LogOperations.Any && operation != LogOperations.Any && (OpFilter & operation) != operation))
+                return;
 
             //lock ("data.txt")
             {
                 var s = data[0].ToString();
 
-                log.Enqueue(s);
+                //log.Enqueue(s);
 
                 var i = new LogItem(type, data);
 
@@ -176,17 +184,16 @@ namespace library
                 lock (data)
                     json = Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.None);
 
-                if (filters_ != null && !json.Contains(filters_))
+                if (textFilter != null && !json.Contains(textFilter))
                     return;
 
                 //Log.Write(type + "\r\n\r\n" + json + "\r\n\r\n----------------------------------------------------------------------------\r\n");
 
-                Log.Write(type + "\t" + json + "\t\r\n");
+                Log.Write(type + "\t" + operation + "\t" + json + "\t\r\n");
 
                 return;
 
-                if (OnLog != null)
-                    OnLog(i);
+                OnLog?.Invoke(i);
 
                 Items.Add(i);
 

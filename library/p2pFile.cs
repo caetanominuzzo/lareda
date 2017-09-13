@@ -1,4 +1,5 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace library
 {
-    internal partial class p2pFile : IDisposable
+    public partial class p2pFile : IDisposable
     {
         internal byte[] Address;
 
@@ -21,11 +22,83 @@ namespace library
 
         SortedList<int, Packet> FilePackets = new SortedList<int, Packet>();
 
+        List<int> arrives = new List<int>();
+
         public int FirstContentFilePacketOffset = 0;
 
         List<Packet> FilePacketsArrived = new List<Packet>();
 
 
+        internal static ILog log = log4net.LogManager.GetLogger(typeof(p2pFile));
+
+        public int[] Cursors
+        {
+            get
+            {
+                return this.Context.Select(x => Convert.ToInt32(x.OutputStreamPosition / pParameters.packetSize)).ToArray();
+            }
+        }
+
+        public int[] Arrives
+        {
+            get
+            {
+                int[] result = null;
+
+                lock (arrives)
+                    result = arrives.ToArray();
+
+                return result;
+            }
+        }
+
+        public long[] Complete()
+        {
+            if (Monitor.IsEntered(FilePackets))
+            {
+                log.Debug("Monitor is entered");
+
+                return new long[] { -1, 0, 0 };
+            }
+
+            if (Status < FileStatus.addressStructureComplete)
+            {
+                log.Debug("Structure incomplete");
+
+                return new long[] { -1, 0, 0 };
+            }
+
+
+
+
+
+            int[] keys = null;
+
+            lock (FilePackets)
+                keys = FilePackets.Keys.ToArray();
+
+            var result = new List<long>();
+
+
+            result.Add(keys[keys.Length - 2] * pParameters.packetSize + FilePackets[keys.Last()].data.Length);
+
+            log.Debug("Structure Complete \t" + this.Filename + "\t" + result[0].ToString());
+
+            foreach (var i in keys)
+            {
+                if (FilePackets[i].PacketType != PacketTypes.Content)
+                    continue;
+
+                if (FilePackets[i].Arrived)
+                {
+                    result.Add(FilePackets[i].Offset * pParameters.packetSize);
+
+                    result.Add(pParameters.packetSize);
+                }
+            }
+
+            return result.ToArray();
+        }
 
         internal double ReturnRatio = 1;
 
@@ -51,7 +124,7 @@ namespace library
 
         Packet Last;
 
-        List<p2pContext> Context = new List<p2pContext>();
+        public List<p2pContext> Context = new List<p2pContext>();
 
 
         public IEnumerable<Guid> RequestTraceIdentifier
@@ -84,11 +157,9 @@ namespace library
             set
             {
                 if ((value == FileStatus.dataStructureComplete || value == FileStatus.dataComplete))
-                //&&                    (status != FileStatus.dataStructureComplete && status != FileStatus.dataComplete))
+                //&&             (status != FileStatus.dataStructureComplete && status != FileStatus.dataComplete))
                 {
-                    Log.Add(Log.LogTypes.queueFileReady, this.Filename);
-
-                    Client.DownloadComplete(Address, Filename, SpecifFilename);
+                    Log.Add(Log.LogTypes.Queue, Log.LogOperations.Ready, this.Filename);
                 }
 
                 status = value;
@@ -157,22 +228,32 @@ namespace library
                 return Context.Any();
             }
 
-            
+
         }
 
         internal bool GetLastPacket = false;
+
+        internal bool GetSecondLastPacket = false;
 
         bool isNear(long bytesPosition)
         {
             return true;
 
+            if (this.GetLastPacket || this.GetSecondLastPacket)
+                return true;
+
             try
             {
-                foreach (var c in this.Context)
-                    Log.Add(Log.LogTypes.Nears, new { c.HttpContext.Request.RequestTraceIdentifier, Near = Math.Abs(c.OutputStreamPosition - bytesPosition) < pParameters.QueueWebserverStreamMaxDistance, c.OutputStreamPosition, bytesPosition, diff = c.OutputStreamPosition - bytesPosition, pParameters.QueueWebserverStreamMaxDistance, Filename, c.Download });
+                var result = false;
 
                 lock (this.Context)
-                    return this.Context.Any(x => Math.Abs(x.OutputStreamPosition - bytesPosition) < pParameters.QueueWebserverStreamMaxDistance);
+                    result = this.Context.Any(x => Math.Abs(x.OutputStreamPosition - bytesPosition) < pParameters.QueueWebserverStreamMaxDistance ||
+                     Math.Abs(x.OutputStreamEndPosition - bytesPosition) < pParameters.QueueWebserverStreamMaxDistance);
+
+                foreach (var c in this.Context)
+                    Log.Add(Log.LogTypes.Stream, Log.LogOperations.IsNear, new { c, Near = result, OutputStreamPosition = c.OutputStreamPosition, bytesPosition, diff = c.OutputStreamPosition - bytesPosition, pParameters.QueueWebserverStreamMaxDistance, Filename, c.Download });
+
+                return result;
 
 
             }
@@ -185,11 +266,9 @@ namespace library
         {
             while (!Client.Stop && !Ended && AnyContext())
             {
-                Log.Add(Log.LogTypes.queueRefresh, new { Filename, dequeueOffset });
+                Log.Add(Log.LogTypes.Queue, Log.LogOperations.Refresh, new { Filename, dequeueOffset });
 
                 Packet packet = null;
-
-                Log.Add(Log.LogTypes.queueRefresh, this);
 
                 var wait = false;
 
@@ -265,11 +344,20 @@ namespace library
 
                         GetLastPacket = false;
                     }
-                    else
+                    else if (GetSecondLastPacket)
+                    {
+                        packet = FilePackets[FilePackets.Keys.Max() - 1];
+
+                        GetSecondLastPacket = false;
+                    }
+
+                if (null == packet)
+                {
+                    lock (FilePackets)
                     {
                         packet = FilePackets.FirstOrDefault(x => x.Value.Level < Levels && !x.Value.Arrived).Value;
 
-                        if (packet == null)
+                        if (null == packet)
                         {
                             if (!FilePackets.Keys.Contains(dequeueFilePacketsOffset))
                                 dequeueFilePacketsOffset = FilePackets.Keys.Min();
@@ -278,14 +366,12 @@ namespace library
 
                             dequeueFilePacketsOffset = Math.Min(FilePackets.Keys.Max() + 1, dequeueFilePacketsOffset + 1);
                         }
-                        else
-                        {
-                        }
                     }
+                }
 
                 packet.Get();
 
-                
+
 
             }
 
@@ -314,7 +400,7 @@ namespace library
             lock (FilePackets)
                 FilePackets.Add(packet.FilePacketOffset, packet);
 
-            Log.Add(Log.LogTypes.queueAddPacket, packet);
+            Log.Add(Log.LogTypes.Queue, Log.LogOperations.Add, packet);
 
             packetEvent.Set();
         }

@@ -44,7 +44,7 @@ namespace windows_desktop
 
                 c.Tag = value;
 
-                c.Checked = ((Log.LogTypes)value & Log.filter) != Log.LogTypes.None;
+                c.Checked = ((Log.LogTypes)value & Log.typeFilter) != Log.LogTypes.None;
 
                 flowLogTypes.Controls.Add(c);
             }
@@ -99,12 +99,12 @@ namespace windows_desktop
 
         void GetValue()
         {
-            Log.filter = Log.LogTypes.None;
+            Log.typeFilter = Log.LogTypes.None;
 
             foreach (CheckBox c in flowLogTypes.Controls)
             {
                 if (c.Checked)
-                    Log.filter |= (Log.LogTypes)c.Tag;
+                    Log.typeFilter |= (Log.LogTypes)c.Tag;
             }
         }
 

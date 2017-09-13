@@ -8,55 +8,55 @@ using System.Threading.Tasks;
 
 namespace library
 {
-    static class pParameters
+    public static class pParameters
     {
-        internal static byte addressSize = 32;
+        public static byte addressSize = 32;
 
-        internal static byte base64AddressSize = 44;
+        public static byte base64AddressSize = 44;
 
-        internal static int statsBufferSize = 10;
+        public static int statsBufferSize = 10;
 
-        internal static int propagation = 1;
+        public static int propagation = 1;
 
-        internal static byte requestHeaderParamsSize = 4; 
+        public static byte requestHeaderParamsSize = 4; 
 
-        internal static byte requestHeaderSize = (byte)(requestHeaderParamsSize + 6); //6 = sizeof(ip:port);
+        public static byte requestHeaderSize = (byte)(requestHeaderParamsSize + 6); //6 = sizeof(ip:port);
 
-        internal static byte ipv4Addresssize = 4;
+        public static byte ipv4Addresssize = 4;
 
-        internal static int packetSize = addressSize * 2029;
+        public static int packetSize = addressSize * 2029;
 
-        internal static int postSize = (addressSize * 2029) - (requestHeaderSize + sizeof(int) + addressSize + 1); //sizeof(int) = content length; addressize = targetsize; 1 = binary
+        public static int postSize = (addressSize * 2029) - (requestHeaderSize + sizeof(int) + addressSize + 1); //sizeof(int) = content length; addressize = targetsize; 1 = binary
 
-        internal static int packetHeaderSize = 21; //1 byte (data type) + 4 byte (offset) + 16 byte (hash)
+        public static int packetHeaderSize = 21; //1 byte (data type) + 4 byte (offset) + 16 byte (hash)
 
         #region semantic search
 
-        internal const byte semanticSearchSteps = 2;
+        public const byte semanticSearchSteps = 2;
 
-        internal static byte semanticSearchReferences = 3;
+        public static byte semanticSearchReferences = 3;
 
         #endregion
 
         #region files
 
-        internal static string localTempDir = "temp";
+        public static string localTempDir = "temp";
 
-        internal static string localPacketsDir = "packets";
+        public static string localPacketsDir = "packets";
 
-        internal static string localPacketsFile = "Packet.bin";
+        public static string localPacketsFile = "Packet.bin";
 
-        internal static string peersPath = "Peer.bin";
+        public static string peersPath = "Peer.bin";
 
-        internal static string fileQueuePath = "FileQueue.bin";
+        public static string fileQueuePath = "FileQueue.bin";
 
         #endregion
 
-        internal static int maxDataAddress = 400;
+        public static int maxDataAddress = 400;
 
-        internal static int max_upload_kb = 100;
+        public static int max_upload_kb = 100;
 
-        internal static int max_download_kb = 100;
+        public static int max_download_kb = 100;
 
         public static int time_out = 4000;
 
@@ -64,11 +64,11 @@ namespace library
 
         public static int peers_interval = 10000;
         
-        internal static int response_timeout = 2000;
+        public static int response_timeout = 2000;
 
-        internal static int postTupleTimeout = 100;
+        public static int postTupleTimeout = 100;
 
-        internal static int cacheActiveTimeoutInterval = 100;
+        public static int cacheActiveTimeoutInterval = 100;
 
         
 
@@ -92,5 +92,9 @@ namespace library
 
         public static int QueueWebserverStreamMaxDistance = 1024 * 1024 * 3;
 
+        public static int READFILE_RETRY_COUNT = 3;
+
+
+        public static int WebServer_FileDownloadTimeout = 1000;
     }
 }

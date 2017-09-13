@@ -25,12 +25,17 @@ $.input.models =
 	children : $("#render_children"),
 	text	: $("#render_text"),
 	parents	: $("#render_parents"),
-	list	: $("#render_list")
+	list	: $("#render_list"),
+	select	: $("#render_select"),
 }
 
-$.input.models.master_stream.click($.nav.parentsItemClick);
+$.input.models.master_stream.find('>.cards').click($.nav.parentsItemClick);
 
-$.input.models.master_stream.mouseenter($.nav.parentsItemFocus);
+$.input.models.master_stream.find('>.cards').mouseenter($.nav.parentsItemFocus);
+
+$.input.models.master_stream.find('>.cards').mouseleave($.nav.parentsItemLeave);
+
+
 
 $.input.models.master_post.click($.nav.parentsItemClick);
 
@@ -43,6 +48,8 @@ $.input.models.list.click($.nav.listItemClick);
 $.input.models.parents.click($.nav.parentsItemClick);
 
 $.input.models.text.click($.nav.parentsItemClick);
+
+$.input.models.select.click($.nav.parentsItemClick);
 
 /*
 $.input.models.children.click($.nav.searchItemClick);
@@ -122,11 +129,13 @@ $.input.searchCallback = function(data, target)
 	}
 }
 
-$.input.updateItems = function($parent, items, mode, deepness)
+$.input.updateItems = function($parent_subresults, items, mode, deepness, parent, $parent_subparentresults, parent_index)
 {
 	if(typeof deepness == 'undefined') deepness = 0;
 
-	$locals = $parent.children("div");
+	$parent_subresults.show();
+
+	$locals = $parent_subresults.children("div");
 	
 	for(var i = 0; i < items.length; i++)
 	{
@@ -135,7 +144,7 @@ $.input.updateItems = function($parent, items, mode, deepness)
 		if(item.index != -1)
 			item.index = i;
 		
-		var	$item = $parent.children("div[address='" + item.address + "']");
+		var	$item = $parent_subresults.children("div[address='" + item.address + "']");
 	
 		var old_index = $item.attr("index");
 
@@ -146,77 +155,159 @@ $.input.updateItems = function($parent, items, mode, deepness)
 			new_item = true;
 			
 			$item = $.input.cloneModel(
-						mode == 'list'? $.input.models.list : 
-							mode == 'children'? $.input.models.children :
-								mode == 'parents'? $.input.models.parents :
-									mode == 'text'? $.input.models.text : //(nav or main)
-										item.root == 'post666' ? $.input.models.master_post :
-											$.input.models.master_stream,
+						mode == 'select'? $.input.models.select : 
+							mode == 'list'? $.input.models.list : 
+								mode == 'children'? $.input.models.children :
+									mode == 'parents'? $.input.models.parents :
+										mode == 'text'? $.input.models.text : //(nav or main)
+											item.root == 'post666' ? $.input.models.master_post :
+												$.input.models.master_stream,
 						item.address);
 
 			var show = false;
 
 			if(mode == 'nav')
 			{
-				if($parent.children().length > 0)
+				if($parent_subresults.children().length > 0)
 				{
-					$parent.children().fadeOut('fast', function() { $(this).remove() });
+					$parent_subresults.children().fadeOut('fast', function() { $(this).remove() });
 				
 					show = true;
 				}
+
+				//var colorBytes = $.utils.addressToColorBytes(item.address);
+
+				//var colorBytesShadow = [colorBytes[0]-50, colorBytes[1]-50, colorBytes[2]-50];
+
+				//$parent_subresults.css('background', 'rgba(' + colorBytes.join(', ') + ', 1)');
 			}
 
-			$parent.append($item);
+			$parent_subresults.append($item);
 
-			(!$parent.is(":visible"))
-			{
-				$parent.fadeIn('fast');
 
-				$parent.animate({height : 548}, 'fast');
-			}
+			var $playButton = $('.large_play', $item);
+
+			$playButton.on('click', $.menu.play);
+
+			$card = $('>.cards', $item);
+
+			$card.on('mouseenter', $.nav.mouseenter).on('mouseleave', $.nav.mouseleave);
+
 
 		}
 		else if(item.index == -1)
 		{
 			$item.remove();	
 		}
-		//else 
-		//if(mode == 'nav')
-		//	return;
-		
-
-		
-		$.input.bindItem($item, item, new_item);
 
 
-		if(item.children && item.children.length > 0)
+		//if(!item.children || item.children[0].root == 'sequence' || mode == 'main' || typeof parent == 'undefined')
+			$.input.bindItem($item, item, new_item);
+
+		if(typeof parent_index != 'undefined')
+			$item.attr('parent_index', parent_index);
+
+		if(item.children && item.children.length > 0 && mode != 'main')
 		{
+			var $subresults_buttons_placeholder = $item.find("div.subitems_buttons_placeholder:first");
+
+			var $subparentresults_buttons_placeholder = $item.find("div.subparentitems_buttons_placeholder:first");
+
+			var $prev = $('.subresults_buttons.slick-prev', $item);
+
+			var $next = $('.subresults_buttons.slick-next', $item);
+
+			var $parentprev = $('.subparentresults_buttons.slick-prev', $item);
+
+			var $parentnext = $('.subparentresults_buttons.slick-next', $item);
+
 			var $subresults = $item.find("div.subitems:first");
 
-			$.input.updateItems($subresults, item.children, 'children', deepness);
+			var $subparentresults = $item.find(".subparentitems:first");
+
+			if(item.children[0].root == 'sequence')
+			{
+				$.input.updateItems($subparentresults, item.children, 'select', deepness+1, item, $subresults, i);
+			}
+			else if(item.root == 'sequence')
+			{
+				var child_index = $('>div', $parent_subparentresults).length;
+
+				$.input.updateItems($parent_subparentresults, item.children, 'post', deepness+1, item, $subresults);
+
+				$item.attr('child_index', child_index);
+			}
+			else
+			{
+				$.input.updateItems($subresults, item.children, 'post', deepness+1, item, $subparentresults);
+			}
+
+
+			if(deepness < 1)
+			{
+				
+				/*$subresults.slick({
+					//slidesToShow: 1,
+					variableWidth: true,
+					prevArrow: $prev,
+					nextArrow: $next,
+				});
+				*/
+
+				$subresults.children().after("<div class='navItems searchResults'>");
+
+				$subresults.on('mousewheel', $.nav.scroll);
+
+				$subresults.on('beforeChange', function(slick, currentSlide, nextSlide)
+				{
+				  	var selectedSlide = $(currentSlide.$slides[nextSlide]).attr('child_index');
+
+					//todo: sync select
+					//$subparentresults.slick('slickGoTo', selectedSlide);
+
+				});
+
+				$subresults.on('mouseenter', function()
+				{
+					$prev.attr('style', 'display: block !important');
+					$next.attr('style', 'display: block !important');
+				});
+				
+				$subresults.on('mouseleaeve', function()
+				{
+					$prev.removeAttr('style');
+					$next.removeAttr('style');
+				});
+
+				$subparentresults.show();
+
+				$subresults.show();
+
+				$subparentresults.show();
+
+			}
+
+
 		}
+
+
 	}
 
 
 	if(mode == 'main')
 	{
-		$(".navItems", $parent).remove();
-
-		var last_top = -1;
-
-		var last = $parent.children().length - 1;
-		
-		$parent.children().each(function(i, t)
-		{
-			var $t = $(t);
-
-			if(last_top != -1 &&  $t.offset().top != last_top)
-				$t.before("<div class='navItems searchResults'>");
-			else if(i == last)
-				$t.after("<div class='navItems searchResults'>");
-
-			last_top = $t.offset().top;
-		});
+		/*
+		$parent_subresults.slick({
+					//slidesToShow: 1,
+					variableWidth: true,
+					prevArrow: $prev,
+					nextArrow: $next,
+				});
+				*/
+				
+		$(".navItems", $parent_subresults).remove();
+	
+		$parent_subresults.children().after("<div class='navItems searchResults'>");
 	}
 
 
@@ -257,6 +348,18 @@ $.input.bindItem = function($item, item, new_item)
 
 		return;
 	}
+	
+	if($item.is('.option')) 
+	{
+		var parents_thumb_text =  $('.thumb_text:first', $item);
+
+		if($item.text() != item.thumb_text)
+			$item.text(item.thumb_text);
+
+		$item.attr('value', item.address);
+
+		return;
+	}
 		
 
 	var author =   $('.firstauthor:first', $content);
@@ -271,6 +374,10 @@ $.input.bindItem = function($item, item, new_item)
 
 	var audio = $content.find("audio:first")[0];
 
+	var video_src = null;
+
+	if(img.tagName == "VIDEO")
+		video_src = img.children[0];
 	
 	
 	var parents = $('.parents:first', $content); 
@@ -302,7 +409,37 @@ $.input.bindItem = function($item, item, new_item)
 	{
 		if(!img.src.endsWith(item.video))
 		{
-			img.setAttribute("src", item.video);			
+			/*
+			videojs('vidd1', {
+			  tracks: [
+			    { src:'', kind:'captions', srclang:'en' label:'English' }
+			  ]
+			});
+*/
+			//img.setAttribute("src", item.video);	
+			video_src.setAttribute("src", item.video)	
+
+			var f = function(){ 
+					if(!img.duration > 0)
+					{
+						video_src.setAttribute("src", item.video);						
+
+					//	setTimeout(f, 100);
+					}
+					
+					$.ajax({
+			            url: "keepAlive/",
+			            data:
+			                {
+			                    files: JSON.stringify([video_src.src,  audio.src]),
+			                },
+			            crossDomain: false,
+			            dataType: "json",
+			            method: "GET"
+			        });
+			};
+
+			setTimeout(f, 500);
 		}
 
 		if(typeof audio != 'undefined' &&  typeof item.audio != 'undefined')
@@ -366,6 +503,8 @@ $.input.bindItem = function($item, item, new_item)
 		date.timeago();
 	}		
 
+//if(item.thumb_text == "Ressonância Límbica")
+//	debugger;
 
 	if(text.text() != item.text)
 		text.text(item.text);
@@ -409,15 +548,15 @@ $.input.cloneModel = function($model, address)
 	//$('.cards', $clone).css('background-color', 'rgba(' + colorBytes.join(', ') + ', .6)');
 	//$('.cards', $clone).css('background-color', 'white');
 
-	$('.card_triangle', $clone).css('background-color', 'rgba(' + colorBytesShadow.join(', ') + ', 1)');
+//	$('.card_triangle', $clone).css('background-color', 'rgba(' + colorBytesShadow.join(', ') + ', 1)');
 
-	$('.card_title .top', $clone).css('border-left', '1px solid rgba(' + colorBytes.join(', ') + ', 1)');
+//	$('.card_title .top', $clone).css('border-left', '1px solid rgba(' + colorBytes.join(', ') + ', 1)');
 
 	//$('.card_title .top', $clone).css('border-right', '1px solid rgba(' + colorBytes.join(', ') + ', .6)');
 
-	$('.card_title .top', $clone).css('border-bottom', '1px solid rgba(' + colorBytes.join(', ') + ', 1)');
+//	$('.card_title .top', $clone).css('border-bottom', '1px solid rgba(' + colorBytes.join(', ') + ', 1)');
 
-	$('.card_title .top', $clone).css('background-color', 'rgba(' + colorBytes.join(', ') + ', 1)');
+//	$('.card_title .top', $clone).css('background-color', 'rgba(' + colorBytes.join(', ') + ', 1)');
 
 //	$('.cards', $clone).css('box-shadow', '0px 0px 100px rgba(' + colorBytes.join(', ') + ', .3)');
 

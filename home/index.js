@@ -35,11 +35,14 @@ $(function()
 			$.nav.top = 100;
 		});
 
+	$('body').on('mousewheel', $.nav.scroll);
+
 	var count  = 0;
 	var max = 3;
 
 	var i = 0;
-
+	
+if(false)
 	$.ajax({
 	url: "createUserAvatar/" + "aaa" + (i == 0 ? "" : i) });
 
@@ -92,9 +95,8 @@ $(function()
 			
 
 	
-
-	if(false)
-	for(var i = 0; i < 0; i++)
+if(false)
+	for(var i = 0; i < 1; i++)
 	{
 		$.ajax({
 			url: "createUserAvatar/" + "aaa" + (i == 0 ? "" : i),
@@ -116,6 +118,12 @@ $(function()
 				$.input.post ("ddd" + i, null);
 
 				$.input.post ("eee" + i, null);
+
+				$.input.post ("fff" + i, null);
+
+				$.input.post ("ggg" + i, null);
+
+				$.input.post ("hhh" + i, null);
 
 			},
 			dataType: "text"});

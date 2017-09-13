@@ -94,9 +94,9 @@ namespace library
 
             #endregion
 
-            public static int max_upload = 100 * 1024;
+            public static int max_upload = 1 * 1024;
 
-            public static int max_download = 100 * 1024;
+            public static int max_download = 1 * 1024;
 
             public static bool below_max_send()
             {

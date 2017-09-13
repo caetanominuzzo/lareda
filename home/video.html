@@ -1,0 +1,61 @@
+<html>
+<head>
+<script src="3rd/jquery-2.1.4.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="3rd/video-js.css">
+</head>
+<body>
+<input type=button id="b1" />
+<video id="vidd1" class="firstpic firstaudio video-js bound" preload="true">
+
+                        </video>
+
+<script type="text/javascript">
+	
+$('#b1').on('click', function() {
+
+
+var video = videojs('vidd1');
+//var video = document.getElementById('vidd1');
+
+/*
+
+
+
+
+	//videojs('vidd1', {});
+
+
+
+/*
+<source src="eee.mp4" kind="Main" selected="true" type="video/mp4">
+*//*
+var source = document.createElement('source');
+
+
+
+source.setAttribute('src', 'eee.mp4');
+
+source.setAttribute('kind', 'Main');
+
+source.setAttribute('selected', 'true');
+
+source.setAttribute('type', 'true');
+
+video.appendChild(source);
+*/
+//video.load();
+
+video.play();
+
+
+});
+	
+
+
+
+</script>
+
+<script src="3rd/video.js"></script>
+</body>
+                    </html>
+

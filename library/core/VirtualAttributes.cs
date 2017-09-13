@@ -46,6 +46,8 @@ namespace library
 
         public static byte[] ROOT_STREAM = Utils.GetAddress();
 
+        public static byte[] ROOT_SEQUENCE = Utils.GetAddress();
+
         public static byte[] ROOT_IMAGE = Utils.GetAddress();
 
         public static byte[] ROOT_POST = Utils.GetAddress();
@@ -128,12 +130,8 @@ namespace library
         public static byte[] CONTEUDO = Utils.GetAddress();
        
         public static byte[] Nome = Utils.GetAddress();
-        
 
         public static byte[] DATA = Utils.GetAddress();
-
-
-
 
         public static int Count = Utils.AddressCount;
 

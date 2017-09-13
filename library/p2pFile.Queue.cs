@@ -10,18 +10,18 @@ using System.Xml.Linq;
 
 namespace library
 {
-    partial class p2pFile
+    public partial class p2pFile
     {
-        internal static class Queue
+        public static class Queue
         {
             static Cache<p2pFile> _queue = null;
-            static Cache<p2pFile> queue
+            public static Cache<p2pFile> queue
             {
                 get
                 {
                     if (_queue == null)
                     {
-                        _queue = new Cache<p2pFile>(10 * 1000);
+                        _queue = new Cache<p2pFile>(1002 * 1000);
 
                         _queue.OnCacheExpired += Queue_OnCacheExpired;
                     }
@@ -76,7 +76,10 @@ namespace library
 
                         item.Reset();
 
-                        Log.Add(Log.LogTypes.queueAddFile, new { RESET = 1, item.CachedValue});
+
+                        item.CachedValue.packetEvent.Set();
+
+                        Log.Add(Log.LogTypes.Queue, Log.LogOperations.Add, new { RESET = 1, item.CachedValue});
 
                         return;
                     }
@@ -84,7 +87,7 @@ namespace library
 
                 p2pFile file = new p2pFile(address, context, filename, specifFIle);
 
-                Log.Add(Log.LogTypes.queueAddFile, file);
+                Log.Add(Log.LogTypes.Queue, Log.LogOperations.Add, file);
 
                 lock (queue)
                     queue.Add(file);
@@ -105,7 +108,7 @@ namespace library
 
             private static void Queue_OnCacheExpired(CacheItem<p2pFile> item)
             {
-                Log.Add(Log.LogTypes.queueExpireFile, item.CachedValue);
+                Log.Add(Log.LogTypes.Queue, Log.LogOperations.Expire, item.CachedValue);
 
                 item.CachedValue.Dispose();
             }
@@ -125,7 +128,7 @@ namespace library
                 }
 
                 if (file.Success)
-                    Client.DownloadComplete(file.Address, file.Filename, file.SpecifFilename);
+                    Client.DownloadComplete(file.Address, file.Filename, file.SpecifFilename, file.Arrives, file.Cursors);
             }
 
             private static void Save()

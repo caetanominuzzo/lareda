@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Security.Permissions;
 using System.Security.Principal;
 using System.Net;
+using log4net;
 
 namespace windows_desktop
 {
@@ -64,7 +65,9 @@ namespace windows_desktop
         static void Main(string[] args)
         {
             //GenerateSimpleNames()
-            
+
+            log4net.Config.XmlConfigurator.Configure();
+
             Configure();
 
             if (Netsh(args))
@@ -135,7 +138,7 @@ namespace windows_desktop
             if (Directory.GetCurrentDirectory() != AppDomain.CurrentDomain.BaseDirectory)
                 Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
 
-            Log.Add(Log.LogTypes.Application | Log.LogTypes.Configure, AppDomain.CurrentDomain.BaseDirectory);
+            Log.Add(Log.LogTypes.Application, Log.LogOperations.Configure, AppDomain.CurrentDomain.BaseDirectory);
 
             webCache = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, webCache);
 
@@ -193,7 +196,7 @@ namespace windows_desktop
 
         static bool Install()
         {
-            Log.Add(Log.LogTypes.Application, AppDomain.CurrentDomain.BaseDirectory);
+            Log.Add(Log.LogTypes.Application, Log.LogOperations.Install, AppDomain.CurrentDomain.BaseDirectory);
 
             var appdata = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
@@ -205,8 +208,6 @@ namespace windows_desktop
                 && !AppDomain.CurrentDomain.FriendlyName.Contains("vshost")
                 && !AppDomain.CurrentDomain.BaseDirectory.Contains("debug"))
             {
-                Log.Add(Log.LogTypes.Application, AppDomain.CurrentDomain.BaseDirectory);
-
                 try
                 {
                     if (!RunAsAdministrator(AppDomain.CurrentDomain.FriendlyName))
@@ -234,11 +235,11 @@ namespace windows_desktop
                 }
                 catch (MissingTailException e)
                 {
+                    Log.Add(Log.LogTypes.Application, Log.LogOperations.Exception, AppDomain.CurrentDomain.BaseDirectory, e);
+
                     return false;
                 }
             }
-
-            Log.Add(Log.LogTypes.Application, AppDomain.CurrentDomain.BaseDirectory);
 
             return false;
         }
@@ -395,7 +396,7 @@ namespace windows_desktop
             if (args[0] != "NETSH")
                 return false;
 
-            Log.Add(Log.LogTypes.Application, WebPort);
+            Log.Add(Log.LogTypes.Application, Log.LogOperations.Configure, WebPort);
 
             Process p = new Process();
 

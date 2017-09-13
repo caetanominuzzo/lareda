@@ -60,31 +60,30 @@ namespace library
         {
             while (!Client.Stop)
             {
+                IPEndPoint remoteEndPoint = null;
                 try
                 {
-                IPEndPoint remoteEndPoint = null;
 
-                byte[] buffer = server.Receive(ref remoteEndPoint);
+                    byte[] buffer = server.Receive(ref remoteEndPoint);
 
-                if (remoteEndPoint != null)
-                {
-                    var command = (RequestCommand)buffer[0];
+                    if (remoteEndPoint != null)
+                    {
+                        var command = (RequestCommand)buffer[0];
 
-                    Log.Add(Log.LogTypes.p2pIncoming | Log.FromCommand(command), new { Port = remoteEndPoint.Port, Address = buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray(), Data = buffer.Length > pParameters.requestHeaderSize + pParameters.addressSize  });
+                        Log.Add(Log.LogTypes.P2p | Log.FromCommand(command), Log.LogOperations.Incoming, new { Port = remoteEndPoint.Port, Address = buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray(), Data = buffer.Length > pParameters.requestHeaderSize + pParameters.addressSize });
 
+                        var r = p2pRequest.CreateRequestFromReceivedBytes(remoteEndPoint, buffer);
 
-                    var r = p2pRequest.CreateRequestFromReceivedBytes(remoteEndPoint, buffer);
+                        p2pResponse.Process(r);
 
-                    p2pResponse.Process(r);
+                        //ThreadPool.QueueUserWorkItem(new WaitCallback(p2pResponse.Process), new p2pRequest(remoteEndPoint, buffer));
 
-                    //ThreadPool.QueueUserWorkItem(new WaitCallback(p2pResponse.Process), new p2pRequest(remoteEndPoint, buffer));
-
-                    Client.Stats.Received.Add(buffer.Length);
-                }
+                        Client.Stats.Received.Add(buffer.Length);
+                    }
                 }
                 catch (Exception e)
                 {
-                    Log.Add(Log.LogTypes.Application, e.ToString());
+                    Log.Add(Log.LogTypes.Application, Log.LogOperations.Exception, new { remoteEndPoint, Exception = e.ToString() });
                 }
             }
 

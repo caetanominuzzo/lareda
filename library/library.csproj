@@ -48,6 +48,15 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugCleanCache|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\DebugCleanCache\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Accord">
       <HintPath>..\packages\Accord.3.0.2\lib\net45\Accord.dll</HintPath>
@@ -70,6 +79,10 @@
     </Reference>
     <Reference Include="Identicon">
       <HintPath>..\packages\IdenticonHandler.1.1.0\lib\Identicon.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -99,7 +112,6 @@
     <Compile Include="core\Counter.cs" />
     <Compile Include="core\ffmpegProcess.cs" />
     <Compile Include="FileDownloadObject.cs" />
-    <Compile Include="p2pContext.cs" />
     <Compile Include="core\TimeCounter.cs" />
     <Compile Include="core\DelayedWrite.cs" />
     <Compile Include="core\DIV.cs" />
@@ -117,11 +129,13 @@
     <Compile Include="core\QueueCache.cs" />
     <Compile Include="core\VirtualAttributes.cs" />
     <Compile Include="Network.cs" />
+    <Compile Include="p2pContext.cs" />
     <Compile Include="p2pFile.cs" />
     <Compile Include="p2pFile.Packet.cs" />
     <Compile Include="p2pFile.Queue.cs" />
     <Compile Include="p2pFile.Upload.cs" />
     <Compile Include="p2pStream.cs" />
+    <Compile Include="p2pStreamManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SearchResult.cs" />
     <Compile Include="Subtitles.cs" />

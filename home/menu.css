@@ -15,6 +15,19 @@
 .menu .bad		{ background-image: url('menu/bad.png'); }
 
 .menu .large_play		{ background-image: url('menu/large_play.png'); }
+.1menu .large_play:hover	{ background-image: url('menu/large_play_red.png'); }
+.menu .large_loading	{
+	background-image: url('menu/loading.gif');
+	background-size: 30% !important;
+	width: 100% !important;
+	height: 100% !important;
+	margin-top: 0 !important;
+	background-color: black;
+	}
+
+.menu .large_loading:hover {
+    transform: none;
+}
 .menu .large_down		{ background-image: url('menu/large_down.png'); }
 
 .menu .pause	{ background-image: url('menu/pause.png'); }
@@ -35,6 +48,17 @@
 	font-size: 13px;
 	font-family: trebuchet ms;
 	/* border: 1px solid #333; */
+	/* height: 100%; */
+	top: 0px;
+	bottom: 0px;
+	right: 0px;
+	left: 0px;
+}
+
+.navItems .cards
+{
+	/* height: initial; */
+	/* margin: 0px !important; */
 }
 
 .menu .bottom,
@@ -61,22 +85,7 @@
 	visibility: hidden;
 }
 
-.cards:hover .clip .rootitem .firstpic_container .menu > div
-{
-	visibility: visible;
-}
-
-.navItems .layout .cards .clip .rootitem .firstpic_container .menu > div
-{
-	visibility: visible;
-}
-
-.menu:hover > div
-{
-	
-}
-
-.firstpic_container:hover .menu > div
+.firstpic_container:hover .menu > div 
 {
 	visibility: visible;
 }
@@ -108,12 +117,13 @@
 	background-position: 50% 50%;
 	background-repeat: no-repeat;
 	/* display: inline-block; */
+	/* height: 100%; */
 }
 
 .menu
 {
 	width: 100%;
-	height: initial;
+	height: 100%;
 	position: absolute;
 	/* background-color: rgba(255,0,0,.5); */
 	/* text-shadow: 0px 0px 10px rgba(0,0,0,.8); */
@@ -124,18 +134,39 @@
 
 .cards .top
 {
-	padding: 8px 0px 8px 7px;
-	/* text-shadow: 0px 0px 10px rgba(0,0,0,.8); */
-	font-size: 18px;
+	/* padding: 8px 0px; */
+	text-shadow: 0px 0px 10px rgba(0,0,0,.8);
+	font-size: 1.5em;
 	opacity: 1;
 	/* color: #000; */
 	/* background: white; */
-	position: absolute;
+	/* position: absolute; */
 	/* z-index: 100000; */
 	/* left: -17px; */
 	width: 100%;
-	right: 0px;
+	/* right: 0px; */
 	/* margin-right: 10px; */
+	overflow: hidden;
+	background-repeat: no-repeat;
+	background-position-x: center;
+	background-size: 34px;
+	background-position-y: -14px;
+	border: 0px !important;
+	text-align: center;
+	background-image: url("images/down.svg");
+	height: 100%;
+	/* vertical-align: middle; */
+	padding: 16px 0px;
+}
+
+.subresults .cards .top
+{
+	font-size: 1.2em;
+}
+
+.subparentresults .cards .top
+{
+	font-size: 1em;
 }
 
 .card_triangle
@@ -147,38 +178,27 @@ height: 8px;
 	
 position: absolute;
 	
-/* z-index: 20000; */
+z-index: 1;
 	
 top: -8px;
 	
 left: -8px;
 	
 background: url('menu/triangle.png');
+	
+display: none;
 }
 
 .card_title
 {
-	height: 75px;
+	height: 22%;
 	width: 100%;
+	/* background: #0c0c0c; */
 	position: absolute;
-	/* display: inherit !important; */
+	bottom: 0px;
 }
 
-.navItems .card_title
-{
-	height: AUTO;
-	width: 50%;
-	float: left;
-	display: block !important;
-	top: 0px;
-}
 
-.navItems .card_title .top
-{
-	height: 100%;
-	background-color: black !important;
-	font-size: 24px;
-}
 
 
 .menu .bottom
@@ -189,7 +209,7 @@ background: url('menu/triangle.png');
 	bottom: 0px;
 	/* height: 46px; */
 	background-color: rgba(0,0,0,0.7);
-	padding: 20px;
+	/* padding: 20px; */
 	/* width: 100%; */
 	background: rgba(0,0,0,0);
 	background: -moz-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
@@ -231,6 +251,7 @@ background: url('menu/triangle.png');
 	height: 28px;
 	bbackground-color: red;
 	/* margin: 6px 9px; */
+	position: relative;
 }
 
 .menu .bottom .timeline .progress_bar span
@@ -247,18 +268,26 @@ background: url('menu/triangle.png');
 {
 	background-color: red;
 	width: 0%;
+	/* float: right; */
+	z-index: 2;
 }
 
 .menu .bottom .timeline .progress_bar .progress_bar_loaded
 {
-	background-color: #999;
+	background-color: #666;
 	width: 5px;
+	/* opacity: .5; */
+	/* position: absolute; */
+	z-index: 2;
 }
 
 .menu .bottom .timeline .progress_bar .progress_bar_toplay
 {
 	background-color: #DDD;
 	width: 100%;
+	position: absolute;
+	right: 0px;
+	z-index: 1;
 }
 
 .menu .bottom .buttons .right_buttons,
@@ -303,22 +332,13 @@ background: url('menu/triangle.png');
 
 .menu .primary_action .button
 {
-	width: 96px;
+	width: 35%;
 	height 96px;
-	height: 96px;
-	margin-top: 20px;
+	height: 35%;
+	margin-top: 17%;
 	background-size: 50%;
 }
 
-.navItems .menu .primary_action .button
-{
-	width: 196px;
-	height 196px;
-	/* height: 96px; */
-	margin-top: 0px;
-	padding-top: 303px;
-	/* margin-left: 50%; */
-}
 
 .menu .right
 {
@@ -330,6 +350,13 @@ background: url('menu/triangle.png');
 	border-radius: 0px 0px  0px 16px;
 	top: 0px;
 	/* display: none; */
+	height: 70px;
+}
+
+.button:hover
+{
+	transform: scale(1.3);
+	transition: transform 400ms cubic-bezier(0.5, 0, 0.1, 1) 0ms;
 }
 
 .menu .right .bad,
@@ -361,7 +388,7 @@ background: url('menu/triangle.png');
 .menu .bottom .inline_volume_bar
 {
 	display: inline-block;
-	margin: -19px 18px;
+	margin: 4px 4px;
 	/* height: 22px; */
 	/* top: 0px; */
 	position: absolute;

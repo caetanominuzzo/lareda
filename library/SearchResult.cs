@@ -53,7 +53,7 @@ namespace library
 
         internal void AddToSearch(IEnumerable<byte[]> addresses)
         {
-            Log.Add(Log.LogTypes.Search | Log.LogTypes.Add, addresses.Select(x => Utils.ToSimpleAddress(x)));
+            Log.Add(Log.LogTypes.Search, Log.LogOperations.Add, addresses.Select(x => Utils.ToSimpleAddress(x)));
 
             lock (AddressestoSearch)
             {
@@ -79,7 +79,7 @@ namespace library
 
                 if (AddressestoSearch.Any())
                 {
-                    Log.Add(Log.LogTypes.Search | Log.LogTypes.Get, AddressestoSearch.Select(x => Utils.ToSimpleAddress(x)).Aggregate((x, y) => string.Concat(x, "-", y)));
+                    Log.Add(Log.LogTypes.Search, Log.LogOperations.Get, AddressestoSearch.Select(x => Utils.ToSimpleAddress(x)).Aggregate((x, y) => string.Concat(x, "-", y)));
 
                     result = AddressestoSearch[0];
 
@@ -187,6 +187,9 @@ namespace library
 
         bool Search(byte[] address, MetaPacketType type)
         {
+
+            if(Utils.ToSimpleAddress(address) == "521")
+            { }
 
 
             var searched = true;
@@ -472,13 +475,19 @@ namespace library
 
             var anyInvalidation = false;
 
-            var link = RootAddItem(metapacket.LinkAddress, metapacket.Hash, metapacket);
+            var link = RootAddItem(metapacket.LinkAddress, metapacket.Hash, metapacket, out anyInvalidation);
 
             if (type == MetaPacketType.Hash)
                 return true;
 
 
-            var address = RootAddItem(metapacket.Address, null, metapacket);
+            var address = RootAddItem(metapacket.Address, null, metapacket, out anyInvalidation);
+
+
+            if(Utils.ToSimpleAddress(metapacket.Address) == "521" ||
+                Utils.ToSimpleAddress(metapacket.LinkAddress) == "521" ||
+                Utils.ToSimpleAddress(metapacket.TargetAddress) == "521")
+            { }
 
             if (ChildrenAdd(address, link))
                 anyInvalidation = true;
@@ -487,7 +496,7 @@ namespace library
                 anyInvalidation = true;
 
 
-            var target = RootAddItem(metapacket.TargetAddress, null, null);
+            var target = RootAddItem(metapacket.TargetAddress, null, null, out anyInvalidation);
 
 
 
@@ -519,8 +528,10 @@ namespace library
         }
 
 
-        internal DIV RootAddItem(byte[] address, byte[] hash, Metapacket metapacket)
+        internal DIV RootAddItem(byte[] address, byte[] hash, Metapacket metapacket, out bool anyInvalidation)
         {
+            anyInvalidation = false;
+
             if (Utils.ToSimpleAddress(address) == "001")
             { }
 
@@ -531,6 +542,8 @@ namespace library
                 result.Hash = hash ?? result.Hash;
 
                 result.Src = metapacket ?? result.Src;
+
+                anyInvalidation = false;
 
                 return result;
             }
@@ -552,7 +565,8 @@ namespace library
                 result.IsVirtualAttribute = true;
             }
 
-            ChildrenAdd(RootResults, result);
+            if (ChildrenAdd(RootResults, result))
+                anyInvalidation = true;
 
             return result;
         }
@@ -567,13 +581,13 @@ namespace library
             return null;
         }
 
-        void Client_OnFileDownload(byte[] address, string filename, string speficFilena = null)
+        void Client_OnFileDownload(byte[] address, string filename, string speficFilena, int[] arrives, int[] cursors)
         {
         }
 
         void Client_OnSearchReturn(byte[] search, MetaPacketType type, IEnumerable<Metapacket> metapackets)
         {
-            Log.Add(Log.LogTypes.Search | Log.LogTypes.Incoming, new { search = Utils.ToSimpleAddress(search), metapackets });
+            Log.Add(Log.LogTypes.Search, Log.LogOperations.Incoming, new { search = Utils.ToSimpleAddress(search), metapackets });
 
             if (Utils.ToSimpleAddress(search) == "380")
             { }
@@ -639,9 +653,9 @@ namespace library
                 var ar1 = string.Empty;
 
                 if (Mode == RenderMode.Nav && Find(bTerm) != null)
-                    ar1 = Find(bTerm).Serialize(Mode);
+                    ar1 = Find(bTerm).Serialize(Mode, root);
                 else
-                    ar1 = root.Serialize(Mode);
+                    ar1 = root.Serialize(Mode, root);
 
                 //if(ar1.Length > 0)
                 //    ar1 = "{\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"wA08ZlhXpGhS0qO3Xx7XgdyPgZjBWQSdiKsez4_hmY4=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"727\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"-vulMifhA5fMzdx5AT3G_coJ4ime2yZvZkcrKXIa1cM=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"734\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"uhZqrmTdHoo9mGMiwfBGB2egEP_eNjBpQGjT1rcKGQY=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"758\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"dSMRDLDF1CZb9GPYC1UiP7BIHyBWP8wsVd3siMeI1XA=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"768\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"9Hh_qJk2V4kmmzZxjen0yxnYEAjSC5oRJ4j14bsKQB4=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"783\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"UUkLuHRf81IEejvelG0Izv0lJFy2ItL9ALv7-ALCPUo=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"793\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"tdNHWGhh2Dr2Wp-7S0E6xZsQ1nLn1efTuCN_vYQCc9U=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"802\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"bLiay5t4uItTcPuEmM9Xw7z06dyrzUYIn3VugRBANys=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"809\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"IHPPNTGWuo0SDe-1pP666r-I0SxYaWFWerl7OLyCUZc=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"816\"}, {\"root\": \"stream\", \"collapsed\": \"4.00\", \"average\": \"2.50\", \"thumb_text\": \"ccc10\", \"address\": \"BX-NkbLDXccmVic6x5y7xkw1KHzaslaL5Q1pi18H2K0=\", \"index\": \"0\", \"weight\": \"4.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"826\"}, {\"root\": \"stream\", \"collapsed\": \"3.00\", \"average\": \"2.67\", \"thumb_text\": \"ddd10\", \"address\": \"iIG1801PafGy_IJ5er7tPQ-_JtoGh4h7ScpqlQDtzHM=\", \"index\": \"0\", \"weight\": \"3.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"741\"}, {\"root\": \"stream\", \"collapsed\": \"3.00\", \"average\": \"2.67\", \"thumb_text\": \"eee10\", \"address\": \"G6tE_mp-m7BRWhtl8dfql0E93_K-te4uQyh7RE2vr7A=\", \"index\": \"0\", \"weight\": \"3.00\", \"date\": \"Sunday, April 9, 2017\", \"text\": \"\", \"pic\": \"dTDBn0k_zLDM8hkxwaOvv3RX0tM0WPeQ-h-EHxC5A9M=\", \"simple\": \"748\"}";
@@ -667,7 +681,7 @@ namespace library
 
             return text ?
 
-                Content(t.Address, context) :
+                Content(t.Src.LinkAddress, context) :
 
                  Utils.ToBase64String(t.Src.LinkAddress);
         }
@@ -869,6 +883,8 @@ namespace library
             }
             else
             {
+                
+
                 List<DIV> list = null;
 
                 lock (SearchResult.LockRootResults)

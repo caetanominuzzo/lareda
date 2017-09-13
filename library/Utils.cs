@@ -20,6 +20,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace library
 {
@@ -39,11 +40,23 @@ namespace library
         static string[] SimpleAddress = null;
 
         internal static int AddressCount = 0;
-             
+
 
         public static byte[] GetPseudoAddress()
         {
             return GetAddress(16);
+        }
+
+        public static int Random(int min, int max)
+        {
+            return Rand.Next(min, max);
+        }
+
+        public static string Replace(string input, string pattern, string replace)
+        {
+            Regex r = new Regex(pattern);
+
+            return r.Replace(input, replace);
         }
 
         public  static byte[] GetAddress(int size = 0)
@@ -55,8 +68,8 @@ namespace library
             
             Rand.NextBytes(result);
 
-            if(AddressCount == 51)
-            {
+            if(AddressCount == 413)
+                {
 
             }
 
@@ -68,6 +81,9 @@ namespace library
             }
 
             //result = Utils.ToAddressSizeArray(Rand.NextDouble().ToString());
+
+            if(Utils.ToSimpleAddress(result) == "409")
+            { }
 
             return result;
         }

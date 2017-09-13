@@ -12,7 +12,10 @@
     <link rel="stylesheet" type="text/css" href="3rd/video-js.css">
     <link rel="stylesheet" type="text/css" href="menu.css">
 
+    
     <script src="3rd/jquery-2.1.4.min.js"></script>
+    <script src="3rd/jquery-ui.min.js"></script>
+    
     <script src="3rd/isotope.pkgd.min.js"></script>
     <script src="3rd/diff_match_patch.js"></script>
     <script src="3rd/jquery.timeago.js"></script>
@@ -152,7 +155,6 @@
 
     <div id="body">
         <div id="searchResults" class="searchResults">
-            <div class="layout-sizer"></div>
         </div>
     </div>
 
@@ -160,14 +162,34 @@
    
 
 <div class="layout anchor root_stream" address="" id='render_master_stream'>
-
+    <img src="images/ratio_16_11.png" class="layout-ratio"/>
+    <img src="images/ratio_16_9.png" class="navitens-layout-ratio"/>
     <div class="cards">
+        <img src="images/ratio_16_9.png" class="navitens-layout-ratio"/>
+        
+
+
         <div class="clip">
             <div class="rootitem content">
+
+                <div class="left-side-nav">
+                    <div class="left-side-nav-tracks">
+                         <div class="text"></div>  
+                        <select class="subparentitems subparentresults"></select>
+                        
+                        <div class="carousel">
+                                <div class="subitems subresults"></div>
+                        </div>
+                    
+                       
+                    </div>
+                </div>
+
                 <div class="firstpic_container">
 
 
-
+                    <div class='firstpic_overdraw'></div>
+                    
                     <div class="menu">
 
                         <div class="primary_action">
@@ -235,9 +257,9 @@
                     </div>
 
 
-
+                    
                     <video id='vidd1' class="firstpic firstaudio video-js222" preload="metadata" poster="">
-                        <source src="">
+                        <source src=""  kind="Main" Selected="true">
                         <track kind="subtitles" src="" srclang="en" label="English" default>
                     </video>
                     <audio class="firstpic firstaudio video-js222   " preload="metadata"><source src=""></audio>
@@ -245,22 +267,22 @@
                 </div>
 
 
-                <div class="text subresults"></div>  
+               
                 <div class="subinput" style="display: none !important">
                     <div class="textarea_padding">
                         <div class="searchInput" contentEditable="true"></div>
                     </div>
                     <div class="buttons"><input type="button" value="Post"></div>
                 </div>
-                
-                <div class="subitems subresults"></div>
 
+                
                 
                 
             </div>
             
            
         </div>
+
 
         <div class="card_title">
             <div class="card_triangle"></div>
@@ -272,7 +294,12 @@
             </div>
         </div>
 
+        
+
     </div>
+
+    
+
 </div>
 
 
@@ -345,7 +372,7 @@
 
 
                     <video id='vidd1' class="firstpic firstaudio video-js222" preload="metadata" poster="">
-                        <source src="">
+                        <source src=""   kind="Main"  Selected="true">
                         <track kind="subtitles" src="" srclang="en" label="English" default>
                     </video>
                     <audio class="firstpic firstaudio video-js222   " preload="metadata"><source src=""></audio>
@@ -460,7 +487,7 @@
 
 
                     <video id='vidd1' class="firstpic firstaudio video-js222" preload="metadata" poster="">
-                        <source src="">
+                        <source src=""   kind="Main"  Selected="true">
                         <track kind="subtitles" src="" srclang="en" label="English" default>
                     </video>
                     <audio class="firstpic firstaudio video-js222   " preload="metadata"><source src=""></audio>
@@ -506,6 +533,8 @@
     </div>
 </div>
 
+<option address="" id="render_select" class="option thumb_text" value=""></option>
+
 <div address=""  id='render_text'>
     <div class="cards">
         <div class="clip">
@@ -532,6 +561,7 @@
 <div id='render_list' class='listitem subresults' contentEditable="false"><div class="cards"><div class="clip"><div class="rootitem content"><img class="firstpic" /><div class="thumb_text"></div><div class="firstauthor subresults"></div><div class="firstdate subresults"></div></div></div></div></div>
 
     <script src="3rd/video.js"></script>
+    <script src="3rd/slick.min.js"></script>
 
 </body>
 </html>

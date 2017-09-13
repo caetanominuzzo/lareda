@@ -1,4 +1,6 @@
-﻿using Frapper;
+﻿//#define COMPLETE
+
+using Frapper;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,7 +19,7 @@ using TagLib;
 
 namespace library
 {
-    partial class p2pFile
+    public partial class p2pFile
     {
         class RecentItem
         {
@@ -38,12 +40,12 @@ namespace library
 
         internal static string[] htmlExtensions = new string[] { ".HTML", ".HTM" };
 
-        internal static void FileUpload(string path, byte[] conceptAddress, byte[] userAddress = null, bool newThread = true)
+        internal static void FileUpload(string path, byte[] conceptAddress, byte[] userAddress = null, bool newThread = true, List<byte[]> parents = null)
         {
-            FileUpload(new string[] { path }, conceptAddress, userAddress, newThread);
+            FileUpload(new string[] { path }, conceptAddress, userAddress, newThread, parents);
         }
 
-        internal static void FileUpload(string[] paths, byte[] conceptAddress, byte[] userAddress = null, bool newThread = true)
+        internal static void FileUpload(string[] paths, byte[] conceptAddress, byte[] userAddress = null, bool newThread = true, List<byte[]> parents = null)
         {
             TagLib.File tags = null;
 
@@ -61,7 +63,7 @@ namespace library
 
                     var fi = new FileInfo(paths[0]);
 
-                    GeneratePosts(paths[0], conceptAddress, userAddress, fi.Length + pParameters.packetHeaderSize <= pParameters.packetSize, tags);
+                    GeneratePosts(paths[0], conceptAddress, userAddress, fi.Length + pParameters.packetHeaderSize <= pParameters.packetSize, tags, parents);
                 }
 
                 if (newThread)
@@ -73,7 +75,8 @@ namespace library
                              Paths = paths,
                              ConceptAddress = conceptAddress,
                              UserAddress = userAddress,
-                             Tags = tags
+                             Tags = tags,
+                             Parents = parents
                          });
                 }
                 else
@@ -84,7 +87,8 @@ namespace library
                              Paths = paths,
                              ConceptAddress = conceptAddress,
                              UserAddress = userAddress,
-                             Tags = tags
+                             Tags = tags,
+                             Parents = parents
                          });
                 }
             }
@@ -93,7 +97,7 @@ namespace library
                 if (tags != null)
                     tags.Dispose();
             }
-            //ThreadUpload(
+            //ThreadUpload(  
             //    new FileUploadItem
             //    {
             //        Paths = paths,
@@ -114,7 +118,7 @@ namespace library
                 var path = file.Paths[0];
 
                 if (Directory.Exists(path))
-                    DirectoryUpload(file.ConceptAddress, new string[] { path }, file.UserAddress);
+                    DirectoryUpload(file.ConceptAddress, new string[] { path }, file.UserAddress, file.Parents);
                 else
                 {
                     Client.FileUpload(path, Utils.ToBase64String(file.ConceptAddress));
@@ -163,7 +167,7 @@ namespace library
 
                                 var tmp = Path.Combine(pParameters.localTempDir, Utils.ToBase64String(Utils.GetAddress())) + format.FileExtension;
 
-                                ffmpegProcess.ExecuteAsync(string.Format(@"-ss 00:08:00 -i ""{0}"" -t 00:0:11  -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
+                                ffmpegProcess.ExecuteAsync(string.Format(@" -ss 00:00:00  -i ""{0}"" -t 00:02:04   -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
                                         file.Paths[0],
                                         format.FfmpegSelector,
                                         streamNumber++,
@@ -174,7 +178,7 @@ namespace library
                                 if (format.MediaTypes == MediaTypes.Text)
                                     tmp = Subtitles.ConvertSrtToVtt(tmp);
 
-                                using (var stream = new FileStream(tmp, FileMode.Open, FileAccess.Read))
+                                using (var stream = TryNewFileStream(tmp))
                                 {
                                     var streamConcept = file.ConceptAddress;
 
@@ -206,7 +210,7 @@ namespace library
 
                         foreach (var srtFile in srtFiles)
                         {
-                            /////////////////////////////
+                            /////////////////////////////a
                             var tmpSubtitle = Path.Combine(Path.GetDirectoryName(file.Paths[0]), Path.GetFileNameWithoutExtension(file.Paths[0])) + ".*.srt";
 
                             tmpSubtitle = srtFile;
@@ -223,7 +227,7 @@ namespace library
 
                                 tmpSubtitle = Subtitles.ConvertSrtToVtt(tmpSubtitle);
 
-                                using (var stream = new FileStream(tmpSubtitle, FileMode.Open, FileAccess.Read))
+                                using (var stream = TryNewFileStream(tmpSubtitle))
                                 {
                                     var streamConcept = file.ConceptAddress;
 
@@ -244,10 +248,53 @@ namespace library
                             }
                         }
                         ///////////////////////////
+
+
+
+                        var txtFiles = Directory.GetFiles(Path.GetDirectoryName(file.Paths[0]), Path.GetFileNameWithoutExtension(file.Paths[0]) + ".*.txt");
+
+                        foreach (var txtFile in txtFiles)
+                        {
+                            /////////////////////////////a
+                            var tmpSubtitle = Path.Combine(Path.GetDirectoryName(file.Paths[0]), Path.GetFileNameWithoutExtension(file.Paths[0])) + ".*.txt";
+
+                            tmpSubtitle = txtFile;
+
+                            var t = tmpSubtitle.Split('.');
+
+                            var language = VirtualAttributes.PT_BR;
+
+                            if (t[1] == "en")
+                                language = VirtualAttributes.EN_US;
+
+                            if (System.IO.File.Exists(tmpSubtitle))
+                            {
+
+                                using (var stream = TryNewFileStream(tmpSubtitle))
+                                {
+                                    var streamConcept = file.ConceptAddress;
+
+                                    var contentAddress = StreamUpload(
+                                                            streamConcept,
+                                                            PacketTypes.Content,
+                                                            stream, file.Tags,
+                                                            VirtualAttributes.MIME_TYPE_TEXT);
+
+                                    var culturetype = Metapacket.Create(contentAddress, language);
+
+                                    Metapacket.Create(culturetype.Address, VirtualAttributes.Culture);
+                                }
+
+                            }
+                        }
+                        ///////////////////////////
+
+
+
                     }
                     else
                     {
-                        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+                        using (var stream = TryNewFileStream(path))
                         {
                             StreamUpload(file.ConceptAddress, PacketTypes.Content, stream, file.Tags);
                         }
@@ -257,12 +304,12 @@ namespace library
             else
             {
                 var topDirectories = file.Paths.Select(x => Path.GetDirectoryName(x)).Distinct().Count();
-
+                
                 if (topDirectories == 1)
-                    DirectoryUpload(file.ConceptAddress, file.Paths, file.UserAddress);
+                    DirectoryUpload(file.ConceptAddress, file.Paths, file.UserAddress, file.Parents);
                 else
                     foreach (var path in file.Paths)
-                        FileUpload(path, file.ConceptAddress, file.UserAddress, false);
+                        FileUpload(path, file.ConceptAddress, file.UserAddress, false, file.Parents.ToArray().ToList());
             }
         }
 
@@ -277,10 +324,34 @@ namespace library
 
         }
 
+        static FileStream TryNewFileStream(string path)
+        {
+            FileStream result = null;
+
+            var count = 0;
+
+            while (true)
+            {
+                count++;
+
+                try
+                {
+                    result = new FileStream(path, FileMode.Open, FileAccess.Read);
+
+                    return result;
+                }
+                catch (IOException ex)
+                {
+                    if (count > pParameters.READFILE_RETRY_COUNT)
+                        throw ex;
+                    else
+                        Thread.Sleep(100);
+                }
+            }
+        }
 
 
-
-        static void DirectoryUpload(byte[] conceptAddress, string[] path, byte[] userAddress)
+        static void DirectoryUpload(byte[] conceptAddress, string[] path, byte[] userAddress, List<byte[]> parents)
         {
             var files = new string[0];
 
@@ -292,9 +363,16 @@ namespace library
             else
                 files = path;
 
-            var result = new List<byte>();
-
             bool web = false;
+
+            var dirName = Path.GetDirectoryName(files[0]);
+
+            GeneratePosts(dirName, conceptAddress, userAddress, false, null, parents);
+
+            if (null == parents)
+                parents = new List<byte[]>();
+
+            parents.Add(conceptAddress);
 
             foreach (var file in files)
             {
@@ -305,34 +383,20 @@ namespace library
                     web = true;
                 }
 
-                var contentAddress_1 = Utils.GetAddress();
-
                 var conceptAddress_1 = Utils.GetAddress();
+                
+                FileUpload(file, conceptAddress_1, parents: parents.ToArray().ToList());
 
-                FileUpload(file, contentAddress_1, conceptAddress_1, false);
-
-                Metapacket.Create(conceptAddress, conceptAddress_1);
-
-                //Metapacket.Create(conceptAddress_1, VirtualAttributes.CONCEITO);
+                //Metapacket.Create(conceptAddress, conceptAddress_1);
 
                 var rootedFileName = file.Substring(path.Length + 1);
 
                 var filename = Encoding.Unicode.GetBytes(rootedFileName);
 
-                var item = BitConverter.GetBytes(filename.Length).
-                    Concat(filename).
-                    Concat(contentAddress_1); //??
-
-                result.AddRange(item);
             }
 
-            StreamUpload(conceptAddress, PacketTypes.Directory, new MemoryStream(result.ToArray()), null, VirtualAttributes.MIME_TYPE_DIRECTORY);
 
-            var dirName = Path.GetDirectoryName(files[0]);
-
-            var tt = GeneratePosts(dirName, conceptAddress, userAddress, false, null);
-
-
+            
         }
 
         /// <summary>
@@ -493,11 +557,11 @@ namespace library
             return offset;
         }
 
-        static Metapacket CreatePostTuple(byte[] address, string value, byte[] property)
+        static Metapacket __createPostTuple(byte[] address, string value, byte[] property, byte[] conceptAddress = null)
         {
-            var valueConceptAddress = Client.Post(value);
+            conceptAddress = Client.Post(value, conceptAddress);
 
-            var mValue = Metapacket.Create(address, valueConceptAddress);
+            var mValue = Metapacket.Create(address, conceptAddress);
 
             Metapacket.Create(mValue.Address, property);
 
@@ -613,7 +677,7 @@ namespace library
                 return null;
         }
 
-        static byte[] GeneratePosts(string path, byte[] conceptAddress, byte[] userAddress, bool singlePacketFile, TagLib.File tags)
+        static byte[] GeneratePosts(string path, byte[] conceptAddress, byte[] userAddress, bool singlePacketFile, TagLib.File tags, List<byte[]> parents = null)
         {
             Metapacket.Create(conceptAddress, VirtualAttributes.CONCEITO);
 
@@ -628,17 +692,29 @@ namespace library
                     linkAddress: VirtualAttributes.AUTHOR);
             }
 
+            if(parents != null)
+            {
+                foreach(var parent in parents)
+                    Metapacket.Create(targetAddress: parent, linkAddress: conceptAddress);
+            }
+
             if (path != null && Directory.Exists(path))
             {
-                var link = Metapacket.Create(
-                       targetAddress: conceptAddress,
-                       linkAddress: VirtualAttributes.MIME_TYPE_DIRECTORY);
+                var link = Metapacket.Create(targetAddress: conceptAddress, linkAddress: VirtualAttributes.ROOT_SEQUENCE);
 
-                Metapacket.Create(link.Address, VirtualAttributes.CONCEITO);
+                Metapacket.Create(link.Address, VirtualAttributes.ROOT_TYPE);
 
                 //yep, Path.GetFilename to get the name of the directory 
-                Client.Post(Path.GetFileName(path), conceptAddress);
-                
+                var dirname = Path.GetFileName(path);
+
+                int i = -1;
+
+                if (int.TryParse(dirname, out i))
+                    //    Metapacket.Create(link.Address, MIME_TYPE);
+                    CreatePostTupleOrReuse(conceptAddress, i.ToString("n2"), VirtualAttributes.ORDER);
+
+                Client.Post(dirname, conceptAddress);
+
                 return conceptAddress;
             }
 
@@ -653,7 +729,10 @@ namespace library
                     nameItems = TorrentNameParser.ParseTitle(title);
                 }
             }
-            catch { }
+            catch (Exception e)
+            {
+
+            }
 
             var a_order = new string[] { "1", string.Empty, string.Empty };
 
@@ -661,11 +740,15 @@ namespace library
                 a_order[1] = nameItems["season"];
 
             if (nameItems.ContainsKey("episode"))
-                a_order[2] = nameItems["episode"];
+            {
+                var ep = nameItems["episode"];
 
-            var order = string.Join(".", a_order);
+                int i = -1;
 
-            CreatePostTuple(conceptAddress, order, VirtualAttributes.ORDER);
+                if (int.TryParse(ep, out i))
+
+                    CreatePostTupleOrReuse(conceptAddress, i.ToString("n2"), VirtualAttributes.ORDER);
+            }
 
             if (tags == null || tags.Properties == null)
             {
@@ -767,7 +850,7 @@ namespace library
                 if (nameItems.ContainsKey("season"))
                 {
 
-                    CreatePostTuple(conceptAddress, nameItems["season"], VirtualAttributes.Season);
+                    CreatePostTupleOrReuse(conceptAddress, nameItems["season"], VirtualAttributes.Season);
                     //var season = CreatePostTupleOrReuse(conceptAddress, nameItems["season"], VirtualAttributes.Season, rootProperty);
 
                     //if (season != null)
@@ -783,23 +866,23 @@ namespace library
 
 
                 if (nameItems.ContainsKey("episode"))
-                    CreatePostTuple(conceptAddress, nameItems["episode"], VirtualAttributes.Episode);
+                    CreatePostTupleOrReuse(conceptAddress, nameItems["episode"], VirtualAttributes.Episode);
 
 
                 if (nameItems.ContainsKey("year"))
-                    CreatePostTuple(conceptAddress, nameItems["year"], VirtualAttributes.Year);
+                    CreatePostTupleOrReuse(conceptAddress, nameItems["year"], VirtualAttributes.Year);
 
                 if (nameItems.ContainsKey("resolution"))
-                    CreatePostTuple(conceptAddress, nameItems["resolution"], VirtualAttributes.Resolution);
+                    CreatePostTupleOrReuse(conceptAddress, nameItems["resolution"], VirtualAttributes.Resolution);
 
                 if (nameItems.ContainsKey("quality"))
-                    CreatePostTuple(conceptAddress, nameItems["quality"], VirtualAttributes.Quality);
+                    CreatePostTupleOrReuse(conceptAddress, nameItems["quality"], VirtualAttributes.Quality);
 
                 if (nameItems.ContainsKey("codec"))
-                    CreatePostTuple(conceptAddress, nameItems["codec"], VirtualAttributes.VideoCodec);
+                    CreatePostTupleOrReuse(conceptAddress, nameItems["codec"], VirtualAttributes.VideoCodec);
 
                 if (nameItems.ContainsKey("audio"))
-                    CreatePostTuple(conceptAddress, nameItems["audio"], VirtualAttributes.AudioCodec);
+                    CreatePostTupleOrReuse(conceptAddress, nameItems["audio"], VirtualAttributes.AudioCodec);
 
 #endif
 
@@ -816,15 +899,15 @@ namespace library
                     CreatePostTupleOrReuse(conceptAddress, item, VirtualAttributes.Artist, rootProperty);
 
             foreach (var item in tags.Tag.Composers)
-                CreatePostTuple(conceptAddress, item, VirtualAttributes.Artist);
+                CreatePostTupleOrReuse(conceptAddress, item, VirtualAttributes.Artist);
 
 
             if (!string.IsNullOrWhiteSpace(tags.Tag.Conductor))
-                CreatePostTuple(conceptAddress, tags.Tag.Conductor, VirtualAttributes.Artist);
+                CreatePostTupleOrReuse(conceptAddress, tags.Tag.Conductor, VirtualAttributes.Artist);
 
 
             if (!string.IsNullOrWhiteSpace(tags.Tag.Comment))
-                CreatePostTuple(conceptAddress, tags.Tag.Comment, VirtualAttributes.Comment);
+                CreatePostTupleOrReuse(conceptAddress, tags.Tag.Comment, VirtualAttributes.Comment);
 
 
             foreach (var item in tags.Tag.Genres)
@@ -832,59 +915,59 @@ namespace library
 
 
             if (tags.Tag.Track > 0)
-                CreatePostTuple(conceptAddress, tags.Tag.Track.ToString(), VirtualAttributes.Track);
+                CreatePostTupleOrReuse(conceptAddress, tags.Tag.Track.ToString(), VirtualAttributes.Track);
 
 
             if (!string.IsNullOrWhiteSpace(tags.Tag.Lyrics))
-                CreatePostTuple(conceptAddress, tags.Tag.Lyrics, VirtualAttributes.Lyrics);
+                CreatePostTupleOrReuse(conceptAddress, tags.Tag.Lyrics, VirtualAttributes.Lyrics);
 
 
             if (!string.IsNullOrWhiteSpace(tags.Tag.Grouping))
-                CreatePostTuple(conceptAddress, tags.Tag.Grouping, VirtualAttributes.Grouping);
+                CreatePostTupleOrReuse(conceptAddress, tags.Tag.Grouping, VirtualAttributes.Grouping);
 
 
             if (tags.Tag.BeatsPerMinute > 0)
-                CreatePostTuple(conceptAddress, tags.Tag.BeatsPerMinute.ToString(), VirtualAttributes.BeatsPerMinute);
+                CreatePostTupleOrReuse(conceptAddress, tags.Tag.BeatsPerMinute.ToString(), VirtualAttributes.BeatsPerMinute);
 
 
             if (tags.Tag.Disc > 0)
-                CreatePostTuple(conceptAddress, tags.Tag.Disc.ToString(), VirtualAttributes.Disc);
+                CreatePostTupleOrReuse(conceptAddress, tags.Tag.Disc.ToString(), VirtualAttributes.Disc);
 
 
             if (tags.Properties.Duration.TotalMilliseconds > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.Duration.ToString(@"hh\:mm\:ss"), VirtualAttributes.Duration);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.Duration.ToString(@"hh\:mm\:ss"), VirtualAttributes.Duration);
 
             if (!string.IsNullOrWhiteSpace(tags.Properties.Description))
-                CreatePostTuple(conceptAddress, tags.Properties.Description, VirtualAttributes.Description);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.Description, VirtualAttributes.Description);
 
             if (tags.Properties.AudioBitrate > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.AudioBitrate.ToString(), VirtualAttributes.AudioBitrate);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.AudioBitrate.ToString(), VirtualAttributes.AudioBitrate);
 
             if (tags.Properties.AudioSampleRate > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.AudioSampleRate.ToString(), VirtualAttributes.AudioSampleRate);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.AudioSampleRate.ToString(), VirtualAttributes.AudioSampleRate);
 
 
             if (tags.Properties.BitsPerSample > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.BitsPerSample.ToString(), VirtualAttributes.BitsPerSample);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.BitsPerSample.ToString(), VirtualAttributes.BitsPerSample);
 
 
             if (tags.Properties.AudioChannels > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.AudioChannels.ToString(), VirtualAttributes.AudioChannels);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.AudioChannels.ToString(), VirtualAttributes.AudioChannels);
 
 
             if (tags.Properties.PhotoQuality > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.PhotoQuality.ToString(), VirtualAttributes.Quality);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.PhotoQuality.ToString(), VirtualAttributes.Quality);
 
 
             if (tags.Properties.VideoHeight > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.VideoHeight.ToString(), VirtualAttributes.Height);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.VideoHeight.ToString(), VirtualAttributes.Height);
             else if (tags.Properties.PhotoHeight > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.PhotoHeight.ToString(), VirtualAttributes.Height);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.PhotoHeight.ToString(), VirtualAttributes.Height);
 
             if (tags.Properties.VideoWidth > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.VideoWidth.ToString(), VirtualAttributes.Width);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.VideoWidth.ToString(), VirtualAttributes.Width);
             else if (tags.Properties.PhotoWidth > 0)
-                CreatePostTuple(conceptAddress, tags.Properties.PhotoWidth.ToString(), VirtualAttributes.Width);
+                CreatePostTupleOrReuse(conceptAddress, tags.Properties.PhotoWidth.ToString(), VirtualAttributes.Width);
 
 
 #endif
@@ -900,7 +983,7 @@ namespace library
             if (string.IsNullOrWhiteSpace(tags.Tag.Album))
             {
                 //if (f.Tag.Year > 0)
-                //    CreatePostTuple(conceptAddress, f.Tag.Year.ToString(), VirtualAttributes.Year);
+                //    CreatePostTupleOrReuse(conceptAddress, f.Tag.Year.ToString(), VirtualAttributes.Year);
 
 
                 GenearatePictures(conceptAddress, path, tags);
@@ -922,7 +1005,7 @@ namespace library
                             CreatePostTupleOrReuse(album.LinkAddress, item, VirtualAttributes.Artist, rootProperty);
 
                     //if (f.Tag.Year > 0)
-                    //    CreatePostTuple(album.LinkAddress, f.Tag.Year.ToString(), VirtualAttributes.Year);
+                    //    CreatePostTupleOrReuse(album.LinkAddress, f.Tag.Year.ToString(), VirtualAttributes.Year);
 
                     GenearatePictures(album.LinkAddress, path, tags);
 
@@ -1033,6 +1116,8 @@ namespace library
             internal string[] Paths;
 
             internal TagLib.File Tags;
+
+            internal List<byte[]> Parents = null;
         }
 
     }

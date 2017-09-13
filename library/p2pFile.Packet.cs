@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace library
 {
-    partial class p2pFile
+    public partial class p2pFile
     {
         internal class Packet
         {
@@ -52,30 +52,46 @@ namespace library
                     File.Levels = 1;
 
                 lock (root.Children)
-                    if (root.Children.All(x => !x.Value.Arrived))
+                {
+                    if (!root.Children.Any(x => x.Value.Arrived))
                     {
-                        File.Status = FileStatus.addressStructureIncomplete;
+                        var s = FileStatus.addressStructureIncomplete;
+
+                        File.Status = s;
 
                         return;
                     }
+                }
 
                 lock (root.Children)
                     if (root.Children.Any(x => x.Value.Arrived && x.Value.PacketType == PacketTypes.Content))
                     {
                         if (root.Children.First().Value.Arrived &&
-                            root.Children.ElementAt(root.Children.Count() - 1).Value.Arrived)
+                            root.Children.ElementAt(root.Children.Count() - 1).Value.Arrived &&
+                            root.Children.ElementAt(root.Children.Count() - 2).Value.Arrived)
                         {
                             if (root.Children.All(x => x.Value.Arrived))
                             {
                                 File.Status = FileStatus.dataComplete;
 
                                 File.Success = true;
+
+                                return;
                             }
                             else
+                            {
                                 File.Status = FileStatus.dataStructureComplete;
+
+                                return;
+                            }
                         }
                         else
+                        {
                             File.Status = FileStatus.addressStructureComplete;
+
+                            return;
+                        }
+
                     }
 
                 lock (root.Children)
@@ -170,7 +186,7 @@ namespace library
                             Offset = BitConverter.ToInt32(data, 1);
                     }
 
-                    Log.Add(Log.LogTypes.queuePacketArrived, this);
+                    Log.Add(Log.LogTypes.Queue, Log.LogOperations.Arrived, this);
 
                     this.data = data;
 
@@ -201,18 +217,26 @@ namespace library
                         //ProcessAddPackets(new object[] { addresses.Take(1).ToArray(), FilePacketsOffset, 0});
                         ProcessAddPackets(new object[] { data.Skip(pParameters.packetHeaderSize).Take(pParameters.addressSize), FilePacketsOffset, 0 });
 
+                        //second last item to the main thread
+                        //ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(1).ToArray(), FilePacketsOffset + last_offset, last_offset });
+                        ProcessAddPackets(new object[] { data.Skip(data.Length - pParameters.addressSize * 2).Take(pParameters.addressSize), FilePacketsOffset + last_offset - 1, last_offset-1 });
+
                         //last item to the main thread
                         //ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(1).ToArray(), FilePacketsOffset + last_offset, last_offset });
                         ProcessAddPackets(new object[] { data.Skip( data.Length - pParameters.addressSize).Take(pParameters.addressSize), FilePacketsOffset + last_offset, last_offset });
 
                         if (Parent == null || Offset == Parent.Children.Keys.Max())
+                        {
                             File.GetLastPacket = true;
+
+                            File.GetSecondLastPacket = true;
+                        }
 
                         FilePacketsOffset++;
 
                         //ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] { addresses.Skip(1).Take(count - 2).ToArray(), FilePacketsOffset, 1 });
                         ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] {
-                            data.Skip(pParameters.packetHeaderSize + pParameters.addressSize).Take(data.Length - pParameters.packetHeaderSize - (pParameters.addressSize * 2)), FilePacketsOffset, 1 });
+                            data.Skip(pParameters.packetHeaderSize + pParameters.addressSize).Take(data.Length - pParameters.packetHeaderSize - (pParameters.addressSize * 3)), FilePacketsOffset, 1 });
                         
                         //ProcessAddPackets(new object[] { addresses.Take(count - 1).ToArray(), FilePacketsOffset, 0 });  
 
@@ -251,6 +275,12 @@ namespace library
                         if (this.Offset == 0 && this.Parents().All(x => x.Offset == 0))
                             File.FirstContentFilePacketOffset = this.FilePacketOffset;
 
+                        lock(File.arrives)
+                            File.arrives.Add(this.FilePacketOffset);
+
+
+                        Client.DownloadComplete(File.Address, File.Filename, File.SpecifFilename, File.Arrives, File.Cursors);
+
                         break;
 
                     case PacketTypes.Metapacket:
@@ -262,7 +292,8 @@ namespace library
 
                 
 
-                //ProcessPacketPriority();
+                ProcessPacketPriority();
+                
 
                 File.packetEvent.Set();
             }
@@ -298,7 +329,7 @@ namespace library
 
             internal void Get()
             {
-                Log.Add(Log.LogTypes.queueGetPacket, this);
+                Log.Add(Log.LogTypes.Queue, Log.LogOperations.Get, this);
 
                 byte[] data = null;
 

@@ -192,7 +192,8 @@ namespace library
                 // Concat(Address).
                 Concat(Data ?? bytes_empty).ToArray();
 
-            Log.Add(Log.LogTypes.p2pOutgoing | Log.FromCommand(Command), new { Port = DestinationPeer.EndPoint.Port, Address = Address ?? Data, Data = Data.Length > 0 });
+
+            Log.Add(Log.LogTypes.P2p | Log.FromCommand(Command), Log.LogOperations.Outgoing, new { Port = DestinationPeer.EndPoint.Port, Address = Address ?? Data, Data = Data.Length > 0 });
 
             //Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
             //    Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0 ? Address : Data), 
@@ -234,18 +235,14 @@ namespace library
 
             Client.Stats.Sent.Add(data.Length);
 
-            
             try
             {
-
                 u.Send(data, data.Length, remoteEndPoint);
-
             }
             catch (Exception e)
             {
-                Log.Add(Log.LogTypes.Application, e.ToString());
+                Log.Add(Log.LogTypes.Application, Log.LogOperations.Exception, new { remoteEndPoint, Exception = e.ToString() });
             }
-
         }
     }
 

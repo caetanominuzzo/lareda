@@ -224,10 +224,9 @@ namespace library
             itemCount = 0;
         }
 
-        public string Serialize(RenderMode mode, int parentCount = 0, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
+        public string Serialize(RenderMode mode, DIV parent, int parentCount = 0, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
         {
-
-            if (this.ToString() == "372")
+            if (this.ToString() == "408")
             { }
 
             if (IsRendered)
@@ -236,12 +235,16 @@ namespace library
             if (this.IsVirtualAttribute)
                 return string.Empty;
 
-            var maxDeepness = 10;// Client.MaxDeepness;
+            if (this.Weight > parent.Weight)
+                return string.Empty;
+
+
+            var maxDeepness = 11;// Client.MaxDeepness;
 
             if (childrenFilter == GettingChildrenFilter.Superior)
                 maxDeepness = 10;
 
-            Log.Add(Log.LogTypes.SearchSerialize, this);
+            Log.Add(Log.LogTypes.Search, Log.LogOperations.Serialize, this);
 
             if (parentCount > maxDeepness)
                 return string.Empty;
@@ -280,6 +283,10 @@ namespace library
                     {
                         root_stype = "stream";
                     }
+                    else if (Addresses.Equals(VirtualAttributes.ROOT_SEQUENCE, root_type.Address, false))
+                    {
+                        root_stype = "sequence";
+                    }
 
                 var root = "\"root\": \"" + root_stype + "\"";
 
@@ -289,7 +296,9 @@ namespace library
 
                 if (m_order != null)
                 {
-                    order = "\"order\": \"" + SearchResult.FirstContent(m_order, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true) + "\"";
+                    var s_order = SearchResult.FirstContent(m_order, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
+
+                    order = "\"order\": \"" + s_order + "\"";
                 }
 
                 #region AUTHOR
@@ -338,7 +347,7 @@ namespace library
                 if (this.ToString() == "419" || this.ToString() == "390")
                 { }
 
-                if (mode == RenderMode.Nav && parentCount <= 1)
+                if (mode == RenderMode.Nav && parentCount <= 1)  
                 {
                     var videoDiv = SearchResult.ClosestMarker(this, VirtualAttributes.MIME_TYPE_VIDEO_STREAM);
 
@@ -403,12 +412,12 @@ namespace library
 
                 var superiorChildren = string.Empty;
 
-                if (this.ToString() == "385")
+                if (this.ToString() == "476")
                 { }
 
                 if (childrenFilter == GettingChildrenFilter.Inferior)
                 {
-                    var inferiorChildrenList = SerializeChildren(mode, parentCount, true, GettingChildrenFilter.Inferior);
+                    var inferiorChildrenList = SerializeChildren(mode,this, parentCount, true, GettingChildrenFilter.Inferior);
 
                     if (inferiorChildrenList.Any())
                         inferiorChildren = string.Format("\"children\": [{0}]", string.Join(", ", inferiorChildrenList));
@@ -416,7 +425,7 @@ namespace library
 
                 if (this.Index)
                 {
-                    var superiorChildrenList = SerializeChildren(mode, parentCount, true, GettingChildrenFilter.Superior);
+                    var superiorChildrenList = SerializeChildren(mode, this, parentCount, true, GettingChildrenFilter.Superior);
 
                     if (superiorChildrenList.Any())
                         superiorChildren = string.Format("\"superiorchildren\": [{0}]", string.Join(", ", superiorChildrenList));
@@ -443,7 +452,7 @@ namespace library
             {
                 if (true)
                 {
-                    var inferiorChildrenList = SerializeChildren(mode, parentCount, false, childrenFilter);
+                    var inferiorChildrenList = SerializeChildren(mode, parent, parentCount, false, childrenFilter);
 
                     if (inferiorChildrenList.Any())
                         return string.Join(", ", inferiorChildrenList);
@@ -487,7 +496,7 @@ namespace library
         }
 
 
-        //Properties are any children which are not from the source metapacket
+        //Properties are any children which are not from the main metapacket
         private static IEnumerable<DIV> DivPropertiesList(DIV legenda)
         {
             var linkDaLegenda = DIV.Find(legenda.Children, legenda.Src.LinkAddress);
@@ -507,7 +516,7 @@ namespace library
             }
         }
 
-        private string[] SerializeChildren(RenderMode mode, int parentCount, bool onChildren, GettingChildrenFilter childrenFilter)
+        private string[] SerializeChildren(RenderMode mode, DIV parent, int parentCount, bool onChildren, GettingChildrenFilter childrenFilter)
         {
             var ttt = getChildren(parentCount, onChildren, childrenFilter: childrenFilter);
 
@@ -515,7 +524,7 @@ namespace library
 
             foreach (var tttt in ttt)
             {
-                var ssss = tttt.Serialize(mode, parentCount, childrenFilter);
+                var ssss = tttt.Serialize(mode, parent, parentCount, childrenFilter);
 
                 if (!string.IsNullOrEmpty(ssss))
                     ar.Add(ssss);

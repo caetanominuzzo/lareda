@@ -30,7 +30,6 @@ namespace windows_desktop
 
         public void Display()
         {
-
             ni.MouseClick += new MouseEventHandler(ni_MouseClick);
 
             ni.Text = Program.AppName +  Program.p2pPort;

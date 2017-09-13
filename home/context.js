@@ -67,21 +67,28 @@ $.context.create = function ($target, mode, parent)
                 //target.context.timeoutObject = setTimeout(target.context.process, target.context.interval);            
 
                 $.input.searchCallback(data, target);
+
+                if(typeof target.context.pos_callback != 'undefined')
+                    target.context.pos_callback(data, target);
             }
             else
                 target.context.timeoutObject = setTimeout(target.context.process, target.context.interval);            
+
+            
         },
 
         stop: function () {
             clearTimeout(target.context.timeoutObject);
         },
 
-        start: function (term, mode) {
+        start: function (term, mode, pos_callback) {
             target.context.stop();
 
             target.context.interval = $.context.minInterval;
 
             target.text = term;
+
+            target.context.pos_callback = pos_callback;
 
             if(typeof mode != 'undefined')
                 target.context.mode = mode;

@@ -30,19 +30,82 @@ $.menu.bind = function($item, item, video)
 
 	var $toplay = $('.progress_bar_toplay', $progress);
 
+	var $loaded = $('.progress_bar_loaded', $progress);
+
 	
 	$video.bind('timeupdate', function(e)
 	{
+		/*
+		$.ajax({
+            url: "keepAlive/",
+            data:
+                {
+                    files: [video.currentSrc, audio.currentSrc],
+                },
+            crossDomain: false,
+            dataType: "json",
+            method: "GET"
+        });
+*/
+
 		var lasting = video.duration - video.currentTime;
 
 		$lasting_time.text($.menu.secToTime(lasting));
 
-		var perc = $video[0].currentTime / video.duration;
+		var perc = video.currentTime / video.duration;
+
+		var currentBuffer = 0;
+
+		var start = video.buffered.start(currentBuffer);
+
+		var end = video.buffered.end(currentBuffer);
+
+		var loaded = (video.buffered.end(0) - video.buffered.start(0)) / video.duration;
+
+		while(video.currentTime < start || video.currentTime > end)
+		{
+			currentBuffer++;
+			
+			start = video.buffered.start(currentBuffer);
+
+			end = video.buffered.end(currentBuffer);
+		}
+
+		var loaded = end / video.duration;
+
+		loaded -= perc;
 
 		$played.width(perc * 100 + "%");
-	
-		$toplay.width(100 - (perc * 100)  + "%");
+
+		$loaded.width(loaded * 100 + "%");
+
+		hideLoading();
 	});
+
+	var hideLoading = function(e)
+	{
+		var $top = $('.top', $menu);
+
+		var $bottom = $('.bottom', $menu);
+
+		var $video = $menu.next();
+
+		var $play = $('.play', $menu);
+
+		var $large_play = $('.large_loading', $menu);
+
+		$large_play.hide();
+
+		$large_play.removeClass('large_loading');
+
+		$large_play.addClass('large_play');
+
+	};
+	
+
+	$video.bind('canplay', hideLoading);
+
+
 
 	$video.bind('ended', function(e)
 	{
@@ -64,6 +127,22 @@ $.menu.bind = function($item, item, video)
 		var offset = e.pageX - $progress.offset().left;
 
 		video.currentTime = video.duration * (offset/ total);
+
+		var $top = $('.top', $menu);
+
+		var $bottom = $('.bottom', $menu);
+
+		var $video = $menu.next();
+
+		var $play = $('.play', $menu);
+
+		var $large_play = $('.large_play', $menu);
+
+		$large_play.show();
+
+		$large_play.removeClass('large_play');
+
+		$large_play.addClass('large_loading');
 	});
 
 	
@@ -317,37 +396,69 @@ $.menu.secToTime = function(sec)
 	return t.toTimeString().substr(0,8);
 }
 
-$.menu.play = function(e)
+$.menu.play = function(e, t)
 {
 	e.stopPropagation();
 
 	var $this = $(this);
 
+	if(t)
+		$this = $(t);
+	
+	if(typeof t == 'undefined' && $this.parents('.navItems').length == 0 && $this.is('.large_play'))
+	{
+		$.nav.parentsItemClick(e, $this.parents('.layout:first')[0]);
+
+		return;		
+	}
+
+	
+
 	var $menu = $this.parents(".menu:first");
 
 	var $top = $('.top', $menu);
 
+	var $bottom = $('.bottom', $menu);
+
 	var $video = $menu.next();
+
+	var $play = $('.play', $menu);
+
+	var $large_play = $('.large_play', $menu);
 	
-	if($this.is('.play'))
+	if($this.is('.play') || $this.is('.large_play'))
 	{
-		$this.removeClass('play');
+		$menu.parent().find('>.firstpic_overdraw').fadeOut();
+		
+		$large_play.removeClass('large_play');
 
-		$this.addClass('pause');
+		$large_play.addClass('large_loading');
 
-		$video[0].play();
+		$play.removeClass('play');
+
+		$play.addClass('pause');
+
+		var playPromise = $video[0].play();
 
 		$top.removeClass('visible');
+
+		$bottom.addClass('visible');
+
+		//$large_play.hide();
 	}
 	else
 	{
-		$this.removeClass('pause');
+		$play.removeClass('pause');
 
-		$this.addClass('play');
+		$play.addClass('play');
 
 		$video[0].pause();
 
 		$top.addClass('visible');
+
+		$large_play.show();
+
+		$bottom.removeClass('visible');
 	}
 }
 
