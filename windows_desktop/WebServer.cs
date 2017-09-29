@@ -16,21 +16,36 @@ using windows_desktop.Properties;
 using System.Drawing.Imaging;
 using System.Drawing;
 using Devcorner.NIdenticon;
-using Unosquare.Labs.EmbedIO;
-using Unosquare.Labs.EmbedIO.Modules;
 
 namespace windows_desktop
 {
 
     public class WebServer : IDisposable
     {
+        public class HttpListenerCallbackState
+        {
+            private readonly HttpListener _listener;
+
+            private readonly AutoResetEvent _listenForNextRequest;
+
+            public HttpListenerCallbackState(HttpListener listener)
+            {
+                if (listener == null) throw new ArgumentNullException("listener");
+                _listener = listener;
+                _listenForNextRequest = new AutoResetEvent(false);
+            }
+
+            public HttpListener Listener { get { return _listener; } }
+            public AutoResetEvent ListenForNextRequest { get { return _listenForNextRequest; } }
+        }
+
         internal static ManualResetEvent stopEvent = new ManualResetEvent(false);
 
         public delegate void DraggingHandler(bool dragging, string dragId, string userAddress);
 
         static public event DraggingHandler OnDragging;
 
-        internal static Cache<FileDownloadObject> downloads = new Cache<FileDownloadObject>(2100000000);
+        internal static Cache<FileDownloadObject> downloads = new Cache<FileDownloadObject>(10000);
 
         internal static Cache<string> keepAlive = new Cache<string>(1000000);
 
@@ -51,15 +66,17 @@ namespace windows_desktop
             //todo: pra fechar a conexão
             downloads.OnCacheExpired += Downloads_OnCacheExpired;
 
+            var ws = new WebServer();
+
             if (thread == null)
             {
-                thread = new Thread(Configure);
+                thread = new Thread(ws.Configure);
 
                 thread.Start();
             }
 
 
-            return new WebServer();
+            return ws;
         }
 
         private static void Downloads_OnCacheExpired(CacheItem<FileDownloadObject> item)
@@ -79,7 +96,7 @@ namespace windows_desktop
             stopEvent.Set();
         }
 
-        public static void Configure()
+        public void Configure()
         {
             //Client.OnSearchReturn += Client_onSearchReturn;
 
@@ -88,15 +105,17 @@ namespace windows_desktop
             try
             {
 
-                using (var server = new Unosquare.Labs.EmbedIO.WebServer("http://+:" + Program.WebPort + "/", RoutingStrategy.Regex))
-                {
-                    server.RegisterModule(new FallbackModule(ThreadReceiveNew));
+                HttpListener listener = new HttpListener();
 
-                    server.RunAsync();
+                listener.Prefixes.Add("http://+:" + Program.WebPort + "/");
 
-                    stopEvent.WaitOne();
-                }
+                listener.Start();
 
+                HttpListenerCallbackState state = new HttpListenerCallbackState(listener);
+
+                ThreadPool.QueueUserWorkItem(ThreadReceiveNew, state);
+
+                stopEvent.WaitOne();
 
             }
             catch (HttpListenerException e)
@@ -112,59 +131,64 @@ namespace windows_desktop
             //ThreadReceive();
         }
 
-        static bool ThreadReceiveNew(HttpListenerContext context, CancellationToken cancel)
+        private void ThreadReceiveNew(object state)
         {
-            ProcessReceive(new p2pContext(context));
+            HttpListenerCallbackState callbackState = (HttpListenerCallbackState)state;
 
-            //context.JsonResponse(new { Hola = "Message" });
-
-            return true;
-        }
-
-        //static void ThreadReceive()
-        //{
-        //    while (!stop)
-        //    {
-        //        try
-        //        {
-        //            if (server.IsListening)
-        //            {
-        //                IAsyncResult result = server.BeginGetContext(new AsyncCallback(ListenerCallback), server);
-
-        //                result.AsyncWaitHandle.WaitOne();
-
-        //                //var c = new p2pContext(server.GetContext());
-
-        //                //Log.Write("CREATE" + c.ToString());
-
-        //                //ThreadPool.QueueUserWorkItem(ProcessReceive, c);
-
-        //                //Program.GetThreads();
-        //            }
-
-        //            // ProcessReceive(new p2pContext(server.GetContext()));
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //        }
-        //    }
-        //}
-
-
-        public static void ListenerCallback(IAsyncResult result)
-        {
-            HttpListener listener = (HttpListener)result.AsyncState;
-
-            HttpListenerContext context = listener.EndGetContext(result);
-
-            using (var c = new p2pContext(context))
+            while (callbackState.Listener.IsListening)
             {
-                ProcessReceive(c);
+                callbackState.Listener.BeginGetContext(new AsyncCallback(ListenerCallback), callbackState);
+                int n = WaitHandle.WaitAny(new WaitHandle[] { callbackState.ListenForNextRequest, stopEvent });
+
+                if (n == 1)
+                {
+                    // stopEvent was signalled 
+                    callbackState.Listener.Stop();
+                    break;
+                }
             }
 
-            //Log.Write("CREATE" + c.ToString());
 
-            //ThreadPool.QueueUserWorkItem(ProcessReceive, c);
+            //ProcessReceive(new p2pContext(context));
+
+            ////ThreadPool.QueueUserWorkItem(ProcessReceive, new p2pContext(context));
+
+            ////context.JsonResponse(new { Hola = "Message" });
+        }
+
+        private void ListenerCallback(IAsyncResult ar)
+        {
+            HttpListenerCallbackState callbackState = (HttpListenerCallbackState)ar.AsyncState;
+            HttpListenerContext context = null;
+
+            try
+            {
+                context = callbackState.Listener.EndGetContext(ar);
+            }
+            catch (Exception ex)
+            {
+                return;
+            }
+            finally
+            {
+                callbackState.ListenForNextRequest.Set();
+            }
+
+            if (context == null) return;
+
+
+            HttpListenerRequest request = context.Request;
+
+            try
+            {
+                using (HttpListenerResponse response = context.Response)
+                {
+                    ProcessReceive(new p2pContext(context));
+                }
+            }
+            catch (Exception e)
+            {
+            }
         }
 
 
@@ -189,9 +213,9 @@ namespace windows_desktop
 
             if (baseAddress == null || Utils.AddressFromBase64String(baseAddress) == null)
             {
-                response.RedirectLocation = Program.webHome + "/index.html";
+                response.RedirectLocation = pParameters.webHome + "/index.html";
 
-                response.Redirect("/" + Program.webHome + "/");
+                response.Redirect("/" + pParameters.webHome + "/");
 
                 //context.Response.StatusCode = (int)HttpStatusCode.Ambiguous;
 
@@ -202,12 +226,12 @@ namespace windows_desktop
 
             var command = string.Empty;
 
-            if (baseAddress == Program.webHome || baseAddress == Program.welcomeHome)
+            if (baseAddress == pParameters.webHome || baseAddress == pParameters.welcomeHome)
                 command = GetSegment(context.HttpContext, 2);
 
             switch (command)
             {
-#if DEBUG
+//#if DEBUG
                 default:
 
                     if (command != null && command.StartsWith("debug:"))
@@ -230,14 +254,14 @@ namespace windows_desktop
                     break;
 
 
-#else
-              default:
+//#else
+//              default:
 
-                    ProcessGet(context);
+//                    ProcessGet(context);
 
-                    break;
+//                    break;
 
-#endif
+//#endif
                 case WebCommands.Search:
 
                     ProcessSearch(context);
@@ -475,9 +499,9 @@ namespace windows_desktop
             var address = Utils.AddressFromBase64String(path);
 
             if (address != null)
-                path = Program.webCache + "/" + path;
+                path = pParameters.webCache + "/" + path;
             else
-                path = Program.webCache + context.HttpContext.Request.RawUrl;
+                path = pParameters.webCache + context.HttpContext.Request.RawUrl;
 
             if (Directory.Exists(path))
             {
@@ -488,13 +512,36 @@ namespace windows_desktop
 
             if (File.Exists(path))
             {
-                if (!Client.AnyPeer() && !path.Contains(Program.welcomeHome))
+                if (!Client.AnyPeer() && !path.Contains(pParameters.welcomeHome))
                     return false;
+
+                switch (Path.GetExtension(path))
+                {
+                    case ".gif": context.HttpContext.Response.ContentType = "image/gif"; break;
+                    case ".png": context.HttpContext.Response.ContentType = "image/png"; break;
+                    case ".jpeg":
+                    case ".jpg": context.HttpContext.Response.ContentType = "image/jpg"; break;
+                    case ".svg": context.HttpContext.Response.ContentType = "image/svg+xml"; break;
+                    case ".css": context.HttpContext.Response.ContentType = "text/css"; break;
+                    case ".html":
+                    case ".htm": context.HttpContext.Response.ContentType = "text/html"; break;
+                    case ".js": context.HttpContext.Response.ContentType = "text/javascript"; break;
+                    case ".pdf": context.HttpContext.Response.ContentType = "application/pdf"; break;
+                    case ".exe": context.HttpContext.Response.ContentType = "application/octet-stream"; break;
+                    case ".zip": context.HttpContext.Response.ContentType = "application/zip"; break;
+                    case ".doc": context.HttpContext.Response.ContentType = "application/msword"; break;
+                    case ".xls": context.HttpContext.Response.ContentType = "application/vnd.ms-excel"; break;
+                    case ".ppt": context.HttpContext.Response.ContentType = "application/vnd.ms-powerpoint"; break;
+
+                        // default: context.HttpContext.Response.AddHeader("Content-Type", "application/force-download"); break; will break videos & audios7
+                }
+
+
 
                 var d = new FileDownloadObject(address, context, path);
 
-                if(address != null)
-                    Client.Download(Utils.ToBase64String(address), context, Program.webCache + "/" + Utils.ToBase64String(address));
+                if (address != null)
+                    Client.Download(Utils.ToBase64String(address), context, pParameters.webCache + "/" + Utils.ToBase64String(address));
 
                 ProcessSeek(context, new CacheItem<FileDownloadObject>(d));
 
@@ -520,7 +567,7 @@ namespace windows_desktop
 
             if (!Client.AnyPeer())
             {
-                context.HttpContext.Response.Redirect("/" + Program.welcomeHome + "/");
+                context.HttpContext.Response.Redirect("/" + pParameters.welcomeHome + "/");
 
                 context.HttpContext.Response.Close();
 
@@ -547,12 +594,12 @@ namespace windows_desktop
             }
             else
             {
-                FileDownloadObject ci = new FileDownloadObject(address, context, Program.webCache + "/" + Utils.ToBase64String(address));
+                FileDownloadObject ci = new FileDownloadObject(address, context, pParameters.webCache + "/" + Utils.ToBase64String(address));
 
                 lock (downloads)
                     downloads.Add(ci);
 
-                Client.Download(Utils.ToBase64String(address), context, Program.webCache + "/" + Utils.ToBase64String(address));
+                Client.Download(Utils.ToBase64String(address), context, pParameters.webCache + "/" + Utils.ToBase64String(address));
 
                 ProcessSeek(context, new CacheItem<FileDownloadObject>(ci));
 
@@ -577,17 +624,13 @@ namespace windows_desktop
 
             // context.HttpContext.Response.Headers.Clear();
 
-            if (download.Filename.Contains("gLseAGI6QBqGWA5YKLUIHEoU"))
-            {
-
-            }
-
             var closeFile = download.FileStream == null;
 
             try
             {
                 //if (!context.headerAlreadySent)
                 //    context.HttpContext.Response.StatusCode = 206;
+
 
                 long range1 = 0;
 
@@ -609,38 +652,50 @@ namespace windows_desktop
                 }
                 catch { }
 
+
                 if (closeFile)
                     download.FileStream = p2pStreamManager.GetStream(download.Filename, context, range1);
 
-                var file = download.FileStream;
-
-                while (file.Length < 1)
+                if(download.FileStream.Length < 1)
                 {
+                    int retry = 3;
 
+                    int count = 1;
 
-                    Log.Add(Log.LogTypes.Stream, Log.LogOperations.CantSeek, new { File_Length = -1, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
-
-                    var address = download.Address;
-
-                    var packetArrived = download.packetArrivedEvent.WaitOne(pParameters.WebServer_FileDownloadTimeout);
-
-                    if (!packetArrived)
+                    while (download.FileStream.Length < 1)
                     {
-                        Log.Add(Log.LogTypes.Stream, Log.LogOperations.TimeOut, new { File_Length = -1, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
+                        Log.Add(Log.LogTypes.Stream, Log.LogOperations.CantSeek, new { File_Length = -1, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
 
+                        var address = download.Address;
 
-                        return;
+                        download.packetArrivedEvent.Reset();
+
+                        var packetArrived = download.packetArrivedEvent.WaitOne(pParameters.WebServer_FileDownloadTimeout / retry);
+
+                        if (!packetArrived)
+                        {
+                            Log.Add(Log.LogTypes.Stream, Log.LogOperations.TimeOut, new { TRY = count, File_Length = -1, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
+
+                            if(count++ > retry)
+                                return;
+                        }
+
+                        download.FileStream = p2pStreamManager.GetStream(download.Filename, context, range1);
                     }
                 }
 
-                download.Context.OutputStreamLength = file.Length;
+               
+
+                download.Context.OutputStreamLength = download.FileStream.Length;
 
                 if (range2 == -1)
-                {
-                    range2 = file.Length - 1;
+                    range2 = download.FileStream.Length - 1;
 
-                    download.Context.OutputStreamEndPosition = range2;
-                }
+                range2 = Math.Min(range2, range1 + pParameters.WebServer_MaxNonRangeDownloadSize - 1);
+
+                download.Context.OutputStreamEndPosition = range2;
+
+                var initial_position = range1;
 
                 context.OutputStreamPosition = range1;
 
@@ -654,22 +709,48 @@ namespace windows_desktop
                 {
                     Log.Add(Log.LogTypes.Stream, Log.LogOperations.Header, new { context, context.HttpContext.Response.ContentLength64, responseSize, context.HttpContext.Response.Headers });
 
-                    context.HttpContext.Response.ContentLength64 = responseSize;
 
-                    context.HttpContext.Response.StatusCode = 206;
+                    //if (download.FileStream.Filename.Contains("psP2xPTU") && range1 == 0)
+                    //{
+                    //    context.HttpContext.Response.ContentLength64 = responseSize - 5000;
 
-                    context.HttpContext.Response.AddHeader("Content-Length", (range2 - range1).ToString());
+                    //    context.HttpContext.Response.StatusCode = 206;
 
-                    context.HttpContext.Response.AddHeader("Content-Range", string.Format("bytes {0}-{1}/{2}", range1, range2, file.Length)); ;
+                    //    context.HttpContext.Response.AddHeader("Content-Length", (range2 - range1 - 5000).ToString());
+
+                    //    context.HttpContext.Response.AddHeader("Content-Range", string.Format("bytes {0}-{1}/{2}", range1, range2 - 5000, download.FileStream.Length - 5000));
+                    //}
+                    // else
+                    {
+
+                        context.HttpContext.Response.StatusCode = 206;
+
+                        context.HttpContext.Response.ContentLength64 = responseSize;
+
+                        context.HttpContext.Response.AddHeader("Content-Range", string.Format("bytes {0}-{1}/{2}", range1, range2, download.FileStream.Length));
+
+                        if (context.HttpContext.Request.Headers.AllKeys.Contains("Range") && range1 == 0)
+                        {
+                            download.FileStream.InitialLoadDone();
+
+                            Log.Add(Log.LogTypes.Stream, Log.LogOperations.ClosingInitialRequest, new { File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], context });
+
+                            context.HttpContext.Response.OutputStream.Flush();
+                        }
 
 
-                    if (file.Filename.Contains("psP2xPTU"))
+                    }
+
+
+
+
+                    if (download.FileStream.Filename.Contains("psP2xPTU"))
                         context.HttpContext.Response.AddHeader("Content-Type", "video/mp4");
 
                     context.headerAlreadySent = true;
                 }
 
-                long bufferSize = Math.Min(Program.MaxNonRangeDownloadSize, responseSize);
+                long bufferSize = Math.Min(pParameters.WebServer_MaxNonRangeDownloadSize, responseSize);
 
                 var buffer = new byte[bufferSize];
 
@@ -678,93 +759,104 @@ namespace windows_desktop
                 try
                 {
 
-                    var wrote = 0;
+                    var retry = 3;
+
+                    var count = 1;
 
                     while (true)
-                    {
-                        lock (keepAlive)
-                            if (!keepAlive.Any(x => Addresses.Equals(x.CachedValue, cache.CachedValue.Context.HttpContext.Request.Url.AbsoluteUri)))
-                            {
-                                //waitMoreData = false;
+                    { 
 
-                                //return;
-                            }
+                        download.FileStream = p2pStreamManager.GetStream(download.Filename, context, context.OutputStreamPosition);
 
-                        read = file.Read(buffer, 0, (int)bufferSize, context);
+                        p2pFile.Packet[] packets = null;
+
+                        read = download.FileStream.Read(buffer, (int)context.OutputStreamPosition, (int)bufferSize, context, out packets);
 
                         if (read == 0)
                             return;
 
                         if (read == -1)
                         {
-                            Log.Add(Log.LogTypes.Stream, Log.LogOperations.CantSeek, new { File_Read = -1, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
+                            Log.Add(Log.LogTypes.Stream, Log.LogOperations.CantSeek, new { TRY = count, File_Read = -1, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
+
+                            download.packetArrivedEvent.Reset();
+
+                            foreach (var p in packets)
+                                p.Get();
 
                             var packetArrived = download.packetArrivedEvent.WaitOne(pParameters.WebServer_FileDownloadTimeout);
 
                             if (!packetArrived)
                             {
-                                Log.Add(Log.LogTypes.Stream, Log.LogOperations.TimeOut, new { File_Read = -1, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
+                                Log.Add(Log.LogTypes.Stream, Log.LogOperations.TimeOut, new { TRY = count, File_Read = -1, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
 
-                                return;
+                                if (count++ > retry)
+                                    return;
+                                else
+                                    continue;                                
                             }
                             else
                                 continue;
                         }
 
-                        OnFileWrite?.Invoke(file.Filename, new int[] { Convert.ToInt32((long)(file.GetPosition(context) / (32 * 2029))) });
+
+
+
+#if DEBUG
+                        //if (download.FileStream.Filename.Contains("psP2xPTU"))
+                        //{
+                        //    var original = File.ReadAllBytes(@"D:\lareda\windows_desktop\bin\Debug\temp\9LW5P-R7JY24CH72a_grrVMlZshJ3nJ1PkXxmzR74u8=.mp4");
+
+                        //    var part = original.Skip((int)context.OutputStreamPosition).Take((int)bufferSize).ToArray();
+
+                        //    if (!part.SequenceEqual(buffer))
+                        //    {
+                        //        var buf = System.Text.Encoding.Default.GetString(buffer.Take(read).ToArray());
+
+                        //        var par = System.Text.Encoding.Default.GetString(part.Take(read).ToArray());
+
+                        //        if (buf != par)
+                        //        {
+
+                        //        }
+                        //    }
+                        //}
+#endif
+
+                        OnFileWrite?.Invoke(download.FileStream.Filename, new int[] { Convert.ToInt32((long)(download.FileStream.GetPosition(context) / (32 * 2029))) });
 
                         var attempts = 0;
 
-                        while (attempts < 1)
+                        try
                         {
-                            try
-                            {
-                                using (var timer = new System.Threading.Timer(_ =>
-                                {
-                                    Log.Add(Log.LogTypes.Stream, Log.LogOperations.TimeOut, new { Write = true, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], context });
+                            lock (context)
+                                context.HttpContext.Response.OutputStream.Write(buffer, 0, read);
 
-                                    context.HttpContext.Response.Abort();
-
-                                }, null, 1000, Timeout.Infinite))
-                                {
-
-
-
-                                    lock (context)
-                                        context.HttpContext.Response.OutputStream.Write(buffer, 0, read);
-                                    timer.Dispose();
-                                    }
-
-                                Log.Add(Log.LogTypes.Stream, Log.LogOperations.Write, new { File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], RequestTraceIdentifier = cache.CachedValue.Context.HttpContext.Request.RequestTraceIdentifier });
-
-                                break;
-                            }
-                            catch (Exception e)
-                            {
-                                Log.Add(Log.LogTypes.Stream, Log.LogOperations.Exception, new { e, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
-                            }
-
-                            attempts++;
+                            Log.Add(Log.LogTypes.Stream, Log.LogOperations.Write, new { File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], RequestTraceIdentifier = cache.CachedValue.Context.HttpContext.Request.RequestTraceIdentifier });
                         }
-
-                        context.HttpContext.Response.OutputStream.Flush();
-
-                        if (context.HttpContext.Request.Headers.AllKeys.Contains("Range") && range1 == 0)
+                        catch (Exception e)
                         {
-                            Log.Add(Log.LogTypes.Stream, Log.LogOperations.ClosingInitialRequest, new { File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], context });
-
-                            return;
+                            Log.Add(Log.LogTypes.Stream, Log.LogOperations.Exception, new { e, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
                         }
 
                         context.OutputStreamPosition += read;
 
-                        cache.Reset();
+                        context.HttpContext.Response.OutputStream.Flush();
+
+                       
+
+                        if (context.HttpContext.Request.Headers.AllKeys.Contains("Range"))
+                            return;
 
                     }
                 }
                 catch (HttpListenerException e)
                 {
                     Log.Add(Log.LogTypes.WebServer, Log.LogOperations.Exception, e);
+                }
+                catch (Exception ex)
+                {
+                    Log.Add(Log.LogTypes.Stream, Log.LogOperations.Exception, new { ex, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
                 }
                 finally
                 {
@@ -776,6 +868,12 @@ namespace windows_desktop
             catch (ObjectDisposedException ex)
             {
                 Log.Add(Log.LogTypes.Stream, Log.LogOperations.Exception, ex);
+
+                Log.Add(Log.LogTypes.Stream, Log.LogOperations.Exception, new { ex, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
+            }
+            catch (Exception ex)
+            {
+                Log.Add(Log.LogTypes.Stream, Log.LogOperations.Exception, new { ex, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
             }
             finally
             {
@@ -783,6 +881,8 @@ namespace windows_desktop
 
                 if (closeFile && download.FileStream != null)
                     download.FileStream.Dispose(context);
+
+                downloads.Remove(cache);
             }
         }
 
@@ -804,7 +904,7 @@ namespace windows_desktop
 
             using (Bitmap bmp = renderer.Create(address))
             {
-                var path = Path.Combine(Program.webCache, address + ".png");
+                var path = Path.Combine(pParameters.webCache, address + ".png");
 
                 using (var ms = new MemoryStream())
                 {
@@ -839,7 +939,7 @@ namespace windows_desktop
 
             Client.GetPeer(key);
 
-            context.HttpContext.Response.Redirect("/" + Program.webHome + "/");
+            context.HttpContext.Response.Redirect("/" + pParameters.webHome + "/");
 
             context.HttpContext.Response.Close();
         }

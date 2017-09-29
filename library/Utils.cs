@@ -1,4 +1,4 @@
-﻿#define SIMPLE
+﻿//#define SIMPLE
 //#define PRINT
 
 #if PRINT

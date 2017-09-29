@@ -14,7 +14,7 @@ namespace library
         {
             if (streams == null)
             {
-                streams = new Cache<p2pStream>(20 * 1000);
+                streams = new Cache<p2pStream>(20 * 1000 * 1000);
 
                 streams.OnCacheExpired += Streams_OnCacheExpired;
             }

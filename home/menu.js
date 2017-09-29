@@ -48,6 +48,9 @@ $.menu.bind = function($item, item, video)
         });
 */
 
+		if(!isFinite(video.duration))
+			return;	
+
 		var lasting = video.duration - video.currentTime;
 
 		$lasting_time.text($.menu.secToTime(lasting));
@@ -122,12 +125,6 @@ $.menu.bind = function($item, item, video)
 
 	$progress.bind('mouseup', function(e)
 	{
-		var total = parseInt($progress.width());
-
-		var offset = e.pageX - $progress.offset().left;
-
-		video.currentTime = video.duration * (offset/ total);
-
 		var $top = $('.top', $menu);
 
 		var $bottom = $('.bottom', $menu);
@@ -143,7 +140,30 @@ $.menu.bind = function($item, item, video)
 		$large_play.removeClass('large_play');
 
 		$large_play.addClass('large_loading');
+
+		var setTime = function()
+		{
+			if(!isFinite(video.duration))
+			{
+				setTimeout(setTime, 100);
+
+				return;
+			}
+			var total = parseInt($progress.width());
+
+			var offset = e.pageX - $progress.offset().left;
+
+			video.currentTime = video.duration * (offset/ total);
+
+		}
+
+setTime();
+		
+
+		
 	});
+
+
 
 	
 

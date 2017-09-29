@@ -78,7 +78,7 @@ namespace library
             if (address != null && address.Length == 0)
                 address = null;
 
-            var senderPeer = Peers.GetPeer(endpoint,
+            var senderPeer = Peers.GetPeer(endpoint,  
                 buffer[0] == (int)RequestCommand.Peer &&
                     !Addresses.Equals(Client.LocalPeer.Address, address) ?
                     address :
@@ -189,11 +189,10 @@ namespace library
             }
 
             var data = ToBytes().
-                // Concat(Address).
+                 Concat(Address ?? bytes_empty).
                 Concat(Data ?? bytes_empty).ToArray();
 
-
-            Log.Add(Log.LogTypes.P2p | Log.FromCommand(Command), Log.LogOperations.Outgoing, new { Port = DestinationPeer.EndPoint.Port, Address = Address ?? Data, Data = Data.Length > 0 });
+            Log.Add(Log.LogTypes.P2p, Log.LogOperations.Outgoing | Log.FromCommand(Command), new { Port = DestinationPeer.EndPoint.Port, Address = Address ?? Data, Data = null != Data && Data.Length > 0 });
 
             //Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
             //    Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0 ? Address : Data), 
@@ -204,6 +203,11 @@ namespace library
             //                Command == RequestCommand.Peer ? Log.LogTypes.p2pOutgoingPeers : Log.LogTypes.None
 
             //    );
+
+            //if(Utils.ToBase64String((Address ?? bytes_empty).Concat(Data ?? bytes_empty).ToArray()) == "3DnFpsP2xPTUm9L4G++gLseAGI6QBqGWA5YKLUIHEoU=")
+            //{
+
+            //}
 
             ThreadSend(DestinationPeer.EndPoint, data);
 
@@ -225,18 +229,30 @@ namespace library
 
         static void ThreadSend(IPEndPoint remoteEndPoint, byte[] data)
         {
-            UdpClient u = new UdpClient();
+            if(data[0] == (int)RequestCommand.Packet)
+            {
 
-            u.Client.ExclusiveAddressUse = false;
+            }
 
-            u.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            UdpClient u = null;
 
-            u.Client.Bind(new IPEndPoint(IPAddress.Any, Client.P2pPort));
+            if (null == u)
+            {
+                u = new UdpClient();
+
+                u.Client.ExclusiveAddressUse = false;
+
+                u.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+
+                u.Client.Bind(new IPEndPoint(IPAddress.Any, Client.P2pEndpoint.Port));
+            }
 
             Client.Stats.Sent.Add(data.Length);
 
             try
             {
+                Log.Add(Log.LogTypes.P2p, Log.LogOperations.Outgoing, data, remoteEndPoint);
+
                 u.Send(data, data.Length, remoteEndPoint);
             }
             catch (Exception e)

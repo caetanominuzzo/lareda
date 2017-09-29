@@ -337,12 +337,12 @@ namespace library
 
                         Peers.BeginGetPeer(peer);
 
-                        p2pRequest request = new p2pRequest(
+                        p2pRequest request = new p2pRequest( 
                           command: RequestCommand.Peer,
                           address: Client.LocalPeer.Address,
                           originalPeer: Client.LocalPeer,
                           senderPeer: Client.LocalPeer,
-                          destinationPeer: peer);
+                          destinationPeer: peer); 
 
                         request.Enqueue();
 
@@ -358,11 +358,11 @@ namespace library
 
         }
 
-        internal static Peer CreateLocalPeer()
+        internal static Peer CreateLocalPeer(IPEndPoint endpoint)
         {
             var peer = new Peer();
 
-            peer.EndPoint = new IPEndPoint(IPAddress.Loopback, Client.P2pPort);
+            peer.EndPoint = endpoint;
 
             peer.Address = Client.P2pAddress;
 

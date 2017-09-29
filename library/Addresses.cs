@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -164,6 +165,38 @@ namespace library
         {
             return IPEndPoint.Address.GetAddressBytes().Concat(
                 BitConverter.GetBytes((UInt16)IPEndPoint.Port)).ToArray();
+        } 
+
+
+        internal static List<byte[]> ToAddresses2(IEnumerable<byte> data)
+        {
+            int offset = 0;
+
+            List<byte[]> result = new List<byte[]>();
+
+            int count = data.Count();
+
+            // var buffer = new byte[pParameters.addressSize];
+
+            var data2 = data.ToArray();
+
+            while (offset * pParameters.addressSize < count)
+            {
+                //buffer = data.Skip(offset * pParameters.addressSize).
+                //    Take(pParameters.addressSize).
+                //    ToArray();
+
+                var buffer = new byte[pParameters.addressSize];
+
+                Buffer.BlockCopy(data2, offset * pParameters.addressSize, buffer, 0, pParameters.addressSize);
+
+
+                offset++;
+
+                result.Add(buffer);
+            }
+
+            return result;
         }
 
         internal static List<byte[]> ToAddresses(IEnumerable<byte> data)
@@ -210,6 +243,23 @@ namespace library
             }
 
             return result;
+        }
+
+        public static IPEndPoint CreateIPEndPoint(string endPoint)
+        {
+            string[] ep = endPoint.Split(':');
+            if (ep.Length != 2) throw new FormatException("Invalid endpoint format");
+            IPAddress ip;
+            if (!IPAddress.TryParse(ep[0], out ip))
+            {
+                throw new FormatException("Invalid ip-adress");
+            }
+            int port;
+            if (!int.TryParse(ep[1], NumberStyles.None, NumberFormatInfo.CurrentInfo, out port))
+            {
+                throw new FormatException("Invalid port");
+            }
+            return new IPEndPoint(ip, port);
         }
 
     }

@@ -14,6 +14,10 @@ using System.Security.Permissions;
 using System.Security.Principal;
 using System.Net;
 using log4net;
+using log4net.Repository.Hierarchy;
+using log4net.Layout;
+using log4net.Appender;
+using log4net.Core;
 
 namespace windows_desktop
 {
@@ -21,25 +25,13 @@ namespace windows_desktop
     {
         public static int WebPort;
 
-        public static int p2pPort;
+        public static IPEndPoint p2pEndpoint;
 
         public static byte[] p2pAddress;
 
-        internal static int Timeout = 60000;
-
-        internal static int MaxNonRangeDownloadSize = 1024 * 60;
-
         internal static UIHelper UIHelper;
 
-        internal static string AppName = "la-red";
-
-        internal static string webCache = "cache";
-
-        internal static string webHome = "k5c0241K9ckEw3ruLh2ZTUppkFtTurVikZJTuMn8UX8_";
-
-        internal static string welcomeHome = "dWZSFOJSbWAYqE6ccy0vwNvNQMWMQjlA7MuYi0iBAFE_";
-
-
+         
         static void GenerateSimpleNames()
         {
             var s = string.Empty;
@@ -58,6 +50,30 @@ namespace windows_desktop
             netsh = 1
         }
 
+        static void log4netConfig()
+        {
+            Hierarchy hierarchy = (Hierarchy)LogManager.GetRepository();
+
+            PatternLayout patternLayout = new PatternLayout();
+            patternLayout.ConversionPattern = "%date [%thread] %message%newline";
+            patternLayout.ActivateOptions();
+
+            FileAppender roller = new FileAppender();
+            roller.AppendToFile = true;
+            roller.File = @"logs\log.txt";
+            roller.Layout = patternLayout;
+            roller.ActivateOptions();
+            hierarchy.Root.AddAppender(roller);
+
+            //MemoryAppender memory = new MemoryAppender();
+            //memory.ActivateOptions();
+            //hierarchy.Root.AddAppender(memory);
+
+            hierarchy.Root.Level = Level.Debug;
+
+            hierarchy.Configured = true;
+        }
+
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
@@ -66,21 +82,25 @@ namespace windows_desktop
         {
             //GenerateSimpleNames()
 
+            Configure();
+
+            //log4netConfig();
             log4net.Config.XmlConfigurator.Configure();
 
-            Configure();
+            Log.Add(Log.LogTypes.Application, Log.LogOperations.Start, AppDomain.CurrentDomain.BaseDirectory);
+
 
             if (Netsh(args))
                 return;
 
 #if !DEBUG
-
-                        //if(Install())
-                        //    return;
+                       // if(Install())
+                       //     return;
+#endif
 
             
 
-#endif
+            
 
             Application.EnableVisualStyles();
 
@@ -91,7 +111,7 @@ namespace windows_desktop
             pp.Show();
 
             using (ProcessIcon.Start())
-            using (Client.Start(p2pAddress, p2pPort))
+            using (Client.Start(p2pAddress, p2pEndpoint))
             using (WebServer.Start())
             using (UIHelper = new UIHelper())
             {
@@ -140,10 +160,10 @@ namespace windows_desktop
 
             Log.Add(Log.LogTypes.Application, Log.LogOperations.Configure, AppDomain.CurrentDomain.BaseDirectory);
 
-            webCache = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, webCache);
+            pParameters.webCache = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, pParameters.webCache);
 
-            if (!Directory.Exists(webCache))
-                Directory.CreateDirectory(webCache);
+            if (!Directory.Exists(pParameters.webCache))
+                Directory.CreateDirectory(pParameters.webCache);
 
             #region app.config
 
@@ -151,14 +171,17 @@ namespace windows_desktop
 
             config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
-            if (config.AppSettings.Settings["p2pPort"] == null ||
-                string.IsNullOrWhiteSpace(config.AppSettings.Settings["p2pPort"].Value))
+            if (config.AppSettings.Settings["p2pEndpoint"] == null ||
+                string.IsNullOrWhiteSpace(config.AppSettings.Settings["p2pEndpoint"].Value))
             {
-                p2pPort = Utils.GetAvaiablePort();
-                config.AppSettings.Settings.Add("p2pPort", p2pPort.ToString());
+                var port = Utils.GetAvaiablePort();
+
+                p2pEndpoint = new IPEndPoint(IPAddress.Loopback, port);
+
+                config.AppSettings.Settings.Add("p2pEndpoint", p2pEndpoint.ToString());
             }
             else
-                p2pPort = Convert.ToInt32(config.AppSettings.Settings["p2pPort"].Value);
+                p2pEndpoint = Addresses.CreateIPEndPoint(config.AppSettings.Settings["p2pEndpoint"].Value);
 
             if (config.AppSettings.Settings["p2pAddress"] == null ||
                 string.IsNullOrWhiteSpace(config.AppSettings.Settings["p2pAddress"].Value))
@@ -202,7 +225,7 @@ namespace windows_desktop
 
             appdata = Path.Combine(appdata, Application.CompanyName, Application.ProductName, Application.ProductVersion);
 
-            var target = Path.Combine(appdata, AppName + ".exe");
+            var target = Path.Combine(appdata, pParameters.AppName + ".exe");
 
             if (AppDomain.CurrentDomain.BaseDirectory != appdata + "\\"
                 && !AppDomain.CurrentDomain.FriendlyName.Contains("vshost")
@@ -210,8 +233,7 @@ namespace windows_desktop
             {
                 try
                 {
-                    if (!RunAsAdministrator(AppDomain.CurrentDomain.FriendlyName))
-                        return false;
+                   // RunAsAdministrator(AppDomain.CurrentDomain.FriendlyName);
 
                     Directory.CreateDirectory(appdata);
 
@@ -224,11 +246,11 @@ namespace windows_desktop
                     System.Diagnostics.Process.Start(p);
 
                     CreateShortcut(
-                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), AppName),
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), pParameters.AppName),
                         target);
 
                     CreateShortcut(
-                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), AppName),
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), pParameters.AppName),
                         target);
 
                     return true;
@@ -237,7 +259,7 @@ namespace windows_desktop
                 {
                     Log.Add(Log.LogTypes.Application, Log.LogOperations.Exception, AppDomain.CurrentDomain.BaseDirectory, e);
 
-                    return false;
+                    throw e;                         
                 }
             }
 
@@ -274,19 +296,27 @@ namespace windows_desktop
 
                 var libraryTail = ReadTailItemSize(0, f);
 
+                var GraphVizWrapperTail = ReadTailItemSize(0, f);
+
+                var log4netTail = ReadTailItemSize(0, f);
+
                 var newtonsoftTail = ReadTailItemSize(0, f);
 
                 var taglibTail = ReadTailItemSize(0, f);
 
                 f.Seek(0, SeekOrigin.Begin);
 
-                WriteTailAssembly(f, appTailSize, AppName + ".exe");
+                WriteTailAssembly(f, appTailSize, pParameters.AppName + ".exe");
 
                 WriteTailAssembly(f, libraryTail, "library.dll");
 
                 WriteTailAssembly(f, newtonsoftTail, "Newtonsoft.Json.dll");
 
                 WriteTailAssembly(f, taglibTail, "taglib-sharp.dll");
+
+
+
+///#define load_files char* files [] = {"", "la-red.exe", "library.dll", "GraphVizWrapper.dll", "log4net.dll", "Newtonsoft.Json.dll", "NIdenticon.dll", "la-red.exe.config"};
 
             }
         }
@@ -331,8 +361,6 @@ namespace windows_desktop
             return VerifyTailItem(buffer);
         }
 
-
-
         private static void CreateShortcut(string shortcutLocation, string target)
         {
             using (StreamWriter writer = new StreamWriter(shortcutLocation + ".url"))
@@ -363,6 +391,7 @@ namespace windows_desktop
         /// <returns></returns>
         internal static bool RunAsAdministrator(string path, string arguments = null)
         {
+
             var psi = new ProcessStartInfo();
 
             psi.FileName = path;

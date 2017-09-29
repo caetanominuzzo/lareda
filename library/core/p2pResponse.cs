@@ -95,9 +95,10 @@ namespace library
                        originalPeer: Request.OriginalPeer,
                        senderPeer: Client.LocalPeer,
                        destinationPeer: Request.OriginalPeer,
-                       data: Request.Address.Concat(data).ToArray());
+                       data: data);
 
-                    request.Enqueue();
+
+                     request.Send();
 
                 }
                 else
@@ -143,7 +144,7 @@ namespace library
                     }
 
                     var res = new p2pRequest(
-                        Request.Command, Request.Address, Client.LocalPeer, Client.LocalPeer, Request.OriginalPeer, Request.Address.Concat(MetaPackets.ToBytes(m)).ToArray());
+                        Request.Command, Request.Address, Client.LocalPeer, Client.LocalPeer, Request.OriginalPeer,MetaPackets.ToBytes(m));
 
                     res.Enqueue();
                 }

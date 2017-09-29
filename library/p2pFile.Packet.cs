@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,11 +12,19 @@ namespace library
 {
     public partial class p2pFile
     {
-        internal class Packet
+        public  class Packet
         {
             p2pFile File;
 
             internal byte[] Address;
+
+            public string Base64Address
+            {
+                get
+                {
+                    return Utils.ToBase64String(Address);
+                }
+            }
 
             public string Filename;
 
@@ -67,8 +76,8 @@ namespace library
                     if (root.Children.Any(x => x.Value.Arrived && x.Value.PacketType == PacketTypes.Content))
                     {
                         if (root.Children.First().Value.Arrived &&
-                            root.Children.ElementAt(root.Children.Count() - 1).Value.Arrived &&
-                            root.Children.ElementAt(root.Children.Count() - 2).Value.Arrived)
+                            (root.Children.Count() == 1 || root.Children.ElementAt(root.Children.Count() - 1).Value.Arrived) &&
+                            (root.Children.Count() == 1 || root.Children.ElementAt(root.Children.Count() - 2).Value.Arrived))
                         {
                             if (root.Children.All(x => x.Value.Arrived))
                             {
@@ -186,8 +195,6 @@ namespace library
                             Offset = BitConverter.ToInt32(data, 1);
                     }
 
-                    Log.Add(Log.LogTypes.Queue, Log.LogOperations.Arrived, this);
-
                     this.data = data;
 
                     File.ReturnRatio = (File.ReturnRatio + (RequestSent / (double)Arrives + 1)) / 2;
@@ -198,12 +205,14 @@ namespace library
                     Arrives++;
                 }
 
+                Log.Add(Log.LogTypes.Queue, Log.LogOperations.Arrived, this);
+
 
                 switch (PacketType)
                 {
                     case PacketTypes.Addresses:
 
-                        List<byte[]> addresses = Addresses.ToAddresses(data.Skip(pParameters.packetHeaderSize));
+                        List<byte[]> addresses = Addresses.ToAddresses2(data.Skip(pParameters.packetHeaderSize));
 
                         var count = addresses.Count();
 
@@ -213,20 +222,34 @@ namespace library
                         
                         FilePacketsOffset++;
 
-                        //first item to the main thread
-                        //ProcessAddPackets(new object[] { addresses.Take(1).ToArray(), FilePacketsOffset, 0});
-                        ProcessAddPackets(new object[] { data.Skip(pParameters.packetHeaderSize).Take(pParameters.addressSize), FilePacketsOffset, 0 });
+                        //last item to the main thread
+                        //ProcessAddPackets(new object[] { data.Skip(data.Length - pParameters.addressSize).Take(pParameters.addressSize), FilePacketsOffset + last_offset, last_offset, false });
+                        ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(1), FilePacketsOffset + last_offset, last_offset, false });
 
                         //second last item to the main thread
-                        //ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(1).ToArray(), FilePacketsOffset + last_offset, last_offset });
-                        ProcessAddPackets(new object[] { data.Skip(data.Length - pParameters.addressSize * 2).Take(pParameters.addressSize), FilePacketsOffset + last_offset - 1, last_offset-1 });
+                        //ProcessAddPackets(new object[] { data.Skip(data.Length - pParameters.addressSize * 2).Take(pParameters.addressSize), FilePacketsOffset + last_offset - 1, last_offset - 1, false });
+                        ProcessAddPackets(new object[] { addresses.Skip(count - 2).Take(1), FilePacketsOffset + last_offset - 1, last_offset - 1, false });
 
-                        //last item to the main thread
-                        //ProcessAddPackets(new object[] { addresses.Skip(count - 1).Take(1).ToArray(), FilePacketsOffset + last_offset, last_offset });
-                        ProcessAddPackets(new object[] { data.Skip( data.Length - pParameters.addressSize).Take(pParameters.addressSize), FilePacketsOffset + last_offset, last_offset });
+                        //Third last item to the main thread
+                        //ProcessAddPackets(new object[] { data.Skip(data.Length - pParameters.addressSize * 3).Take(pParameters.addressSize), FilePacketsOffset + last_offset - 2, last_offset - 2, false });
+                        ProcessAddPackets(new object[] { addresses.Skip(count - 3).Take(1), FilePacketsOffset + last_offset - 2, last_offset - 2, false });
+
+                        //first item to the main thread
+                        //ProcessAddPackets(new object[] { addresses.Take(1).ToArray(), FilePacketsOffset, 0});
+                        ProcessAddPackets(new object[] { addresses.Take(1), FilePacketsOffset, 0, false });
+
+                        FilePacketsOffset++;
+
+                        //first item to the main thread
+                        //ProcessAddPackets(new object[] { addresses.Take(1).ToArray(), FilePacketsOffset, 0});
+                        ProcessAddPackets(new object[] { addresses.Skip(1).Take(1), FilePacketsOffset, 1, false });
+
+
 
                         if (Parent == null || Offset == Parent.Children.Keys.Max())
                         {
+                            File.gotLastsPackets.Reset();
+
                             File.GetLastPacket = true;
 
                             File.GetSecondLastPacket = true;
@@ -234,10 +257,25 @@ namespace library
 
                         FilePacketsOffset++;
 
+                        //var back = new BackgroundWorker();
+
+                        //back.DoWork += Back_DoWork;
+
+                        //back.RunWorkerAsync(new object[] {
+                        //    data.Skip(pParameters.packetHeaderSize + pParameters.addressSize).Take(data.Length - pParameters.packetHeaderSize - (pParameters.addressSize * 3)), FilePacketsOffset, 1, true });
+
+
+                       
+
                         //ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] { addresses.Skip(1).Take(count - 2).ToArray(), FilePacketsOffset, 1 });
+
+                        //ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] {
+                        //    data.Skip(pParameters.packetHeaderSize + pParameters.addressSize).Take(data.Length - pParameters.packetHeaderSize - (pParameters.addressSize * 5)), FilePacketsOffset, 1, true });
+
+
                         ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] {
-                            data.Skip(pParameters.packetHeaderSize + pParameters.addressSize).Take(data.Length - pParameters.packetHeaderSize - (pParameters.addressSize * 3)), FilePacketsOffset, 1 });
-                        
+                            addresses.Skip(2).Take(count - 6), FilePacketsOffset, 2, true });
+
                         //ProcessAddPackets(new object[] { addresses.Take(count - 1).ToArray(), FilePacketsOffset, 0 });  
 
                         //ProcessAddPackets(addresses);
@@ -259,17 +297,25 @@ namespace library
                         break;
 
                     case PacketTypes.Content:
-                        
-                        var buffer = data.Skip(pParameters.packetHeaderSize).ToArray();
 
-                        DelayedWrite.Add(Filename ?? File.Filename, buffer, Offset);
+                        var buffer = data;//.Skip(pParameters.packetHeaderSize).ToArray();
 
-                        lock(File.FilePackets)
-                        if (File.Status == FileStatus.dataStructureComplete || this.FilePacketOffset == File.FilePackets.Keys.Max())
+                        if(null != (Filename ?? File.Filename))
+                            DelayedWrite.Add(Filename ?? File.Filename, buffer, Offset, pParameters.packetHeaderSize);
+
+                        lock (File.FilePackets)
                         {
-                            File.Status = FileStatus.dataStructureComplete;
+                            if (File.Status == FileStatus.dataStructureComplete || this.FilePacketOffset == File.FilePackets.Keys.Max())
+                            {
+                                File.Status = FileStatus.dataStructureComplete;
 
-                            File.Levels = this.Level;
+                                File.Levels = this.Level;
+
+                                var new_length = (this.Offset * pParameters.packetSize) + buffer.Length - pParameters.packetHeaderSize;
+
+                                if(new_length > File.Length)
+                                    File.Length = new_length;
+                            }
                         }
 
                         if (this.Offset == 0 && this.Parents().All(x => x.Offset == 0))
@@ -278,18 +324,17 @@ namespace library
                         lock(File.arrives)
                             File.arrives.Add(this.FilePacketOffset);
 
-
                         Client.DownloadComplete(File.Address, File.Filename, File.SpecifFilename, File.Arrives, File.Cursors);
 
                         break;
 
-                    case PacketTypes.Metapacket:
+                    case PacketTypes.Metapacket:  
 
                         DelayedWrite.Add(Filename, data, 0);
 
                         break;
                 }
-
+ 
                 
 
                 ProcessPacketPriority();
@@ -298,25 +343,45 @@ namespace library
                 File.packetEvent.Set();
             }
 
+            private void Back_DoWork(object sender, DoWorkEventArgs e)
+            {
+                ProcessAddPackets(e.Argument);
+            }
+
             private void ProcessAddPackets(object data)
             {
+               
                 var datas = (object[])data;
 
-                var addresses = (IEnumerable<byte>)datas[0];
+                var addresses = (IEnumerable<byte[]>)datas[0];
 
                 var filePacketsOffset = (int)datas[1];
 
                 var baseOffset = (int)datas[2];
 
+                var waitLastPackets = (bool)datas[3];
+
+                //if (waitLastPackets)
+                //    Thread.Sleep(10000);
+
+
+                ////if (waitLastPackets)
+                ////    File.gotLastsPackets.WaitOne();
+
                 var count = addresses.Count();
 
-                for (var i = 0; i < count; i += pParameters.addressSize)
-                //foreach (byte[] addr in addresses)
+                Packet p = null;
+
+                //for (var i = 0; i < count; i += pParameters.addressSize)
+                foreach (byte[] addr in addresses)
                 {
+                    //var buffer = new byte[pParameters.addressSize];
 
-                    byte[] addr = addresses.Skip(i).Take(pParameters.addressSize).ToArray();
+                    //Buffer.BlockCopy(addresses2, i, buffer, 0, pParameters.addressSize);
 
-                    var p = File.AddPacket(addr, this, filePacketsOffset, baseOffset, Filename);
+                    //buffer = addresses.Skip(i).Take(pParameters.addressSize).ToArray();
+
+                    p = File.AddPacket(addr, this, filePacketsOffset, baseOffset, Filename);
 
                     lock (Children)
                         Children.Add(p.Offset, p);
@@ -324,18 +389,27 @@ namespace library
                     filePacketsOffset++;
                     
                     baseOffset++;
+
+                   
                 }
+
+                if (count == 1)
+                    p.Get();
             }
 
-            internal void Get()
+            public void Get()
             {
                 Log.Add(Log.LogTypes.Queue, Log.LogOperations.Get, this);
 
                 byte[] data = null;
 
-                if (this.Filename.StartsWith("cache/", StringComparison.CurrentCultureIgnoreCase) || MayHaveLocalData)
+                if (null == this.Filename || this.Filename.StartsWith(pParameters.webCache + "/", StringComparison.CurrentCultureIgnoreCase) || MayHaveLocalData)
                 {
-                    data = Packets.Get(Address);
+                    
+
+                    data = Packets.Get(Address, this.Filename);
+
+                    
 
                     if (data == null)
                         MayHaveLocalData = false;
@@ -364,7 +438,7 @@ namespace library
 
                         //todo: IMPORTANT! Refazer: removido parametro wait. Se não tiver chance de ter localdata (!File.MayHaveLocalData())  fazer Peers.idlePeerEvent.WaitOne
 
-                        new p2pRequest(RequestCommand.Packet, Address, data: Address).Enqueue();
+                        new p2pRequest(RequestCommand.Packet, Address).Enqueue();
 
                         //var sent = p2pRequest.Send(
                         //    address: Address,
@@ -382,8 +456,18 @@ namespace library
                     }
                 }
                 else if (data != null)
-                    ProcessDataArrived(data);
+                    ThreadPool.QueueUserWorkItem(ThreadProcessDataArrived, data);
+
+                //ThreadPool.QueueUserWorkItem ProcessDataArrived(data);
+
+               
             }
+
+            void ThreadProcessDataArrived(object data)
+            {
+                ProcessDataArrived((byte[])data);
+            }
+
 
             private void GetDirectory(IEnumerable<Metapacket> search)
             {
@@ -441,5 +525,7 @@ namespace library
                 //Arrives++;
             }
         }
+
+       
     }
 }

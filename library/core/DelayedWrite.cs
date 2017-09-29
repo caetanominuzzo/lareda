@@ -11,13 +11,13 @@ namespace library
     {
         public static byte[] Get(string filename)
         {
-            lock (queue)
-            {
-                DelayedWriteItem item = queue.FirstOrDefault(x => x.Filename == filename);
+            DelayedWriteItem item = null;
 
-                if (item != null)
-                    return item.Data.Skip(item.ReadOffset).ToArray();
-            }
+            lock (queue)
+                item = queue.FirstOrDefault(x => x.Filename == filename);
+
+            if (null != item)
+                return item.Data.Skip(item.ReadOffset).ToArray();
 
             return null;
         }
@@ -60,23 +60,30 @@ namespace library
 
         static void Refresh()
         {
+            IEnumerable<DelayedWriteItem> items = null;
+
+            DelayedWriteItem item = null;
+
             while (!Client.Stop)
             {
+                Log.Add(Log.LogTypes.Journaling, Log.LogOperations.Refresh, "3DnFpsP2x");
+
                 lock (queue)
-                {
-                    var items = queue.Where(x => !x.writeToPacketsDir).ToList();
+                    item = queue.Where(x => !x.writeToPacketsDir).ToList().OrderBy(x => -x.Offset).FirstOrDefault();
 
-                    foreach (var item in items)
-                        Write(item);
+                if (null != item)
+                    Write(item);
 
+
+                lock (queue)
                     items = queue.Where(x => x.writeToPacketsDir).ToList();
 
-                    foreach (var item in items)
-                        Write(item);
+                foreach (var i in items)
+                    Write(i);
 
+                lock (queue)
                     if (!queue.Any())
                         itemsOnQueueEvent.Reset();
-                }
 
                 itemsOnQueueEvent.WaitOne();
             }
@@ -84,15 +91,18 @@ namespace library
 
         static void Write(DelayedWriteItem item)
         {
+            Log.Add(Log.LogTypes.Journaling, Log.LogOperations.Write, item);
+
             try
             {
-                Log.Add(Log.LogTypes.Journaling, Log.LogOperations.Write, item);
-
                 if (item.writeToPacketsDir)
                 {
-                    File.WriteAllBytes(item.Filename, item.Data);
 
-                    Remove(item);
+                    File.OpenWrite(item.Filename).Write(item.Data, item.ReadOffset, item.Data.Length - item.ReadOffset);
+
+                    //File.WriteAllBytes(item.Filename, item.Data);
+
+                    Remove(item); 
                 }
                 else
                 {
@@ -101,12 +111,10 @@ namespace library
 
                     p2pStream stream = null;
 
-                    var context = new p2pContext(null , true);
+                    var context = new p2pContext(null, true);
 
                     try
                     {
-                        
-
                         stream = p2pStreamManager.GetStream(item.Filename, context, 0);
 
                         DelayedWriteItem[] same_file;
@@ -116,13 +124,26 @@ namespace library
 
                         while (same_file.Length > 0)
                         {
+                            Log.Add(Log.LogTypes.Journaling, Log.LogOperations.Write, same_file);
+
                             List<DelayedWriteItem> toRemove = new List<DelayedWriteItem>();
+
+                            ///////////////
+                            var last = same_file.Last();
+
+                            if(!last.Filename.Contains(pParameters.webCache))
+                                stream.Write(last.Data, last.ReadOffset, last.Offset * pParameters.packetSize, last.Data.Length - last.ReadOffset, context);
+
+                            toRemove.Add(last);
+                            ///////////////
 
                             foreach (DelayedWriteItem writeItem in same_file)
                             {
-                                stream.Seek(writeItem.Offset * pParameters.packetSize, 0, context);
+                                if (writeItem == last)
+                                    break;
 
-                                stream.Write(writeItem.Data, 0, writeItem.Data.Length, context);
+                                if (!writeItem.Filename.Contains(pParameters.webCache))
+                                    stream.Write(writeItem.Data, writeItem.ReadOffset, writeItem.Offset * pParameters.packetSize, writeItem.Data.Length - writeItem.ReadOffset, context);
 
                                 toRemove.Add(writeItem);
                             }
@@ -172,23 +193,25 @@ namespace library
         {
             var count = 0;
 
+            var item = new DelayedWriteItem { Filename = filename, Data = data, Offset = offset, ReadOffset = readOffset };
+
+            Log.Add(Log.LogTypes.Journaling, Log.LogOperations.Add, item);
+
             lock (queue)
             {
-                queue.Add(new DelayedWriteItem { Filename = filename, Data = data, Offset = offset, ReadOffset = readOffset });
+                queue.Add(item);
 
                 count = queue.Count();
             }
 
-            if (count == 1)
+            if (count == 1) 
                 itemsOnQueueEvent.Set();
-            else if (count >= pParameters.MaxDelayedWriteQueue)
-            {
-                freeQueueEvent.Reset();
+            //else if (count >= pParameters.MaxDelayedWriteQueue)
+            //{
+            //    freeQueueEvent.Reset();
 
-                freeQueueEvent.WaitOne();
-            }
-
-
+            //    freeQueueEvent.WaitOne();
+            //}
         }
 
         class DelayedWriteItem

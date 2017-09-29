@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static library.p2pFile;
 
 namespace library
 {
@@ -17,15 +20,22 @@ namespace library
         {
             get
             {
+                if (P2pFile != null)
+                    return P2pFile.Length;
+
                 return length;
             }
         }
 
         public string Filename;
 
-        Stream _stream;
-
         p2pFile P2pFile;
+
+        public void InitialLoadDone()
+        {
+            if (null != P2pFile)
+                P2pFile.gotLastsPackets.Set();
+        }
 
         internal p2pStream(string filename, p2pContext context, long initial_position)
         {
@@ -35,16 +45,35 @@ namespace library
 
             var fileExists = File.Exists(Filename);
 
-            _stream = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+            if (fileExists)
+            {
+                var fi = new FileInfo(Filename);
 
-            length = _stream.Length;
+                length = fi.Length;
 
-            if(!fileExists)
+                try
+                {
+                    // _stream = MemoryMappedFile.CreateFromFile(Filename, FileMode.Open, RemoveInvalidFilePathCharacters(Filename), length);
+                }
+                catch (Exception e)
+                {
+
+                }
+            }
+
+            if (!fileExists)
                 P2pFile = p2pFile.Queue.Get(Filename);
 
             lock (source_position)
                 if (!source_position.ContainsKey(context))
                     source_position.Add(context, initial_position);
+        }
+
+        static string RemoveInvalidFilePathCharacters(string filename, string replaceChar = "_")
+        {
+            string regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+            Regex r = new Regex(string.Format("[{0}]", Regex.Escape(regexSearch)));
+            return r.Replace(filename, replaceChar);
         }
 
         public long GetPosition(p2pContext context)
@@ -53,51 +82,65 @@ namespace library
                 return source_position[context];
         }
 
-        public long Seek(long offset, SeekOrigin origin, p2pContext context)
-        {
-            return source_position[context] = _stream.Seek(offset, origin);
-        }
-
-        public int Read(byte[] buffer, int offset, int count, p2pContext context)
+        public int Read(byte[] buffer, int offset, int count, p2pContext context, out Packet[] packets)
         {
             Log.Add(Log.LogTypes.File, Log.LogOperations.Read, new { context, Filename, offset, count });
 
-            if (source_position[context] != _stream.Position)
-                _stream.Seek(source_position[context], SeekOrigin.Begin);
+            packets = null;
 
-            if (P2pFile != null && !P2pFile.CanReadFromLocalStream(source_position[context], 1))
-                return -1;
+            if (P2pFile != null)
+                return P2pFile.TryReadFromPackets(buffer, offset, count, out packets);
 
-            var result = _stream.Read(buffer, offset, count);
+            if (offset == length)
+                return 0;
 
-            source_position[context] = _stream.Position;
+            if (offset + count > length)
+                count = (int)length - offset;
 
-            return result;
+            try
+            {
+
+                using (var mmf = MemoryMappedFile.CreateFromFile(Filename, FileMode.Open, RemoveInvalidFilePathCharacters(Filename), length))
+                using (var accessor = mmf.CreateViewAccessor(offset, count))
+                    return accessor.ReadArray(0, buffer, 0, count);
+            }
+            catch (Exception e)
+            {
+                Log.Add(Log.LogTypes.File, Log.LogOperations.Exception, new { e, context, Filename, offset, count });
+
+            }
+            return -1;
         }
 
-        public void Write(byte[] buffer, int offset, int count, p2pContext context)
+        public void Write(byte[] buffer, int sourceOffset, int offset, int count, p2pContext context)
         {
-            Log.Add(Log.LogTypes.File, Log.LogOperations.Write, new { context, Filename, offset, count });
+            Log.Add(Log.LogTypes.File, Log.LogOperations.Write, new { context, Filename, sourceOffset, offset, count, length, new_length = offset + count });
 
-            if (source_position[context] != _stream.Position)
-                source_position[context] = _stream.Seek(source_position[context], SeekOrigin.Begin);
 
-            _stream.Write(buffer, offset, count);
+            if(offset + count > length)
+                length = offset + count;
 
-            if (_stream.Length > length)
-                length = _stream.Length;
+            try
+            {
+                using (var mmf = MemoryMappedFile.CreateFromFile(Filename, FileMode.OpenOrCreate, RemoveInvalidFilePathCharacters(Filename), length))
+                using (var accessor = mmf.CreateViewAccessor(offset, count))
+                    accessor.WriteArray(0, buffer, sourceOffset, count);
+            }
+            catch (Exception e)
+            {
+                Log.Add(Log.LogTypes.File, Log.LogOperations.Exception, new { e, context, Filename, sourceOffset, offset, count });
+            }
         }
 
         internal void Dispose()
         {
-            _stream.Dispose();
         }
 
         public void Dispose(p2pContext context)
         {
             Log.Add(Log.LogTypes.File, Log.LogOperations.Dispose, new { context, Filename });
 
-            if(Filename.Contains("3DnFpsP2xPTUm"))
+            if (Filename.Contains("3DnFpsP2xPTUm"))
             {
 
             }

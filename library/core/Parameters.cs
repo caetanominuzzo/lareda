@@ -18,7 +18,7 @@ namespace library
 
         public static int propagation = 1;
 
-        public static byte requestHeaderParamsSize = 4; 
+        public static byte requestHeaderParamsSize = 4;
 
         public static byte requestHeaderSize = (byte)(requestHeaderParamsSize + 6); //6 = sizeof(ip:port);
 
@@ -63,14 +63,14 @@ namespace library
         public static int restart_requesting_packets_from_coda_timeout = 0;
 
         public static int peers_interval = 10000;
-        
+
         public static int response_timeout = 2000;
 
         public static int postTupleTimeout = 100;
 
         public static int cacheActiveTimeoutInterval = 100;
 
-        
+
 
         public static int send_localdata_interval = 1000;
 
@@ -95,6 +95,17 @@ namespace library
         public static int READFILE_RETRY_COUNT = 3;
 
 
-        public static int WebServer_FileDownloadTimeout = 1000;
+        public static int WebServer_FileDownloadTimeout = 30000;
+
+        public static int WebServer_MaxNonRangeDownloadSize = 1024 * 500;
+
+        public static string AppName = "la-red";
+
+        public static string webCache = "cache\\";
+
+        public static string webHome = "k5c0241K9ckEw3ruLh2ZTUppkFtTurVikZJTuMn8UX8_";
+
+        public static string welcomeHome = "dWZSFOJSbWAYqE6ccy0vwNvNQMWMQjlA7MuYi0iBAFE_"; 
     }
 }
+ 

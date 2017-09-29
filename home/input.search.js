@@ -379,24 +379,18 @@ $.input.bindItem = function($item, item, new_item)
 	if(img.tagName == "VIDEO")
 		video_src = img.children[0];
 	
-	
 	var parents = $('.parents:first', $content); 
 
 	if(typeof item.superiorchildren != 'undefined' && item.superiorchildren.length > 0)
-	{
 		for(var i = 0; i < item.superiorchildren.length; i++)	
-		{
 			$.input.updateItems(parents, item.superiorchildren, 'parents', 0);
-
-		}
-	}
 
 	if($item.attr('address') != item.address)
 		$item.attr('address', item.address);
 
-
-	if(img && ((img.tagName == "VIDEO" && (typeof img.poster == 'undefined' || !img.poster.endsWith(item.pic)))
-	|| (img.tagName == "IMG" && (typeof img.src == 'undefined' || !img.src.endsWith(item.pic)))))
+	if(img &&
+		((img.tagName == "VIDEO" && (typeof img.poster == 'undefined' || !img.poster.endsWith(item.pic))) ||
+		 (img.tagName == "IMG" && (typeof img.src == 'undefined' || !img.src.endsWith(item.pic)))))
 	{
 		if(img.tagName == "VIDEO")
 			img.poster = item.pic;
@@ -407,50 +401,92 @@ $.input.bindItem = function($item, item, new_item)
 
 	if(img && (img.tagName == "VIDEO" && (typeof item.video != 'undefined')))
 	{
-		if(!img.src.endsWith(item.video))
+		if(!img.src.endsWith(item.video) && (!img.temp || !img.temp.endsWith(item.video)))
 		{
-			/*
-			videojs('vidd1', {
-			  tracks: [
-			    { src:'', kind:'captions', srclang:'en' label:'English' }
-			  ]
-			});
-*/
-			//img.setAttribute("src", item.video);	
-			video_src.setAttribute("src", item.video)	
+			img.addEventListener('error', function() {
+		       video_src.setAttribute("src", item.video);
+		       img.load();
+		       console.log('video error');
+		    });
 
-			var f = function(){ 
-					if(!img.duration > 0)
+			img.temp = item.video;
+
+			img.retry = 0;
+			
+			video_src.setAttribute("src", item.video);
+
+			img.load();
+
+			var setVideoSrc = function()
+			{ 
+				if(!isFinite(img.duration))
+				{
+					if(img.retry++ % 5 == 0)
 					{
-						video_src.setAttribute("src", item.video);						
+						//video_src.setAttribute("src", '');
 
-					//	setTimeout(f, 100);
+						//video_src.setAttribute("src", item.video);
+
+						//img.load();
 					}
-					
+
+					setTimeout(setVideoSrc, 1000);
+/*
 					$.ajax({
-			            url: "keepAlive/",
-			            data:
-			                {
-			                    files: JSON.stringify([video_src.src,  audio.src]),
-			                },
-			            crossDomain: false,
-			            dataType: "json",
-			            method: "GET"
-			        });
+						url: "keepAlive/",
+						data:
+							{
+								files: JSON.stringify([item.video, item.audio]),
+							},
+						crossDomain: false,
+						dataType: "json",
+						method: "GET"
+					});
+*/
+					return;						
+				}
+
+				if(typeof audio != 'undefined' &&  typeof item.audio != 'undefined')
+				{
+					if(!audio.src.endsWith(item.audio))
+					{
+						audio.setAttribute("src", item.audio);			
+					}
+				}
+
+				if(img && img.tagName == "VIDEO" && (typeof item.subtitle != 'undefined'))
+				{
+
+					var count = 0;
+
+					item.subtitles.forEach(function(t){
+
+						var $subtitle = $('<track kind="subtitles" src="'+t.address+'" srclang="en" label="'+t.thumb_text+'" '+(count==0?'mode="showing"':'')+'>');
+
+						count++;
+
+						$(img).append($subtitle);
+					});
+
+
+				}
+
+
+				if((typeof audio != 'undefined' &&  typeof item.audio != 'undefined') &&
+					(img && img.tagName == "VIDEO" && typeof item.video != 'undefined') &&
+					img.duration > 0 && audio.duration > 0)
+				{
+					img.id = "aa1";
+
+					audio.id = "aa2";
+
+					$.synchronizeVideos(0, "aa1", "aa2");
+				}
+
 			};
-
-			setTimeout(f, 500);
 		}
 
-		if(typeof audio != 'undefined' &&  typeof item.audio != 'undefined')
-		{
-			if(!audio.src.endsWith(item.audio))
-			{
-				audio.setAttribute("src", item.audio);			
-			}
-		}
-
-
+		setTimeout(setVideoSrc, 1000);
 	}
 
 	if(img && (img.tagName == "VIDEO" && (typeof item.video == 'undefined') && (typeof item.audio != 'undefined')))
@@ -460,35 +496,6 @@ $.input.bindItem = function($item, item, new_item)
 			img.setAttribute("src", item.audio);			
 		}
 	}
-
-	if(img && img.tagName == "VIDEO" && (typeof item.subtitle != 'undefined'))
-	{
-
-		var count = 0;
-
-		item.subtitles.forEach(function(t){
-
-			var $subtitle = $('<track kind="subtitles" src="'+t.address+'" srclang="en" label="'+t.thumb_text+'" '+(count==0?'mode="showing"':'')+'>');
-
-			count++;
-			
-			$(img).append($subtitle);
-		});
-
-		
-	}
-
-	if((typeof audio != 'undefined' &&  typeof item.audio != 'undefined') &&
-		(img && img.tagName == "VIDEO" && typeof item.video != 'undefined') &&
-		img.duration > 0 && audio.duration > 0)
-	{
-		img.id = "aa1";
-
-		audio.id = "aa2";
-
-		$.synchronizeVideos(0, "aa1", "aa2");
-	}
-	
 
 	if(item.author)
 		$.input.updateItems(author, [item.author], 'text', 0);

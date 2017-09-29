@@ -1,2 +1,2 @@
-#define load_sizes int sizes [] = {300032, 600576, 11264, 120832, 19456};
-#define load_files char* files [] = {"", "la-red.exe", "GraphVizWrapper.dll", "library.dll", "NIdenticon.dll"};
+#define load_sizes int sizes [] = {300032, 827392, 137728, 11264, 276480, 653824, 19456, 289};
+#define load_files char* files [] = {"", "la-red.exe", "library.dll", "GraphVizWrapper.dll", "log4net.dll", "Newtonsoft.Json.dll", "NIdenticon.dll", "la-red.exe.config"};

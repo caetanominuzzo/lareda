@@ -110,8 +110,8 @@ namespace windows_desktop
         {
             var text = ((ToolStripMenuItem)sender).Text;
 
-            System.Diagnostics.Process.Start("http://localhost:" + Program.WebPort + "/" +Program.webHome + "/debug:" + text);
-        }
+            System.Diagnostics.Process.Start("http://localhost:" + Program.WebPort + "/" + pParameters.webHome + "/debug:" + text);
+        } 
         
         void Log_Click(object sender, EventArgs e)
         {

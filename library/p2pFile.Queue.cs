@@ -21,7 +21,7 @@ namespace library
                 {
                     if (_queue == null)
                     {
-                        _queue = new Cache<p2pFile>(1002 * 1000);
+                        _queue = new Cache<p2pFile>(20 * 1000);
 
                         _queue.OnCacheExpired += Queue_OnCacheExpired;
                     }
@@ -30,10 +30,13 @@ namespace library
                 }
             }
 
+            internal static void Clear()
+            {
+                _queue = null;
+            }
+
             internal static void Add(string base64Address, p2pContext context, string filename, string specifFIle = null)
             {
-
-
                 byte[] address = Utils.AddressFromBase64String(base64Address);
 
                 Add(address, context, filename, specifFIle);
@@ -60,34 +63,29 @@ namespace library
 
             static void Add(byte[] address, p2pContext context, string filename, string specifFIle = null)
             {
-                if(filename.EndsWith("cache/"))
-                {
-
-                }
+                CacheItem<p2pFile> cacheItem = null;
 
                 lock (queue)
                 {
-                    var item = queue.FirstOrDefault(x => Addresses.Equals(x.CachedValue.Address, address, true) &&
+                    cacheItem = queue.FirstOrDefault(x => Addresses.Equals(x.CachedValue.Address, address, true) &&
                         x.CachedValue.Filename == filename);
+                }
+                if (cacheItem != null)
+                {
+                    cacheItem.CachedValue.AddContext(context);
 
-                    if (item != null)
-                    {
-                        item.CachedValue.AddContext(context);
+                    cacheItem.Reset();
 
-                        item.Reset();
+                    cacheItem.CachedValue.packetEvent.Set();
 
+                    Log.Add(Log.LogTypes.Queue, Log.LogOperations.Add | Log.LogOperations.File, new { RESET = 1, cacheItem.CachedValue });
 
-                        item.CachedValue.packetEvent.Set();
-
-                        Log.Add(Log.LogTypes.Queue, Log.LogOperations.Add, new { RESET = 1, item.CachedValue});
-
-                        return;
-                    }
+                    return;
                 }
 
                 p2pFile file = new p2pFile(address, context, filename, specifFIle);
-
-                Log.Add(Log.LogTypes.Queue, Log.LogOperations.Add, file);
+                 
+                Log.Add(Log.LogTypes.Queue, Log.LogOperations.Add | Log.LogOperations.File, file);
 
                 lock (queue)
                     queue.Add(file);
@@ -96,13 +94,13 @@ namespace library
 
             internal static void Reset(p2pFile file)
             {
-                lock (queue)
-                {
-                    var item = queue.FirstOrDefault(x => x.CachedValue == file);
+                CacheItem<p2pFile> cacheItem = null;
 
-                    if (item != null)
-                        item.Reset();
-                }
+                lock (queue)
+                    cacheItem = queue.FirstOrDefault(x => x.CachedValue == file);
+
+                if (cacheItem != null)
+                    cacheItem.Reset();
 
             }
 

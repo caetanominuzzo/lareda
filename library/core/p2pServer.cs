@@ -1,5 +1,4 @@
-﻿//using LumiSoft.Net.STUN.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,7 +25,7 @@ namespace library
             thread = new Thread(Configure);
 
             thread.Start();
-        }
+        } 
 
         internal static void Stop()
         {
@@ -35,7 +34,7 @@ namespace library
 
         static void Configure()
         {
-            localEndPoint = new IPEndPoint(IPAddress.Any, Client.P2pPort);
+            localEndPoint = new IPEndPoint(IPAddress.Any, Client.P2pEndpoint.Port);
 
             server = new UdpClient();
 
@@ -70,7 +69,12 @@ namespace library
                     {
                         var command = (RequestCommand)buffer[0];
 
-                        Log.Add(Log.LogTypes.P2p | Log.FromCommand(command), Log.LogOperations.Incoming, new { Port = remoteEndPoint.Port, Address = buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray(), Data = buffer.Length > pParameters.requestHeaderSize + pParameters.addressSize });
+                        if(command == RequestCommand.Packet)
+                        {
+
+                        }
+                         
+                        Log.Add(Log.LogTypes.P2p, Log.LogOperations.Incoming | Log.FromCommand(command), new { Port = remoteEndPoint.Port, Address = buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray(), Data = buffer.Length > pParameters.requestHeaderSize + pParameters.addressSize });
 
                         var r = p2pRequest.CreateRequestFromReceivedBytes(remoteEndPoint, buffer);
 
@@ -83,7 +87,7 @@ namespace library
                 }
                 catch (Exception e)
                 {
-                    Log.Add(Log.LogTypes.Application, Log.LogOperations.Exception, new { remoteEndPoint, Exception = e.ToString() });
+                    Log.Add(Log.LogTypes.P2p, Log.LogOperations.Exception, new { Endpoint = (null == remoteEndPoint?string.Empty : remoteEndPoint.ToString()), Exception = e.ToString() });
                 }
             }
 
@@ -93,4 +97,3 @@ namespace library
         #endregion
     }
 }
-

@@ -5,29 +5,31 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace library
 {
     public static class Log
-    {
-        public static string textFilter =  "N6t4s0kNFXjD";
+    {//null;//
+        public static string textFilter = "3DnFpsP2xPTUm9L4G--gLseAGI6QBqGWA5YKLUIHEoU=";   
+        // LogTypes.None;// LogTypes.Journaling | LogTypes.Stream | LogTypes.WebServer | LogTypes.File 
+        ////
+        public static LogTypes typeFilter = LogTypes.P2p | LogTypes.Stream | LogTypes.WebServer | LogTypes.Application;// | LogTypes.Queue;// | LogTypes.Journaling | LogTypes.Stream | LogTypes.File | LogTypes.Queue; //LogTypes.All; // LogTypes.Queue ;// | LogTypes.streamSeek | LogTypes.DownloadDispose | LogTypes.streamOutputClose;// LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
 
-        public static LogTypes typeFilter = LogTypes.Stream;// | LogTypes.WebServer | LogTypes.Queue;// LogTypes.WebServerGet | LogTypes.streamSeek | LogTypes.DownloadDispose | LogTypes.streamOutputClose;// LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
+        public static LogOperations OpFilter = LogOperations.Any;
 
-        public static LogOperations OpFilter = LogOperations.Paint;
-
-        internal static LogTypes FromCommand(RequestCommand command)
-        {
+        internal static LogOperations FromCommand(RequestCommand command)
+        { 
             switch (command)
             {
-                case RequestCommand.Packet: return LogTypes.Packets;
-                case RequestCommand.Metapackets: return LogTypes.Metapackets;
-                case RequestCommand.Hashs: return LogTypes.Hash;
-                case RequestCommand.Peer: return LogTypes.Peers;
+                case RequestCommand.Packet: return LogOperations.Packets;
+                case RequestCommand.Metapackets: return LogOperations.Metapackets;
+                case RequestCommand.Hashs: return LogOperations.Hash;
+                case RequestCommand.Peer: return LogOperations.Peers;
             }
 
-            return LogTypes.None;
+            return LogOperations.None;
         }
 
         [Flags]
@@ -37,10 +39,7 @@ namespace library
 
             Ever = 1,
 
-            Packets 	= Ever << 01,
-            Metapackets = Ever << 02,
-            Hash 		= Ever << 03,
-            Peers 		= Ever << 04,
+         
             File 		= Ever << 05,
             KeepAlive   = Ever << 06,
             Download    = Ever << 07,
@@ -108,7 +107,18 @@ namespace library
 
             Paint = Any << 28,
 
+            ClosingMaxDownloadSize = Any << 29,
+
+
+            Packets = Any << 30,
+            Metapackets = Any << 31,
+            Hash = Any << 32,
+            Peers = Any << 33,
+            File = Any << 34,
+
             CantSeek = Cant | Seek,
+
+            CantRead = Cant | Read,
 
             Cant = Any << 61,
             All = Any << 62
@@ -126,11 +136,11 @@ namespace library
 
         internal static ILog log = log4net.LogManager.GetLogger(typeof(Log));
 
+        internal static Regex regex = null;
+
         public static void Write(string s)
         {
-#if DEBUG
             log.Debug(s);
-#endif
 
             //s = DateTime.Now.ToString("HH:mm:ss.fff") + " \t" + s + "\r\n";
 
@@ -160,8 +170,15 @@ namespace library
         public static List<LogItem> Items = new List<LogItem>();
 
 
+
         public static void Add(LogTypes type, LogOperations operation, params object[] data)
-        {
+        { 
+#if !DEBUG
+            return;
+#endif
+
+            return;
+
             if (typeFilter == LogTypes.None || (typeFilter != LogTypes.All && type != LogTypes.Ever && (typeFilter & type) != type))
                 return;
 
@@ -170,6 +187,9 @@ namespace library
 
             if (OpFilter == LogOperations.None || (OpFilter != LogOperations.Any && operation != LogOperations.Any && (OpFilter & operation) != operation))
                 return;
+
+            if(null == regex && null != textFilter)
+                new Regex("\\\"[^\"]*?" + textFilter + "[^\\\"]*?\\\"");
 
             //lock ("data.txt")
             {
@@ -181,15 +201,22 @@ namespace library
 
                 var json = string.Empty;
 
-                lock (data)
-                    json = Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.None);
+                try
+                {
+                    lock (data)
+                        json = Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.None);
+                }
+                catch { }
 
                 if (textFilter != null && !json.Contains(textFilter))
                     return;
 
+                if(null != regex)
+                    json = regex.Replace(json, string.Empty);
+
                 //Log.Write(type + "\r\n\r\n" + json + "\r\n\r\n----------------------------------------------------------------------------\r\n");
 
-                Log.Write(type + "\t" + operation + "\t" + json + "\t\r\n");
+                Log.Write("\t" + type.ToString().PadRight(10) + "\t" + operation.ToString().PadRight(10) + "\t" + json + "\t\r\n");
 
                 return;
 

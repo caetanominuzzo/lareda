@@ -172,11 +172,11 @@ namespace library
             OnPacketArrived?.Invoke(address, data);
         }
 
-        internal static byte[] Get(byte[] address)
+        internal static byte[] Get(byte[] address, string debug_filename = "")
         {
-            string filename = Path.Combine(pParameters.localPacketsDir, Utils.ToBase64String(address)); 
+            string filename = Path.Combine(pParameters.localPacketsDir, Utils.ToBase64String(address));
 
-            byte[] data = DelayedWrite.Get(filename);
+            byte[] data = null;// DelayedWrite.Get(filename);
 
             if (data != null)
                 return data;
@@ -184,7 +184,9 @@ namespace library
             {
                 //Thread.Sleep(100);
                 if (File.Exists(filename))
+                {
                     return File.ReadAllBytes(filename);
+                }
             }
             catch { }
 
@@ -207,7 +209,7 @@ namespace library
 
         static void VerifyIntegrity(byte[] address, byte[] actual, byte[] data, Peer peer)
         {
-            //todo:
+            //todo: 
         }
 
         #region Thread Refresh
@@ -345,7 +347,7 @@ namespace library
 
     }
 
-    enum PacketTypes
+    public enum PacketTypes
     {
         NonSet = 0,
         Content = 1,

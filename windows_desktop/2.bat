@@ -1,6 +1,6 @@
 copy la-red.exe a\ 
-copy la-red.pdb a\ 
-copy library.* a\ 
+copy *.pdb a\ 
+copy *.dll a\ 
 
 #del packet.* /q
 #del link.*  /q
@@ -9,9 +9,9 @@ copy library.* a\
 #cd packets
 #del *.* /q
 #cd ..
-cd cache
-del *.* /q
-cd ..
+#cd cache
+#del *.* /q
+#cd .. 
 
 cd a\
 
@@ -22,10 +22,8 @@ cd a\
 #cd packets
 #del *.* /q
 #cd ..
-cd cache
-del *.* /q
-cd ..
-
-
+#cd cache
+#del *.* /q
+#cd ..
 
 start la-red

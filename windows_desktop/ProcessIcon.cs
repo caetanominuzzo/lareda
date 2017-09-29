@@ -32,7 +32,7 @@ namespace windows_desktop
         {
             ni.MouseClick += new MouseEventHandler(ni_MouseClick);
 
-            ni.Text = Program.AppName +  Program.p2pPort;
+            ni.Text = pParameters.AppName +  Program.p2pEndpoint.ToString(); 
 
             ni.Icon = Resources.A;
 

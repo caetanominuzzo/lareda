@@ -350,6 +350,9 @@ namespace library
 
         internal static byte[] ToBytes(IEnumerable<Metapacket> metapackets)
         {
+
+          
+
             int offset = 0;
 
             var result = new byte[metapacket_size * metapackets.Count()];
@@ -370,7 +373,41 @@ namespace library
 
             //Log.Write(metapacket.ToString());
 
-            return
+            //var result_length = ((includeAddress ? 4 : 3) * pParameters.addressSize) + (2 * 64); //(4 address) + (2 dates)
+
+            //var result = new byte[result_length];
+
+            //var offset = 0;
+
+            //if (includeAddress)
+            //{
+            //    Buffer.BlockCopy(metapacket.Address, 0, result, offset, pParameters.addressSize);
+
+            //    offset += pParameters.addressSize;
+            //}
+
+            //Buffer.BlockCopy(metapacket.TargetAddress, 0, result, offset, pParameters.addressSize);
+
+            //offset += pParameters.addressSize;
+
+            //Buffer.BlockCopy(metapacket.LinkAddress, 0, result, offset, pParameters.addressSize);
+
+            //offset += pParameters.addressSize;
+
+            //if(null != metapacket.Hash)
+            //    Buffer.BlockCopy(metapacket.Hash, 0, result, offset, pParameters.addressSize);
+
+            //offset += pParameters.addressSize;
+
+
+            //Buffer.BlockCopy(BitConverter.GetBytes(metapacket.LastAccess.ToBinary()), 0, result, offset, pParameters.addressSize);
+
+            //offset += pParameters.addressSize;
+
+            //Buffer.BlockCopy(BitConverter.GetBytes(metapacket.Creation.ToBinary()), 0, result, offset, pParameters.addressSize);
+
+            var r2 = 
+
                 (includeAddress? metapacket.Address : new byte[0]).
 
                 Concat(metapacket.TargetAddress).
@@ -379,6 +416,18 @@ namespace library
                 Concat(BitConverter.GetBytes(metapacket.LastAccess.ToBinary())).
                 Concat(BitConverter.GetBytes(metapacket.Creation.ToBinary())).
                     ToArray();
+
+
+            //if(!Addresses.Equals(r2, result, true))
+            //{
+
+            //}
+            //else
+            //{
+
+            //}
+
+            return r2;
         }
 
         internal static Metapacket[] FromBytes(byte[] packet)
@@ -409,22 +458,28 @@ namespace library
             //On receiving via p2p the address is the first data on the packet
             if (address == null)
             {
-                address = packet.Skip(offset).Take(pParameters.addressSize).ToArray();
+                address = new byte[pParameters.addressSize];
 
-                offset += address.Length;
+                Buffer.BlockCopy(packet, offset, address, 0, pParameters.addressSize);
+
+                offset += pParameters.addressSize;
             }
 
-            var targetAddress = packet.Skip(offset).Take(pParameters.addressSize).ToArray();
+            var targetAddress = new byte[pParameters.addressSize];
+            var linkAddress = new byte[pParameters.addressSize];
+            var hashAddress = new byte[pParameters.addressSize];
 
-            offset += targetAddress.Length;
+            Buffer.BlockCopy(packet, offset, targetAddress, 0, pParameters.addressSize);
 
-            var linkAddress = packet.Skip(offset).Take(pParameters.addressSize).ToArray();
+            offset += pParameters.addressSize;
 
-            offset += linkAddress.Length;
+            Buffer.BlockCopy(packet, offset, linkAddress, 0, pParameters.addressSize);
 
-            var hashAddress = packet.Skip(offset).Take(pParameters.addressSize).ToArray();
+            offset += pParameters.addressSize;
 
-            offset += hashAddress.Length;
+            Buffer.BlockCopy(packet, offset, hashAddress, 0, pParameters.addressSize);
+
+            offset += pParameters.addressSize;
 
             if (Addresses.Equals(hashAddress, Addresses.zero, true))
                 hashAddress = null;

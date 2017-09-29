@@ -36,21 +36,21 @@ namespace library
 
         internal static Peer LocalPeer;
 
-        internal static int P2pPort;
+        internal static IPEndPoint P2pEndpoint;
 
         internal static byte[] P2pAddress;
 
-        public static IDisposable Start(byte[] p2pAddress, int p2pPort)
+        public static IDisposable Start(byte[] p2pAddress, IPEndPoint p2pEndpoint)
         {
             Log.Clear();
 
             P2pAddress = p2pAddress;
 
-            P2pPort = p2pPort;
+            P2pEndpoint = p2pEndpoint;
 
             Network.Configure();
 
-            LocalPeer = Peers.CreateLocalPeer();
+            LocalPeer = Peers.CreateLocalPeer(p2pEndpoint);
 
             DelayedWrite.Start();
 
@@ -179,12 +179,12 @@ namespace library
 
         internal static byte[] CreateTailItem(int dataSize)
         {
-            var length = BitConverter.GetBytes(dataSize);
+            var length = BitConverter.GetBytes(dataSize); 
 
             var hash = Utils.ComputeHash(length, 0, length.Count());
 
             return length.Concat(hash).ToArray();
-        }
+        } 
 
         public static bool AnyPeer()
         {
@@ -406,6 +406,13 @@ namespace library
                 p2pFile.Queue.Add(base64Address, context, filename, specifItem);
         }
 
+        public static void Clear()
+        {
+            p2pFile.Queue.Clear();
+
+
+        }
+
         private static bool Connected()
         {
             return true;
@@ -425,8 +432,10 @@ namespace library
         {
 #if !BOOTSTRAP
 
-         //   return;
+            //   return;
 #endif
+
+            Log.Add(Log.LogTypes.All, Log.LogOperations.All, typeof(TagLib.ByteVector).FullName);
 
             VirtualAttributes.BootStrap();
 
@@ -573,8 +582,8 @@ namespace library
 
                     var addresss = int.Parse(Utils.ToSimpleAddress(y.Address));
 
-                    if (addresss < 392)
-                        continue;
+                    //if (addresss < 392)
+                    //    continue;
 
                     var s = Utils.ToSimpleAddress(y.TargetAddress) + "->" + Utils.ToSimpleAddress(y.Address);
 

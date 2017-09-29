@@ -17,12 +17,12 @@
 .menu .large_play		{ background-image: url('menu/large_play.png'); }
 .1menu .large_play:hover	{ background-image: url('menu/large_play_red.png'); }
 .menu .large_loading	{
-	background-image: url('menu/loading.gif');
-	background-size: 30% !important;
+	background-image: url('menu/loading2.svg');
+	background-size: 10% !important;
 	width: 100% !important;
 	height: 100% !important;
 	margin-top: 0 !important;
-	background-color: black;
+	/* background-color: black; */
 	}
 
 .menu .large_loading:hover {

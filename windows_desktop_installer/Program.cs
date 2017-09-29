@@ -26,7 +26,10 @@ namespace windows_desktop_installer
 
         static void add(string name)
         {
-            var s = name + ".dll";
+            var s = name;
+
+            if(!s.EndsWith(".config"))
+                s += ".dll";
 
             if (File.Exists(s))
             {
@@ -85,8 +88,9 @@ namespace windows_desktop_installer
             foreach (AssemblyName r in a.GetReferencedAssemblies())
             {
                 add(r.Name);
-                
             }
+
+            add("la-red.exe.config");
 
             bw.Close();
 

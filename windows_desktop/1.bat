@@ -9,8 +9,8 @@ del packet.* /q
 del link.*  /q
 del hash.*  /q
 
-cd packets
-del *.* /q
+cd packets 
+del *.* /q 
 cd ..
 cd cache
 del *.* /q

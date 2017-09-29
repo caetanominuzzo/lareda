@@ -94,7 +94,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	LPCTSTR str = some.c_str();
 
-	//	MessageBox(NULL, str, NULL, NULL);
+	//MessageBox(NULL, str, NULL, NULL);
 
 
 	char ownPth[MAX_PATH];

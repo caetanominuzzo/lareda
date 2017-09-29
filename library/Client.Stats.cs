@@ -11,7 +11,7 @@ namespace library
     {
         public static class Stats
         {
-            static Timer timer = new Timer(TimerTask, null, 0, 10);
+            static Timer timer = new Timer(TimerTask, null, 0, 100);
 
             internal static ManualResetEvent belowMaxSentEvent = new ManualResetEvent(true);
 

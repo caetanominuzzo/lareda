@@ -8,7 +8,7 @@ cd ..
 
 cd a\
 
-del packet.*  /q
+del packet.*  /q 
 del link.*  /q
 del hash.* /q 
 
