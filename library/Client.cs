@@ -328,12 +328,12 @@ namespace library
                     linkAddress: conceptAddress,
                     type: MetaPacketType.Hash);
 
-                p2pFile.StreamUpload(conceptAddress, PacketTypes.Content, new MemoryStream(Encoding.Unicode.GetBytes(title)), null, VirtualAttributes.MIME_TYPE_TEXT_THUMB);
+                p2pFile.StreamUpload(conceptAddress, PacketTypes.Content, new MemoryStream(Encoding.UTF8.GetBytes(title)), null, VirtualAttributes.MIME_TYPE_TEXT_THUMB);
             }
 
             if (content != null)
             {
-                p2pFile.StreamUpload(conceptAddress, PacketTypes.Content, new MemoryStream(Encoding.Unicode.GetBytes(content)), null, VirtualAttributes.MIME_TYPE_TEXT);
+                p2pFile.StreamUpload(conceptAddress, PacketTypes.Content, new MemoryStream(Encoding.UTF8.GetBytes(content)), null, VirtualAttributes.MIME_TYPE_TEXT);
             }
 
             if (userAddressBase64 != null)

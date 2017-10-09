@@ -167,7 +167,7 @@ namespace library
 
                                 var tmp = Path.Combine(pParameters.localTempDir, Utils.ToBase64String(Utils.GetAddress())) + format.FileExtension;
 
-                                ffmpegProcess.ExecuteAsync(string.Format(@" -ss 00:00:00  -i ""{0}"" -t 00:12:04   -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
+                                ffmpegProcess.ExecuteAsync(string.Format(@"  -i ""{0}""   -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
                                         file.Paths[0],
                                         format.FfmpegSelector,
                                         streamNumber++,
@@ -227,6 +227,28 @@ namespace library
 
                                 tmpSubtitle = Subtitles.ConvertSrtToVtt(tmpSubtitle);
 
+                                var buffer = System.IO.File.ReadAllText(tmpSubtitle);
+
+                                var buffer1 = System.Text.Encoding.UTF8.GetBytes(buffer);
+
+                                var mem = new MemoryStream(buffer1);
+
+                                var streamConcept = file.ConceptAddress;
+
+                                    if (videoConcept != null)
+                                        streamConcept = videoConcept;
+
+                                    var contentAddress = StreamUpload(
+                                                            streamConcept,
+                                                            PacketTypes.Content,
+                                                            mem, file.Tags,
+                                                            VirtualAttributes.MIME_TYPE_TEXT_STREAM);
+
+                                    var culturetype = Metapacket.Create(contentAddress, language);
+
+                                    Metapacket.Create(culturetype.Address, VirtualAttributes.Culture);
+
+                                /*
                                 using (var stream = TryNewFileStream(tmpSubtitle))
                                 {
                                     var streamConcept = file.ConceptAddress;
@@ -244,7 +266,7 @@ namespace library
 
                                     Metapacket.Create(culturetype.Address, VirtualAttributes.Culture);
                                 }
-
+                                */
                             }
                         }
                         ///////////////////////////
@@ -269,9 +291,32 @@ namespace library
 
                             if (System.IO.File.Exists(tmpSubtitle))
                             {
+                                
+                                var buffer = System.IO.File.ReadAllText(tmpSubtitle);
+
+                                var buffer1 = System.Text.Encoding.UTF8.GetBytes(buffer);
+
+                                var mem = new MemoryStream(buffer1);
+
+                                var streamConcept = file.ConceptAddress;
+
+
+                                var contentAddress = StreamUpload(
+                                                           streamConcept,
+                                                           PacketTypes.Content,
+                                                           mem, file.Tags,
+                                                           VirtualAttributes.MIME_TYPE_TEXT);
+
+                                var culturetype = Metapacket.Create(contentAddress, language);
+
+                                Metapacket.Create(culturetype.Address, VirtualAttributes.Culture);
+
+                            
+                              /*
 
                                 using (var stream = TryNewFileStream(tmpSubtitle))
                                 {
+
                                     var streamConcept = file.ConceptAddress;
 
                                     var contentAddress = StreamUpload(
@@ -284,6 +329,8 @@ namespace library
 
                                     Metapacket.Create(culturetype.Address, VirtualAttributes.Culture);
                                 }
+                                */
+                              
 
                             }
                         }

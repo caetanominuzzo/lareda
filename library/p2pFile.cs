@@ -306,9 +306,8 @@ namespace library
                     }
                 }
 
-                packet.Get();
-
-
+                PacketGet(packet);
+                //ThreadPool.QueueUserWorkItem(new WaitCallback(PacketGet), packet);
 
             }
 
@@ -323,6 +322,11 @@ namespace library
             }
 
             stoppedEvent.Set();
+        }
+
+        static void PacketGet(object packet)
+        {
+            ((Packet)packet).Get();
         }
 
 

@@ -668,8 +668,6 @@ namespace library
         }
 
 
-        internal static bool logging = false;
-
         internal static string FirstContent(DIV item, byte[] marker, p2pContext context, bool text = false)
         {
             var t = marker == null ? item : ClosestMarker(item, marker);
@@ -678,6 +676,9 @@ namespace library
 
             if (t == null)
                 return string.Empty;
+
+            return Utils.ToBase64String(t.Src.LinkAddress);
+
 
             return text ?
 
@@ -786,14 +787,15 @@ namespace library
                 {
                     //Log.Write("packet get " + Utils.ToBase64String(content.Address));
 
+
+                    return Utils.ToBase64String(content.Address);
+
                     var packet = Packets.Get(content.Address);
 
                     if (packet != null)
                     {
                         //if (text)
                         //    Log.Write("OK: " + Encoding.Unicode.GetString(packet.Skip(Parameters.packetHeaderSize).ToArray()));
-
-                        logging = false;
 
                         return (text) ?
 

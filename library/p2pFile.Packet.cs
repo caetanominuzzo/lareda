@@ -365,8 +365,8 @@ namespace library
                 //    Thread.Sleep(10000);
 
 
-                ////if (waitLastPackets)
-                ////    File.gotLastsPackets.WaitOne();
+                //if (waitLastPackets)
+                //    File.gotLastsPackets.WaitOne();
 
                 var count = addresses.Count();
 

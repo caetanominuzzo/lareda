@@ -510,18 +510,33 @@ $.input.bindItem = function($item, item, new_item)
 		date.timeago();
 	}		
 
-//if(item.thumb_text == "Ressonância Límbica")
-//	debugger;
 
-	if(text.text() != item.text)
+
+/*	if(text.text() != item.text)
 		text.text(item.text);
 
 	if(thumb_text.text() != item.thumb_text)
 		thumb_text.text(item.thumb_text);
+*/
 
-	if(thumb_text.text().length == 0)
-		thumb_text.text("teste");
-	
+
+	if(text.attr('w3-include-html') != item.text)
+		text.attr('w3-include-html', item.text);
+
+	if(thumb_text.attr('w3-include-html') != item.thumb_text)
+		thumb_text.attr('w3-include-html', item.thumb_text);
+
+	w3.includeHTML();
+
+
+/*
+	if(text.attr('data') != item.text)
+		text.attr('data', item.text);
+
+	if(thumb_text.attr('data') != item.thumb_text)
+		thumb_text.attr('data', item.thumb_text);
+
+*/
 
 	$.menu.bind($item, item, img);
 

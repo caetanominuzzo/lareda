@@ -231,7 +231,7 @@ namespace windows_desktop
 
             switch (command)
             {
-//#if DEBUG
+                //#if DEBUG
                 default:
 
                     if (command != null && command.StartsWith("debug:"))
@@ -254,14 +254,14 @@ namespace windows_desktop
                     break;
 
 
-//#else
-//              default:
+                //#else
+                //              default:
 
-//                    ProcessGet(context);
+                //                    ProcessGet(context);
 
-//                    break;
+                //                    break;
 
-//#endif
+                //#endif
                 case WebCommands.Search:
 
                     ProcessSearch(context);
@@ -533,7 +533,8 @@ namespace windows_desktop
                     case ".xls": context.HttpContext.Response.ContentType = "application/vnd.ms-excel"; break;
                     case ".ppt": context.HttpContext.Response.ContentType = "application/vnd.ms-powerpoint"; break;
 
-                        // default: context.HttpContext.Response.AddHeader("Content-Type", "application/force-download"); break; will break videos & audios7
+                    //default:context.HttpContext.Response.ContentType = "application/force-download"; break;// will break videos & audios7
+                    default: context.HttpContext.Response.ContentType = "text/html"; break;
                 }
 
 
@@ -584,10 +585,6 @@ namespace windows_desktop
 
             if (data != null)
             {
-                //var json = JsonConvert.SerializeObject(new { A = sAddress, C = Encoding.Unicode.GetString(data) });
-
-                //data = context.Request.ContentEncoding.GetBytes(json);
-
                 context.HttpContext.Response.OutputStream.Write(data, 0, data.Count());
 
                 context.HttpContext.Response.Close();
@@ -656,7 +653,7 @@ namespace windows_desktop
                 if (closeFile)
                     download.FileStream = p2pStreamManager.GetStream(download.Filename, context, range1);
 
-                if(download.FileStream.Length < 1)
+                if (download.FileStream.Length < 1)
                 {
                     int retry = 3;
 
@@ -676,7 +673,7 @@ namespace windows_desktop
                         {
                             Log.Add(Log.LogTypes.Stream, Log.LogOperations.TimeOut, new { TRY = count, File_Length = -1, File = cache.CachedValue, Range = cache.CachedValue.Context.HttpContext.Request.Headers["Range"], cache.CachedValue.Context });
 
-                            if(count++ > retry)
+                            if (count++ > retry)
                                 return;
                         }
 
@@ -684,7 +681,7 @@ namespace windows_desktop
                     }
                 }
 
-               
+
 
                 download.Context.OutputStreamLength = download.FileStream.Length;
 
@@ -722,6 +719,7 @@ namespace windows_desktop
                     //}
                     // else
                     {
+                        context.HttpContext.Response.ContentType = "text/html";
 
                         context.HttpContext.Response.StatusCode = 206;
 
@@ -764,7 +762,7 @@ namespace windows_desktop
                     var count = 1;
 
                     while (true)
-                    { 
+                    {
 
                         download.FileStream = p2pStreamManager.GetStream(download.Filename, context, context.OutputStreamPosition);
 
@@ -784,7 +782,7 @@ namespace windows_desktop
                             foreach (var p in packets)
                                 p.Get();
 
-                            var packetArrived = download.packetArrivedEvent.WaitOne(pParameters.WebServer_FileDownloadTimeout);
+                            var packetArrived = download.packetArrivedEvent.WaitOne(packets.Any()? pParameters.WebServer_FileDownloadTimeout : 0);
 
                             if (!packetArrived)
                             {
@@ -793,7 +791,7 @@ namespace windows_desktop
                                 if (count++ > retry)
                                     return;
                                 else
-                                    continue;                                
+                                    continue;
                             }
                             else
                                 continue;
@@ -843,7 +841,7 @@ namespace windows_desktop
 
                         context.HttpContext.Response.OutputStream.Flush();
 
-                       
+
 
                         if (context.HttpContext.Request.Headers.AllKeys.Contains("Range"))
                             return;
