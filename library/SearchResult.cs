@@ -239,7 +239,7 @@ namespace library
             if (parentCount > 0 && item.AverageChildrenWeight < item.Weight / 100)
                 return;
 
-            if (!Searched(item.Address))
+            if (null == item.Hash && !Searched(item.Address))
                 AddToSearch(new byte[][] { item.Address });
 
             DIV[] children = null;

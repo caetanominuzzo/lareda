@@ -78,7 +78,7 @@ namespace library
             if (address != null && address.Length == 0)
                 address = null;
 
-            var senderPeer = Peers.GetPeer(endpoint,  
+            var senderPeer = Peers.GetPeer(endpoint,
                 buffer[0] == (int)RequestCommand.Peer &&
                     !Addresses.Equals(Client.LocalPeer.Address, address) ?
                     address :
@@ -220,44 +220,46 @@ namespace library
 
             b[0] = (byte)Command;
 
-            if (OriginalPeer != null)
-                Addresses.ToBytes(OriginalPeer.EndPoint).CopyTo(b, pParameters.requestHeaderParamsSize);
+            Addresses.ToBytes(null == OriginalPeer ? Client.LocalPeer.EndPoint : OriginalPeer.EndPoint).CopyTo(b, pParameters.requestHeaderParamsSize);
 
             return b;
         }
 
+        static UdpClient u = null;
 
         static void ThreadSend(IPEndPoint remoteEndPoint, byte[] data)
         {
-            if(data[0] == (int)RequestCommand.Packet)
+            if (data[0] == (int)RequestCommand.Packet)
             {
 
             }
 
-            UdpClient u = null;
 
-            if (null == u)
-            {
-                u = new UdpClient();
 
-                u.Client.ExclusiveAddressUse = false;
+            //if (null == u)
+            //{
+            //    u = new UdpClient();
 
-                u.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            //    u.Client.ExclusiveAddressUse = false;
 
-                u.Client.Bind(new IPEndPoint(IPAddress.Any, Client.P2pEndpoint.Port));
-            }
+            //    u.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+
+            //    u.Client.Bind(new IPEndPoint(IPAddress.Any, Client.P2pEndpoint.Port));
+            //}
 
             Client.Stats.Sent.Add(data.Length);
 
             try
             {
-                Log.Add(Log.LogTypes.P2p, Log.LogOperations.Outgoing, data, remoteEndPoint);
+                var i = p2pServer.SocketTcpSend(data, data.Length, remoteEndPoint);
 
-                u.Send(data, data.Length, remoteEndPoint);
+                Log.Add(Log.LogTypes.P2p, Log.LogOperations.Outgoing, new { Address = Utils.ToBase64String(data.Skip(pParameters.packetHeaderSize).Take(pParameters.addressSize).ToArray()), remoteEndPoint = remoteEndPoint.ToString(), Wrote = i });
+
+                //u.Send(data, data.Length, remoteEndPoint);
             }
             catch (Exception e)
             {
-                Log.Add(Log.LogTypes.Application, Log.LogOperations.Exception, new { remoteEndPoint, Exception = e.ToString() });
+                Log.Add(Log.LogTypes.Application, Log.LogOperations.Exception, new { Exception = e.ToString() });
             }
         }
     }

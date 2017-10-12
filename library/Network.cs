@@ -29,7 +29,11 @@ namespace library
 
             Client.LocalPeer.EndPoint = new System.Net.IPEndPoint(ip, Client.LocalPeer.EndPoint.Port);
 
-            await device.CreatePortMapAsync(new Mapping(Protocol.Udp, Client.P2pEndpoint.Port, Client.P2pEndpoint.Port, pParameters.AppName));
+
+            var list = await device.GetAllMappingsAsync();
+
+            
+            //await device.CreatePortMapAsync(new Mapping(Protocol.Udp, Client.P2pEndpoint.Port, Client.P2pEndpoint.Port, pParameters.AppName));
 
             //NATUPNPLib.UPnPNATClass upnpnat = new NATUPNPLib.UPnPNATClass();
 

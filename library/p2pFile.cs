@@ -1,4 +1,5 @@
 ﻿using log4net;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -81,7 +82,13 @@ namespace library
 
         Packet Root;
 
+        [JsonIgnore]
         public List<p2pContext> Context = new List<p2pContext>();
+
+        public string ToString()
+        {
+            return Base64Address;
+        }
 
         internal enum FileStatus
         {
@@ -142,7 +149,7 @@ namespace library
 
             Thread thread = new Thread(Refresh);
 
-            //thread.Start();
+            thread.Start();
         }
 
         bool Ended
@@ -278,10 +285,12 @@ namespace library
                         packet = FilePackets[FilePackets.Keys.Max()];
 
                         GetLastPacket = false;
+
+                        GetSecondLastPacket = false;
                     }
                     else if (GetSecondLastPacket)
                     {
-                        packet = FilePackets[FilePackets.Keys.Max() - 1];
+                        //packet = FilePackets[FilePackets.Keys.Max() - 1];
 
                         GetSecondLastPacket = false;
 
@@ -343,9 +352,7 @@ namespace library
         {
             lock (FilePackets)
                 FilePackets.Add(packet.FilePacketOffset, packet);
-
-            Log.Add(Log.LogTypes.Queue, Log.LogOperations.Add | Log.LogOperations.Packets, packet);
-
+            
             packetEvent.Set();
         }
 

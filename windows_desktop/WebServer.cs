@@ -782,7 +782,7 @@ namespace windows_desktop
                             foreach (var p in packets)
                                 p.Get();
 
-                            var packetArrived = download.packetArrivedEvent.WaitOne(packets.Any()? pParameters.WebServer_FileDownloadTimeout : 0);
+                            var packetArrived = download.packetArrivedEvent.WaitOne(packets.Any()? pParameters.WebServer_FileDownloadTimeout : 1000);
 
                             if (!packetArrived)
                             {

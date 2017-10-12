@@ -12,12 +12,12 @@ namespace library
 {
     public static class Log
     {//null;//
-        public static string textFilter = null;// "TIXC";// "3DnFpsP2xPTUm9L4G--gLseAGI6QBqGWA5YKLUIHEoU=";   
+        public static string textFilter = null;//"TIXC_X2vlUeUQ3QBW8-cv_I";//"3DnFpsP2xPTUm9L4G--gLseAGI6QBqGWA5YKLUIHEoU=";
         // LogTypes.None;// LogTypes.Journaling | LogTypes.Stream | LogTypes.WebServer | LogTypes.File 
         ////
-        public static LogTypes typeFilter = LogTypes.Queue;// | LogTypes.Queue | LogTypes.P2p;// | LogTypes.Queue;// | LogTypes.Journaling | LogTypes.Stream | LogTypes.File | LogTypes.Queue; //LogTypes.All; // LogTypes.Queue ;// | LogTypes.streamSeek | LogTypes.DownloadDispose | LogTypes.streamOutputClose;// LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
+        public static LogTypes typeFilter = LogTypes.All;// LogTypes.P2p | LogTypes.WebServer | LogTypes.Queue;// | LogTypes.Queue;// | LogTypes.Journaling | LogTypes.Stream | LogTypes.File | LogTypes.Queue; //LogTypes.All; // LogTypes.Queue ;// | LogTypes.streamSeek | LogTypes.DownloadDispose | LogTypes.streamOutputClose;// LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
 
-        public static LogOperations OpFilter = LogOperations.ClosingInitialRequest;
+        public static LogOperations OpFilter = LogOperations.Any;
 
         internal static LogOperations FromCommand(RequestCommand command)
         { 
@@ -174,10 +174,10 @@ namespace library
         public static void Add(LogTypes type, LogOperations operation, params object[] data)
         { 
 #if !DEBUG
-            return;
+         //   return;
 #endif
 
-          //  return;
+            //return;
 
             if (typeFilter == LogTypes.None || (typeFilter != LogTypes.All && type != LogTypes.Ever && (typeFilter & type) != type))
                 return;
@@ -206,7 +206,10 @@ namespace library
                     lock (data)
                         json = Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.None);
                 }
-                catch { }
+                catch (Exception e)
+                {
+                    json = e.ToString();
+                }
 
                 if (textFilter != null && !json.Contains(textFilter))
                     return;
