@@ -28,6 +28,32 @@ namespace library
 
 
 
+        public static long Id_CONCEITO;
+
+        public static long Id_CONTEUDO;
+
+
+        public static long Id_MIME_TYPE_VIDEO_STREAM;
+
+        public static long Id_MIME_TYPE_AUDIO_STREAM;
+
+
+        public static long Id_MIME_TYPE_TEXT_STREAM;
+
+        public static long Id_MIME_TYPE_WEB;
+
+        public static long Id_MIME_TYPE_TEXT;
+
+        public static long Id_MIME_TYPE_TEXT_THUMB;
+
+
+        public static long Id_MIME_TYPE_DOWNLOAD;
+
+        public static long Id_MIME_TYPE_IMAGE_THUMB;
+
+        public static long Id_ORDER;
+
+        public static long Id_ROOT_TYPE;
 
 
 
@@ -47,6 +73,8 @@ namespace library
         public static byte[] ROOT_STREAM = Utils.GetAddress();
 
         public static byte[] ROOT_SEQUENCE = Utils.GetAddress();
+
+        public static byte[] ROOT_APP = Utils.GetAddress();
 
         public static byte[] ROOT_IMAGE = Utils.GetAddress();
 
@@ -172,10 +200,51 @@ namespace library
             return false;
         }
 
+        public static byte[] IsVirtualAttribute(string AttributeName)
+        {
+            foreach (var t in fields ?? Fields)
+            {
+                if(t.Name == AttributeName)
+                {
+                    var v = (byte[])t.GetValue(null);
+
+                    return v;
+                }
+            }
+
+            return null;
+        }
+
         public static void BootStrap()
         {
+            Id_CONCEITO = BitConverter.ToInt64(CONCEITO, 0);
 
-            foreach(var field in Fields)
+            Id_CONTEUDO = BitConverter.ToInt64(CONTEUDO, 0);
+
+
+            Id_MIME_TYPE_VIDEO_STREAM = BitConverter.ToInt64(MIME_TYPE_VIDEO_STREAM, 0);
+
+            Id_MIME_TYPE_AUDIO_STREAM = BitConverter.ToInt64(MIME_TYPE_AUDIO_STREAM, 0);
+
+
+            Id_MIME_TYPE_TEXT_STREAM = BitConverter.ToInt64(MIME_TYPE_TEXT_STREAM, 0);
+
+            Id_MIME_TYPE_WEB = BitConverter.ToInt64(MIME_TYPE_WEB, 0);
+
+            Id_MIME_TYPE_TEXT = BitConverter.ToInt64(MIME_TYPE_TEXT, 0);
+
+            Id_MIME_TYPE_TEXT_THUMB = BitConverter.ToInt64(MIME_TYPE_TEXT_THUMB, 0);
+
+
+            Id_MIME_TYPE_DOWNLOAD = BitConverter.ToInt64(MIME_TYPE_DOWNLOAD, 0);
+
+            Id_MIME_TYPE_IMAGE_THUMB = BitConverter.ToInt64(MIME_TYPE_IMAGE_THUMB, 0);
+
+            Id_ORDER = BitConverter.ToInt64(ORDER, 0);
+
+            Id_ROOT_TYPE = BitConverter.ToInt64(ROOT_TYPE, 0);
+
+            foreach (var field in Fields)
             {
                 var value = (byte[])field.GetValue(null);
 

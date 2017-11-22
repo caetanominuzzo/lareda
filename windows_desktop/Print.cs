@@ -55,11 +55,11 @@ namespace windows_desktop
 
             lastPrint = Client.Print();
             
-            textBox1.Text = DateTime.Now.ToString("dd HH:mm");
+            textBox1.Text = DateTime.Now.ToString("dd HH:mm"); 
 
             Genarate(lastPrint);
 
-            this.Close();
+            this.Close();   
         }
 
         static Process process = null;
@@ -68,7 +68,7 @@ namespace windows_desktop
         {
             var graph = "digraph{compound=true;" + print + "}";
 
-            byte[] output = wrapper.GenerateGraph(graph, Enums.GraphReturnType.Svg);
+            byte[] output = wrapper.GenerateGraph(graph, Enums.GraphReturnType.Svg); 
 
             if (output != null && output.Length > 0)
             {

@@ -340,7 +340,9 @@ setTime();
 
 		item.subtitles.forEach(function(t){
 
-			var $tt = $("<div class='language_options_item'>"+t.thumb_text+"</div>");
+			//var $tt = $("<div class='language_options_item'>"+t.thumb_text+"</div>");
+
+			var $tt = $("<div class='language_options_item' w3-include-html="+t.thumb_text+"></div>");
 
 			$tt.bind('click', function(ttt)
 			{
@@ -375,7 +377,9 @@ setTime();
 
 		item.audios.forEach(function(t){
 
-			var $ttt = $("<div class='language_options_item'>"+t.thumb_text+"</div>");
+			//var $ttt = $("<div class='language_options_item'>"+t.thumb_text+"</div>");
+
+			var $ttt = $("<div class='language_options_item' w3-include-html="+t.thumb_text+"</div>");
 
 			$ttt.bind('click', function(ttt)
 			{
@@ -398,6 +402,8 @@ setTime();
 		});
 
 		$language_options.toggle();
+
+		w3.includeHTML();
 
 		$(".timeline", $menu).toggle();
 
@@ -427,7 +433,7 @@ $.menu.play = function(e, t)
 	
 	if(typeof t == 'undefined' && $this.parents('.navItems').length == 0 && $this.is('.large_play'))
 	{
-		$.nav.parentsItemClick(e, $this.parents('.layout:first')[0]);
+		$.nav.parentsItemClick(e, $this.parents('.cards:first')[0]);
 
 		return;		
 	}
@@ -501,8 +507,6 @@ $.menu.seekAudio = function()
 
 
 $('.play', $.input.models.master).bind('click', $.menu.play);
-
-
 $('video:first', $.input.models.master).bind('play', $.menu.playAudio);
 $('video:first', $.input.models.master).bind('pause', $.menu.pauseAudio);
 $('video:first', $.input.models.master).bind('seeked', $.menu.seekAudio);

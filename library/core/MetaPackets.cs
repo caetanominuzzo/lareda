@@ -85,6 +85,7 @@ namespace library
 
             while (!Client.Stop)
             {
+                return;
                 bool any;
 
                 lock (c.Items)
@@ -102,7 +103,7 @@ namespace library
                     break;
 
                 if (!c.Queue.Any())
-                    FillQueue(c.Items, c.Queue);
+                    FillQueue(c.Items, ref c.Queue);
 
                 if (!c.Queue.Any())
                 {
@@ -116,7 +117,7 @@ namespace library
                 if (Client.Stop)
                     break;
 
-                if (!c.Queue.Any())
+                if (!c.Queue.Any()) 
                     continue;
 
                 byte[] address = c.Queue.Dequeue();
@@ -126,7 +127,7 @@ namespace library
                 if (Client.Stop)
                     break;
 
-                var total = c.Count;
+                var total = c.Items.Count;
 
                 //Probability by total packets
                 var pT = (total - pParameters.MetaPacketsMaxItems) / total;
@@ -140,7 +141,7 @@ namespace library
 
                 var toRemove = new List<Metapacket>();
 
-                foreach (var m in c.Items[address])
+                foreach (var m in c.Items[address]) 
                 {
                     var lastAccess = DateTime.Now.Subtract(m.LastAccess).TotalMinutes;
 
@@ -149,7 +150,7 @@ namespace library
                     //probability by last access
                     var pA = Math.Log(lastAccess, avgLastAccess);
 
-                    if (lastAccess < avgLastAccess || pL == 0 || pA == 0 || Utils.Roll(1 / pL * 1 / pA))
+                    if (true) // (lastAccess < avgLastAccess || pL == 0 || pA == 0 || Utils.Roll(1 / pL * 1 / pA))
                     {
                         toSincronize.Add(m);
                     }
@@ -190,6 +191,8 @@ namespace library
 
         private static void Sincronize(Stats stats, List<Metapacket> toSincronize)
         {
+
+            return;
             var data = new List<byte>();
 
             data.AddRange(toSincronize.First().TargetAddress);
@@ -205,23 +208,58 @@ namespace library
             {
                 p2pRequest request = new p2pRequest(
                     command: stats.Type == MetaPacketType.Hash ? RequestCommand.Hashs : RequestCommand.Metapackets,
-                    address: toSincronize[0].Address, 
-                    originalPeer: Client.LocalPeer, 
+                    address: toSincronize[0].Address,
+                    originalPeer: Client.LocalPeer,
                     senderPeer: Client.LocalPeer,
                     destinationPeer: peer,
                     data: data.ToArray());
 
                 request.Enqueue();
             }
+
         }
 
-        static void FillQueue(Dictionary<byte[], List<Metapacket>> list, Queue<byte[]> queue)
+        static void FillQueue(Dictionary<byte[], List<Metapacket>> list, ref Queue<byte[]> queue)
         {
             lock (list)
                 queue = new Queue<byte[]>(list.OrderBy(x => Utils.Rand.Next()).Take(pParameters.MetaPacketsMaintenanceQueueSize).Select(x => x.Key));
         }
 
+        internal static void ExpandSearch()
+        {
+            var address = Utils.ToAddressSizeArray("cat"); //Client.LocalPeer.Address
+
+            var toExpand = Hashs.Items.OrderBy(x => Addresses.EuclideanDistance(x.Key, address)).First();
+
+            var p2pContext = new p2pContext();
+
+            var contextId = Utils.GetAddress();
+
+            var r = new SearchResult(contextId, Utils.ToBase64String(toExpand.Value.First().TargetAddress), RenderMode.Nav, p2pContext, null, true);
+
+            var result = string.Empty;
+
+            var temp_result = "[]";
+
+            while (result == string.Empty && temp_result == "[]")
+            {
+                temp_result = r.GetResultsResults(p2pContext, toExpand.Value.First().TargetAddress);
+
+                if (temp_result != "[]")
+                {
+                    result = temp_result;
+                    temp_result = "[]";
+                }
+
+                break;
+            }
+
+            DelayedWrite.Add(Path.Combine(pParameters.json, Utils.ToBase64String(toExpand.Value.First().TargetAddress)), System.Text.Encoding.UTF8.GetBytes(result));
+        }
+
         #endregion
+
+
 
         #region Serialization
 
@@ -243,7 +281,7 @@ namespace library
 
             var metapackets = FromBytes(buffer);
 
-            foreach(var m in metapackets)
+            foreach (var m in metapackets)
             {
                 m.Type = type;
 
@@ -346,18 +384,18 @@ namespace library
             File.Move(newFilename, filename);
         }
 
-        
+
 
         internal static byte[] ToBytes(IEnumerable<Metapacket> metapackets)
         {
 
-          
+
 
             int offset = 0;
 
             var result = new byte[metapacket_size * metapackets.Count()];
 
-            foreach(var m in metapackets)
+            foreach (var m in metapackets)
             {
                 ToBytes(m, true).CopyTo(result, offset);
 
@@ -406,9 +444,9 @@ namespace library
 
             //Buffer.BlockCopy(BitConverter.GetBytes(metapacket.Creation.ToBinary()), 0, result, offset, pParameters.addressSize);
 
-            var r2 = 
+            var r2 =
 
-                (includeAddress? metapacket.Address : new byte[0]).
+                (includeAddress ? metapacket.Address : new byte[0]).
 
                 Concat(metapacket.TargetAddress).
                 Concat(metapacket.LinkAddress).
@@ -442,7 +480,7 @@ namespace library
 
             var offset = 0;
 
-            for(var i = 0; i < result.Length; i ++)
+            for (var i = 0; i < result.Length; i++)
             {
                 result[i] = FromBytes(packet, offset);
 
@@ -509,7 +547,7 @@ namespace library
 
         #endregion
 
-
+         
         internal static void Add(Metapacket metapacket)
         {
             var mode = metapacket.Type == MetaPacketType.Hash ? Hashs : Links;
@@ -522,7 +560,7 @@ namespace library
                 else
                     list.Add(metapacket.TargetAddress, new List<Metapacket>(new Metapacket[] { metapacket }));
 
-            if (mode == Links) 
+            if (mode == Links)
             {
                 var itemsPerKey = list[metapacket.TargetAddress];
 
@@ -537,26 +575,32 @@ namespace library
                         if (item != null)
                             item.Reset();
                         else
-                            MostUsedItems.Add(new KeyValuePair<byte[], List<Metapacket>>(metapacket.TargetAddress,  itemsPerKey ));
+                            MostUsedItems.Add(new KeyValuePair<byte[], List<Metapacket>>(metapacket.TargetAddress, itemsPerKey));
                     }
 
-                   
+
                 }
 
                 MostUsedRatio.Add(count);
+
+                Links.Event.Set();
             }
+            else
+                Hashs.Event.Set();
+
+
         }
 
         internal static IEnumerable<Metapacket> LocalSearch(byte[] address, MetaPacketType type)
         {
-            if(Utils.ToSimpleAddress(address).Contains("3DnFpsP2xPTUm9L4G"))
+            if (Utils.ToSimpleAddress(address).Contains("3DnFpsP2xPTUm9L4G"))
             {
 
             }
 
             var result = new Metapacket[0];
 
-            if(type == MetaPacketType.Link)
+            if (type == MetaPacketType.Link)
             {
                 IEnumerable<Metapacket> res = new List<Metapacket>();
 
@@ -582,7 +626,7 @@ namespace library
 
                     result = res.Concat(byAddress).ToArray();
 
-                   // return res;
+                    // return res;
                 }
             }
 
@@ -593,7 +637,7 @@ namespace library
                 IEnumerable<Metapacket> res = new List<Metapacket>();
 
                 res = list.Where(x =>
-                    Addresses.Equals(x.Key, address, type == MetaPacketType.Hash)). 
+                    Addresses.Equals(x.Key, address, type == MetaPacketType.Hash)).
                     Select(x => x.Value).
                     Aggregate(res, (x, y) => x.Union(y));
 
@@ -619,7 +663,7 @@ namespace library
 
                 return result;
             }
-           
+
         }
 
         internal static string Print(Stats type)

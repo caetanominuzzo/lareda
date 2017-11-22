@@ -8,6 +8,8 @@ namespace library
 
     public class p2pContext : IDisposable
     {
+        public byte[] ContextId = null;
+
         [JsonIgnore]
         public HttpListenerContext HttpContext;
 

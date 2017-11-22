@@ -13,9 +13,9 @@ namespace library
 {
     static class Peers
     {
-        static List<Peer> peers = new List<Peer>();
+        static Dictionary<double, Peer> peers = new Dictionary<double, Peer>();
 
-        internal static Queue<Peer> queue = new Queue<Peer>();
+        static Queue<Peer> queue = new Queue<Peer>();
 
         internal static TimeCounter LocalAddressDistance = new TimeCounter(10, 10);
 
@@ -27,7 +27,11 @@ namespace library
 
         internal static ManualResetEvent aboveMaxPeersEvent = new ManualResetEvent(false);
 
-        static double removingPeerProbabilityByMaxPeers = 0;
+        static double probabilityByMaxPeers = 0;
+
+        internal static double TopAverageDistance = 0;
+
+        static int totalAtFillQueue = 0;
 
         #region Thread Refresh
 
@@ -73,66 +77,70 @@ namespace library
 
                 Peer peer = queue.Dequeue();
 
-                Client.Stats.belowMinSentEvent.WaitOne();  //todo: or max confomr % de uso, ver outro uso
+                Client.Stats.belowMinSentEvent.WaitOne(); //todo: or max confomr % de uso, ver outro uso (adicionar if Client.IsIdle use belowMax)
 
                 if (Client.Stop)
                     break;
 
-                var avgDistance = LocalAddressDistance.Average;
-
                 //Probability by address distance to Local address
-                var pL = Math.Log(Addresses.EuclideanDistance(Client.LocalPeer.Address, peer.Address), avgDistance);
+                var probabilityByAddressDistance = Math.Log(Addresses.EuclideanDistance(Client.LocalPeer.Address, peer.Address) * 100, TopAverageDistance * 100) - 1;
 
-                if (double.IsNaN(pL))
-                    pL = 1;
+                if (double.IsNaN(probabilityByAddressDistance))
+                    probabilityByAddressDistance = 1;
 
-                var lastAccess = DateTime.Now.Subtract(peer.LastAccess).TotalMinutes;
+                var maxLatency = Latency.Average * 2;
 
-                var avgLastAccess = LastAccess.Average;
+                var latencyPercent = peer.Latency / maxLatency;
 
-                //probability by last access
-                var pA = Math.Log(lastAccess, avgLastAccess);
+                var averagePercent = Latency.Average / maxLatency;
 
-                if (double.IsNaN(pA))
-                    pA = 1;
+                var probabilityLatency = Math.Log(100 * latencyPercent, 100 * averagePercent) - 1;
 
-                //Probability by Latency
-                var pR = Math.Log(peer.Latency, Latency.Average);
+                if (double.IsNaN(probabilityLatency))
+                    probabilityLatency = 1;
 
-                if (double.IsNaN(pR))
-                    pR = 1;
-
-                if (removingPeerProbabilityByMaxPeers > 0 && Utils.Roll(removingPeerProbabilityByMaxPeers * pL * pA * pR))
+                if (probabilityByMaxPeers > 0 && Utils.Roll((probabilityByMaxPeers + probabilityByAddressDistance + probabilityLatency) / 3d))
                 {
                     Remove(peer);
+
+                    totalAtFillQueue--;
+
+                    probabilityByMaxPeers = (totalAtFillQueue - pParameters.PeerMaxItems) / (double)totalAtFillQueue;
                 }
+                else if (Utils.Roll(1 - probabilityByAddressDistance))
+                {
+                    new p2pRequest(RequestCommand.Peer, destinationPeer: peer).Enqueue();
+                }
+
+
             }
         }
 
         static void FillQueue()
         {
+            totalAtFillQueue = peers.Count();
 
-            var total = peers.Count();
+            probabilityByMaxPeers = (totalAtFillQueue - pParameters.PeerMaxItems) / (double)totalAtFillQueue;
 
-            //Probability by total peers
-            removingPeerProbabilityByMaxPeers = (total - pParameters.PeerMaxItems) / (double)total;
-
-            if (removingPeerProbabilityByMaxPeers < .1)
+            if (probabilityByMaxPeers < (pParameters.MinPeerMaintenanceQueueSize / totalAtFillQueue))
             {
                 aboveMaxPeersEvent.Reset();
 
                 aboveMaxPeersEvent.WaitOne();
             }
 
-
             lock (peers)
-                queue = new Queue<Peer>(peers.OrderBy(x => Utils.Rand.Next()).Take(pParameters.PeerMaintenanceQueueSize));
+            {
+                queue = new Queue<Peer>(peers.OrderBy(x => Utils.Rand.Next()).Select(x => x.Value).Take(pParameters.PeerMaintenanceQueueSize));
+
+                TopAverageDistance = peers.OrderBy(x => x.Key).Take(peers.Count() / pParameters.TopPeersPercent).Sum(x => x.Key) / (peers.Count() / pParameters.TopPeersPercent);
+            }
         }
 
         static void Remove(Peer peer)
         {
             lock (peers)
-                peers.Remove(peer);
+                peers.Remove(Addresses.EuclideanDistance(Client.LocalPeer.Address, peer.Address));
         }
 
         #endregion
@@ -192,7 +200,9 @@ namespace library
             {
                 var peer = FromBytes(buffer.Skip(i * (reg_size)).Take(reg_size).ToArray());
 
-                peers.Add(peer);
+                var dist = Addresses.EuclideanDistance(Client.LocalPeer.Address, peer.Address);
+
+                peers.Add(dist, peer);
             }
         }
 
@@ -321,28 +331,29 @@ namespace library
         {
             lock (peers)
             {
-                if ((peer.Address == null || !peers.Any(x => Addresses.Equals(peer.Address, Addresses.zero) && Addresses.Equals(peer.Address, x.Address))) && !peer.EndPoint.Equals(Client.LocalPeer.EndPoint))
+                if ((peer.Address == null || Addresses.Equals(peer.Address, Addresses.zero) || !peers.Any(x => Addresses.Equals(peer.Address, x.Value.Address))) && !peer.EndPoint.Equals(Client.LocalPeer.EndPoint))
                 {
-                    var p2 = peers.FirstOrDefault(x => peer.EndPoint.Equals(x.EndPoint));
+                    var p2 = peers.FirstOrDefault(x => peer.EndPoint.Equals(x.Value.EndPoint)).Value;
 
                     if (p2 == null)
                     {
-                        peers.Add(peer);
+                        var dist = Addresses.EuclideanDistance(Client.LocalPeer.Address, peer.Address);
 
+                        peers.Add(dist, peer);
 
-                        if (peers.Count() > pParameters.PeerMaxItems * 1.1)
+                        if (peers.Count() > pParameters.PeerMaxItems * (1 + (pParameters.MinPeerMaintenanceQueueSize) / 100d))
                             aboveMaxPeersEvent.Set();
 
-                        Peers.LocalAddressDistance.Add(Addresses.EuclideanDistance(Client.LocalPeer.Address, peer.Address));
+                        Peers.LocalAddressDistance.Add(dist);
 
                         Peers.BeginGetPeer(peer);
 
-                        p2pRequest request = new p2pRequest( 
+                        p2pRequest request = new p2pRequest(
                           command: RequestCommand.Peer,
                           address: Client.LocalPeer.Address,
                           originalPeer: Client.LocalPeer,
                           senderPeer: Client.LocalPeer,
-                          destinationPeer: peer); 
+                          destinationPeer: peer);
 
                         request.Enqueue();
 
@@ -353,7 +364,7 @@ namespace library
                     {
                         p2.Address = peer.Address;
                     }
-                } 
+                }
             }
 
         }
@@ -390,10 +401,10 @@ namespace library
 
             if (address != null)
                 lock (peers)
-                    peer = peers.FirstOrDefault(x => Addresses.Equals(x.Address, address));
+                    peer = peers.FirstOrDefault(x => Addresses.Equals(x.Value.Address, address)).Value;
             else
                 lock (peers)
-                    peer = peers.FirstOrDefault(x => x.EndPoint.Equals(remoteEndPoint));
+                    peer = peers.FirstOrDefault(x => x.Value.EndPoint.Equals(remoteEndPoint)).Value;
 
             if (peer != null)
                 peer.Address = address ?? peer.Address;
@@ -413,7 +424,7 @@ namespace library
                 return result;
 
             lock (peers)
-                result = peers.OrderBy(x => Addresses.EuclideanDistance(x.Address, closestToAddress)).Take(count * 2).ToArray();
+                result = peers.OrderBy(x => Addresses.EuclideanDistance(x.Value.Address, closestToAddress)).Select(x => x.Value).Take(count * 2).ToArray();
 
             result.OrderBy(x => Utils.Rand.Next()).Take(count);
 

@@ -351,11 +351,25 @@ $.input.bindItem = function($item, item, new_item)
 	
 	if($item.is('.option')) 
 	{
+		
 		var parents_thumb_text =  $('.thumb_text:first', $item);
 
+		if($item[0].children.length == 0)
+		{
+			$item.append("<div w3-include-html='"+item.thumb_text+"'></div>");
+		}
+		else
+		{
+			var $item_div = $($item[0].children[0]);
+
+			if($item_div.attr('w3-include-html') != item.thumb_text)
+				$item_div.attr('w3-include-html', item.thumb_text);
+
+		}
+/*
 		if($item.text() != item.thumb_text)
 			$item.text(item.thumb_text);
-
+*/
 		$item.attr('value', item.address);
 
 		return;

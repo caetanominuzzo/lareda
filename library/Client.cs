@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using static library.Query;
 
 namespace library
 {
@@ -40,8 +41,70 @@ namespace library
 
         internal static byte[] P2pAddress;
 
+        public static void StartThreads()
+        {
+            MetaPackets.Start(MetaPacketType.Link);
+
+            MetaPackets.Start(MetaPacketType.Hash);
+        }
+
+        public static void ExpandSearch()
+        {
+            MetaPackets.ExpandSearch();
+        }
+
+        private static int distance(byte[] b1, byte[] b2)
+        {
+            int distance;
+            distance = (b1[0] ^ b2[0]) & 0xFF;
+            distance = ((b1[1] ^ b2[1]) & 0xFF) | (distance << 8);
+            distance = ((b1[2] ^ b2[2]) & 0xFF) | (distance << 8);
+            return ((b1[3] ^ b2[3]) & 0xFF) | (distance << 8);
+        }
+
         public static IDisposable Start(byte[] p2pAddress, IPEndPoint p2pEndpoint)
         {
+            for (var i = 0; i < 1; i++)
+            {
+                var A = Utils.GetAddress();
+
+                var B = Utils.GetAddress();
+
+                var C = Utils.GetAddress();
+
+                var AB = Addresses.EuclideanDistance(A, B);
+
+                var AC = Addresses.EuclideanDistance(A, C);
+
+                var BC = Addresses.EuclideanDistance(B, C);
+
+
+                //B = A.ToArray();
+
+                var ab = Addresses.KadDistance(A, B);
+
+                var ac = Addresses.KadDistance(A, C);
+
+                var bc = Addresses.KadDistance(B, C);
+
+
+                if (ab + ac < bc ||
+                    ab + bc < ac ||
+                    ac + bc < ab)
+                {
+
+                }
+
+                if (AB +AC < BC ||
+                    AB + BC < AC ||
+                    AC + BC < AB)
+                {
+
+                }
+            }
+
+
+
             Log.Clear();
 
             P2pAddress = p2pAddress;
@@ -61,10 +124,6 @@ namespace library
             Peers.Start();
 
             Packets.Start();
-
-            MetaPackets.Start(MetaPacketType.Link);
-
-            MetaPackets.Start(MetaPacketType.Hash);
 
             p2pFile.Queue.Load();
 
@@ -179,12 +238,12 @@ namespace library
 
         internal static byte[] CreateTailItem(int dataSize)
         {
-            var length = BitConverter.GetBytes(dataSize); 
+            var length = BitConverter.GetBytes(dataSize);
 
             var hash = Utils.ComputeHash(length, 0, length.Count());
 
             return length.Concat(hash).ToArray();
-        } 
+        }
 
         public static bool AnyPeer()
         {
@@ -213,13 +272,13 @@ namespace library
 
         internal static void Search(byte[] address, MetaPacketType type)
         {
-            if (VirtualAttributes.IsVirtualAttribute(address))
-            {
-                if(!Addresses.Equals(VirtualAttributes.ROOT_STREAM, address) &&
-                    !Addresses.Equals(VirtualAttributes.ROOT_POST, address) &&
-                    !Addresses.Equals(VirtualAttributes.ROOT_SEQUENCE, address))
-                    return;
-            }
+            //if (VirtualAttributes.IsVirtualAttribute(address))
+            //{
+            //    if(!Addresses.Equals(VirtualAttributes.ROOT_STREAM, address) &&
+            //        !Addresses.Equals(VirtualAttributes.ROOT_POST, address) &&
+            //        !Addresses.Equals(VirtualAttributes.ROOT_SEQUENCE, address))
+            //        return;
+            //}
 
             Log.Add(Log.LogTypes.Search, Log.LogOperations.Start, new { address = Utils.ToSimpleAddress(address) });
 
@@ -260,6 +319,10 @@ namespace library
         {
             OnFileUpload?.Invoke(filename, base64Address);
         }
+
+
+
+
 
         public static byte[] Post(string title = null, byte[] parentConceptAddress = null, string target = null, string userAddressBase64 = null, string[] refs = null, string content = null)
         {
@@ -387,25 +450,36 @@ namespace library
         {
             var conceptAddress = Utils.GetAddress();
 
-            p2pFile.FileUpload(filenames, conceptAddress, userAddress, true);
+            var root = Directory.Exists(filenames[0]) ? filenames[0] : Path.GetDirectoryName(filenames[0]);
+
+            p2pFile.FileUpload(root, filenames, conceptAddress, userAddress, true);
         }
 
-        public static byte[] GetLocal(byte[] address)
+        public static byte[] GetLocal(byte[] address, byte[] hash)
         {
             var result = Packets.Get(address);
 
             if (result != null && result[0] == (int)PacketTypes.Content)
-                return result.Skip(pParameters.packetHeaderSize).ToArray();
+            {
+                var real_hash = Utils.ComputeHash(result, pParameters.packetHeaderSize, result.Length - pParameters.packetHeaderSize);
+
+                if (Addresses.Equals(real_hash, hash, true))
+                    return result.Skip(pParameters.packetHeaderSize).ToArray();
+            }
 
             return null;
         }
 
-        public static void Download(string base64Address, p2pContext context, string filename, string specifItem = null)
+        public static void Download(string base64Address, string hash, p2pContext context, string filename, string specifItem = null)
         {
             if (Connected())
-                p2pFile.Queue.Add(base64Address, context, filename, specifItem);
+                p2pFile.Queue.Add(base64Address, hash, context, filename, specifItem);
         }
 
+        public static NodeResult ExecuteQuery(string query, List<Metapacket> metapacket_list = null)
+        {
+            return Query.Execute(query, metapacket_list);
+        }
         public static void Clear()
         {
             p2pFile.Queue.Clear();
@@ -438,6 +512,13 @@ namespace library
             Log.Add(Log.LogTypes.All, Log.LogOperations.All, typeof(TagLib.ByteVector).FullName);
 
             VirtualAttributes.BootStrap();
+
+
+            Client.Post("Ingles", VirtualAttributes.EN_US);
+
+            Client.Post("Portugues", VirtualAttributes.PT_BR);
+
+
 
             //VirtualAttributes.CONCEITO = Utils.GetAddress();
 
@@ -554,8 +635,8 @@ namespace library
 
             return result;
         }
-        
-        
+
+
 
         public static string Print()
         {
@@ -565,7 +646,7 @@ namespace library
 
             var declarations = new Dictionary<int, string>();
 
-            var colors = new string[] { "black",  "red", "blue", "green", "yellow", "orange", "brown", "cyan", "orange", "blue", "red" };
+            var colors = new string[] { "black", "red", "blue", "green", "yellow", "orange", "brown", "cyan", "orange", "blue", "red" };
 
             var i = 0;
 
@@ -578,23 +659,23 @@ namespace library
             {
                 foreach (var y in x.Value)
                 {
-                    var simpleAddress = int.Parse(Utils.ToSimpleAddress(y.LinkAddress));
+                    var simpleAddress = int.Parse(y.SimpleLinkAddress);// int.Parse(Utils.ToSimpleAddress(y.LinkAddress));   
 
-                    var addresss = int.Parse(Utils.ToSimpleAddress(y.Address));
+                    var addresss = int.Parse(y.SimpleAddress);
 
                     //if (addresss < 392)
                     //    continue;
 
-                    var s = Utils.ToSimpleAddress(y.TargetAddress) + "->" + Utils.ToSimpleAddress(y.Address);
+                    var s = y.SimpleTargetAddress + "->" + y.SimpleAddress;
 
 
-                    var tAddress = int.Parse(Utils.ToSimpleAddress(y.Address));
+                    var tAddress = int.Parse(y.SimpleAddress);
 
                     //if ((tAddress <  350))// || tAddress > 650))
                     //   continue;
 
                     if (simpleAddress > 0)
-                        s += "->" + Utils.ToSimpleAddress(y.LinkAddress);
+                        s += "->" + y.SimpleLinkAddress;
 
                     s += ";" + Environment.NewLine;
 
@@ -604,12 +685,12 @@ namespace library
 
                     if (simpleAddress <= VirtualAttributes.Count && simpleAddress > 0)
                     {
-                        if (VirtualAttributes.PropertyIndex(int.Parse(Utils.ToSimpleAddress(y.LinkAddress))) != "ROOT_TYPE" &&
-                            VirtualAttributes.PropertyIndex(int.Parse(Utils.ToSimpleAddress(y.LinkAddress))) != "Culture")
+                        if (VirtualAttributes.PropertyIndex(int.Parse(y.SimpleLinkAddress)) != "ROOT_TYPE" &&
+                            VirtualAttributes.PropertyIndex(int.Parse(y.SimpleLinkAddress)) != "Culture")
                         {
-                            var id = int.Parse(Utils.ToSimpleAddress(y.TargetAddress));
+                            var id = int.Parse(y.SimpleTargetAddress);
 
-                            var subres = Utils.ToSimpleAddress(y.Address) + "-" + VirtualAttributes.PropertyIndex(int.Parse(Utils.ToSimpleAddress(y.LinkAddress))) + "<br/>";
+                            var subres = y.SimpleAddress + "-" + VirtualAttributes.PropertyIndex(int.Parse(y.SimpleLinkAddress)) + "<br/>";
 
                             if (declarations.ContainsKey(id))
                                 declarations[id] += subres;
@@ -643,7 +724,7 @@ namespace library
 
                     }
 
-                    if(s.Contains("545") || declarations.ContainsKey(545))
+                    if (s.Contains("545") || declarations.ContainsKey(545))
                     {
 
                     }
@@ -662,22 +743,15 @@ namespace library
                         {
 
 
-                            packet = "PACOTE_" + ((p.Length - 21) / 2).ToString(); 
+                            packet = "PACOTE_" + ((p.Length - 21) / 2).ToString();
 
                             if (p.Length < 85)
-                                packet = Encoding.Unicode.GetString(p.Skip(21).ToArray());
-
-
-                            byte[] tempBytes;
-                            tempBytes = System.Text.Encoding.GetEncoding("ISO-8859-8").GetBytes(packet);
-                            string asciiStr = System.Text.Encoding.UTF8.GetString(tempBytes);
-
-                            packet = asciiStr;
+                                packet = Encoding.UTF8.GetString(p.Skip(pParameters.packetHeaderSize).ToArray());
                         }
 
                         var id = int.Parse(Utils.ToSimpleAddress(y.LinkAddress));
 
-                        var subres = packet  + "<br/>";
+                        var subres = packet + "<br/>";
 
                         if (declarations.ContainsKey(id))
                             declarations[id] += subres;
@@ -693,10 +767,66 @@ namespace library
 
 
             var s_declarations = declarations.Aggregate(new StringBuilder(),
-              (sb, y) =>  sb.Append("\"" + y.Key + "\" [label=< <FONT POINT-SIZE=\"20\"><b>" + y.Key + "</b></FONT>" + Utils.ToBase64String(Utils.ToAddressSizeArray((y.Key-1).ToString())).Substring(0,5)+"<br /> " + y.Value.Replace("MIME_TYPE_", "") + ">];\n"),
+              (sb, y) => sb.Append("\"" + y.Key + "\" [label=< <FONT POINT-SIZE=\"20\"><b>" + y.Key + "</b></FONT>" + Utils.ToBase64String(Utils.ToAddressSizeArray((y.Key - 1).ToString())).Substring(0, 5) + "<br /> " + y.Value.Replace("MIME_TYPE_", "") + ">];\n"),
               sb => sb.ToString());
 
             return s_declarations + result;
+        }
+
+        public static void CreateLotsOfPackets()
+        {
+            var d = new Dictionary<int, int>();
+
+            for(var i = 0; i < 1000000; i++)
+            {
+                var dis = (int)Addresses.EuclideanDistance(Client.LocalPeer.Address, Utils.GetAddress());
+
+                if (d.ContainsKey(dis))
+                    d[dis] = d[dis] + 1;
+                else
+                    d[dis] = 1;
+
+                //Packets.Add(Utils.GetAddress(), Utils.GetAddress(), Client.LocalPeer);
+            }
+
+            File.WriteAllLines("data2.txt", d.Select(x => x.Key.ToString() + ";" + x.Value.ToString()));
+
+
+        }
+
+
+
+        public static string listPackets()
+        {
+            var s = string.Empty;
+
+            foreach (var x in MetaPackets.Links.Items)
+            {
+                foreach (var y in x.Value)
+                {
+                    var simpleAddress = int.Parse(y.SimpleLinkAddress);// int.Parse(Utils.ToSimpleAddress(y.LinkAddress));   
+
+                    var addresss = int.Parse(y.SimpleAddress);
+
+                    //if (addresss < 392)
+                    //    continue;
+
+                    s += y.SimpleTargetAddress + "->" + y.SimpleAddress;
+
+
+                    var tAddress = int.Parse(y.SimpleAddress);
+
+                    //if ((tAddress <  350))// || tAddress > 650))
+                    //   continue;
+
+                    if (simpleAddress > 0)
+                        s += "->" + y.SimpleLinkAddress;
+
+                    s += ";" + Environment.NewLine;
+                }
+            }
+
+            return s;
         }
 
         public static string GetPeers()
@@ -727,3 +857,4 @@ namespace library
     //    }
     //}
 }
+

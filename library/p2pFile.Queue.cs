@@ -35,11 +35,13 @@ namespace library
                 _queue = null;
             }
 
-            internal static void Add(string base64Address, p2pContext context, string filename, string specifFIle = null)
+            internal static void Add(string base64Address, string base64Hash, p2pContext context, string filename, string specifFIle = null)
             {
                 byte[] address = Utils.AddressFromBase64String(base64Address);
 
-                Add(address, context, filename, specifFIle);
+                byte[] hash = Utils.AddressFromBase64String(base64Hash);
+
+                Add(address, hash, context, filename, specifFIle);
             }
 
             internal static p2pFile Get(string filename)
@@ -61,7 +63,7 @@ namespace library
                 return p2pFile.Queue.queue.Items();
             }
 
-            static void Add(byte[] address, p2pContext context, string filename, string specifFIle = null)
+            static void Add(byte[] address, byte[] hash, p2pContext context, string filename, string specifFIle = null)
             {
                 CacheItem<p2pFile> cacheItem = null;
 
@@ -83,7 +85,7 @@ namespace library
                     return;
                 }
 
-                p2pFile file = new p2pFile(address, context, filename, specifFIle);
+                p2pFile file = new p2pFile(address, hash, context, filename, specifFIle);
                  
                 Log.Add(Log.LogTypes.Queue, Log.LogOperations.Add | Log.LogOperations.File, file);
 
@@ -146,6 +148,9 @@ namespace library
                         buffer.AddRange(BitConverter.GetBytes(file.Address.Length));
                         buffer.AddRange(file.Address);
 
+                        buffer.AddRange(BitConverter.GetBytes(file.Root.Hash.Length));
+                        buffer.AddRange(file.Root.Hash);
+
                         byte[] filename = Encoding.Unicode.GetBytes(file.Filename);
 
                         buffer.AddRange(BitConverter.GetBytes(filename.Length));
@@ -173,11 +178,15 @@ namespace library
 
                     offset += 4 + address.Length;
 
+                    byte[] hash = Utils.ReadBytes(buffer, offset);
+
+                    offset += 4 + hash.Length;
+
                     byte[] filename = Utils.ReadBytes(buffer, offset);
 
                     offset += 4 + filename.Length;
 
-                    Add(address, null, Encoding.Unicode.GetString(filename));
+                    Add(address, hash, null, Encoding.Unicode.GetString(filename));
                 }
             }
         }

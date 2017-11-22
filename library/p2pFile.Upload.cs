@@ -40,12 +40,12 @@ namespace library
 
         internal static string[] htmlExtensions = new string[] { ".HTML", ".HTM" };
 
-        internal static void FileUpload(string path, byte[] conceptAddress, byte[] userAddress = null, bool newThread = true, List<byte[]> parents = null)
+        internal static void FileUpload(string root_path, string path, byte[] conceptAddress, byte[] userAddress = null, bool newThread = true, List<byte[]> parents = null)
         {
-            FileUpload(new string[] { path }, conceptAddress, userAddress, newThread, parents);
+            FileUpload(root_path, new string[] { path }, conceptAddress, userAddress, newThread, parents);
         }
 
-        internal static void FileUpload(string[] paths, byte[] conceptAddress, byte[] userAddress = null, bool newThread = true, List<byte[]> parents = null)
+        internal static void FileUpload(string root_path, string[] paths, byte[] conceptAddress, byte[] userAddress = null, bool newThread = true, List<byte[]> parents = null)
         {
             TagLib.File tags = null;
 
@@ -63,7 +63,7 @@ namespace library
 
                     var fi = new FileInfo(paths[0]);
 
-                    GeneratePosts(paths[0], conceptAddress, userAddress, fi.Length + pParameters.packetHeaderSize <= pParameters.packetSize, tags, parents);
+                    GeneratePosts(root_path, paths[0], conceptAddress, userAddress, fi.Length + pParameters.packetHeaderSize <= pParameters.packetSize, tags, parents);
                 }
 
                 if (newThread)
@@ -73,6 +73,7 @@ namespace library
                          new FileUploadItem
                          {
                              Paths = paths,
+                             RootPath = root_path,
                              ConceptAddress = conceptAddress,
                              UserAddress = userAddress,
                              Tags = tags,
@@ -85,6 +86,7 @@ namespace library
                          new FileUploadItem
                          {
                              Paths = paths,
+                             RootPath = root_path,
                              ConceptAddress = conceptAddress,
                              UserAddress = userAddress,
                              Tags = tags,
@@ -118,7 +120,7 @@ namespace library
                 var path = file.Paths[0];
 
                 if (Directory.Exists(path))
-                    DirectoryUpload(file.ConceptAddress, new string[] { path }, file.UserAddress, file.Parents);
+                    DirectoryUpload(file.RootPath, file.ConceptAddress, new string[] { path }, file.UserAddress, file.Parents);
                 else
                 {
                     Client.FileUpload(path, Utils.ToBase64String(file.ConceptAddress));
@@ -167,7 +169,7 @@ namespace library
 
                                 var tmp = Path.Combine(pParameters.localTempDir, Utils.ToBase64String(Utils.GetAddress())) + format.FileExtension;
 
-                                ffmpegProcess.ExecuteAsync(string.Format(@" -ss 00:04:00  -i ""{0}"" -t 00:02:10  -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
+                                ffmpegProcess.ExecuteAsync(string.Format(@" -ss 00:04:00  -i ""{0}"" -t 00:00:10  -map 0:{1}:{2} -codec copy -y ""{3}""", // >NUL 2>&1 < NUL
                                         file.Paths[0],
                                         format.FfmpegSelector,
                                         streamNumber++,
@@ -353,10 +355,10 @@ namespace library
                 var topDirectories = file.Paths.Select(x => Path.GetDirectoryName(x)).Distinct().Count();
                 
                 if (topDirectories == 1)
-                    DirectoryUpload(file.ConceptAddress, file.Paths, file.UserAddress, file.Parents);
+                    DirectoryUpload(file.RootPath, file.ConceptAddress, file.Paths, file.UserAddress, file.Parents);
                 else
                     foreach (var path in file.Paths)
-                        FileUpload(path, file.ConceptAddress, file.UserAddress, false, file.Parents.ToArray().ToList());
+                        FileUpload(file.RootPath, path, file.ConceptAddress, file.UserAddress, false, file.Parents.ToArray().ToList());
             }
         }
 
@@ -398,7 +400,7 @@ namespace library
         }
 
 
-        static void DirectoryUpload(byte[] conceptAddress, string[] path, byte[] userAddress, List<byte[]> parents)
+        static void DirectoryUpload(string root_path, byte[] conceptAddress, string[] path, byte[] userAddress, List<byte[]> parents)
         {
             var files = new string[0];
 
@@ -414,7 +416,7 @@ namespace library
 
             var dirName = Path.GetDirectoryName(files[0]);
 
-            GeneratePosts(dirName, conceptAddress, userAddress, false, null, parents);
+            GeneratePosts(root_path, dirName, conceptAddress, userAddress, false, null, parents);
 
             if (null == parents)
                 parents = new List<byte[]>();
@@ -432,7 +434,7 @@ namespace library
 
                 var conceptAddress_1 = Utils.GetAddress();
                 
-                FileUpload(file, conceptAddress_1, parents: parents.ToArray().ToList());
+                FileUpload(root_path, file, conceptAddress_1, parents: parents.ToArray().ToList());
 
                 //Metapacket.Create(conceptAddress, conceptAddress_1);
 
@@ -461,13 +463,9 @@ namespace library
             var contentAddress = Utils.GetAddress();
 
 
-            //Conceito/Conteudo - LINK
-            var link = Metapacket.Create(
-                targetAddress: conceptAddress,
-                linkAddress: contentAddress,
-                hashContent: Utils.GetAddress()); //todo:hash
+           
 
-            GenerateMime(conceptAddress, stream, tags, MIME_TYPE, link);
+            
 
             List<byte[]> addresses = new List<byte[]>();
 
@@ -500,16 +498,28 @@ namespace library
 
                         offset++;
 
-                        Utils.ComputeHash(data, pParameters.packetHeaderSize, bytesRead).CopyTo(data, 5); //5 = 1 byte (data type) + 4 byte (offset)
+                        var hash = Utils.ComputeHash(data, pParameters.packetHeaderSize, bytesRead);
+
+                        hash.CopyTo(data, 5); //5 = 1 byte (data type) + 4 byte (offset)
 
                         byte[] packet_address;
 
                         if (!addresses.Any() && offset * pParameters.packetSize >= stream.Length)
+                        {
                             packet_address = contentAddress;
+
+                            //Conceito/Conteudo - LINK
+                            var link = Metapacket.Create(
+                                targetAddress: conceptAddress,
+                                linkAddress: contentAddress,
+                                hashContent: hash);
+
+                            GenerateMime(conceptAddress, stream, tags, MIME_TYPE, link);
+                        }
                         else
                             packet_address = Utils.GetAddress();
 
-                        addresses.Add(packet_address);
+                        addresses.Add(packet_address.Concat(hash).ToArray());
 
                         if (bytesRead < pParameters.packetSize)
                             data = data.Take(bytesRead + pParameters.packetHeaderSize).ToArray();
@@ -531,8 +541,12 @@ namespace library
 
                         foreach (byte[] addr in addresses)
                         {
-                            if (index.Count() + pParameters.addressSize > pParameters.packetSize && pParameters.packetSize - index.Count() % pParameters.packetSize < pParameters.addressSize)
-                                index.AddRange(new byte[pParameters.packetSize - index.Count() % pParameters.packetSize]);
+                            var addressSize = pParameters.addressSize + pParameters.hashSize;
+
+                            var packetSize = pParameters.packetSize;
+
+                            if (index.Count() + addressSize > packetSize && packetSize - index.Count() % packetSize < addressSize)
+                                index.AddRange(new byte[packetSize - index.Count() % packetSize]);
 
                             index.AddRange(addr);
                         }
@@ -724,7 +738,7 @@ namespace library
                 return null;
         }
 
-        static byte[] GeneratePosts(string path, byte[] conceptAddress, byte[] userAddress, bool singlePacketFile, TagLib.File tags, List<byte[]> parents = null)
+        static byte[] GeneratePosts(string root_path, string path, byte[] conceptAddress, byte[] userAddress, bool singlePacketFile, TagLib.File tags, List<byte[]> parents = null)
         {
             Metapacket.Create(conceptAddress, VirtualAttributes.CONCEITO);
 
@@ -739,15 +753,32 @@ namespace library
                     linkAddress: VirtualAttributes.AUTHOR);
             }
 
+            byte[] last_parent = null;
+
+            byte[] first_parent = null;
+
+            Metapacket last_parent_link = null;
+
             if(parents != null)
             {
-                foreach(var parent in parents)
-                    Metapacket.Create(targetAddress: parent, linkAddress: conceptAddress);
+                last_parent = parents.Last();
+
+                first_parent = parents.First();
+
+                foreach (var parent in parents)
+                {
+                    var parent_link = Metapacket.Create(targetAddress: parent, linkAddress: conceptAddress);
+
+                    if (parent == last_parent)
+                        last_parent_link = parent_link;
+                }
             }
 
             if (path != null && Directory.Exists(path))
             {
-                var link = Metapacket.Create(targetAddress: conceptAddress, linkAddress: VirtualAttributes.ROOT_SEQUENCE);
+                var root_type = System.IO.File.Exists(Path.Combine(path, "index.html")) ? VirtualAttributes.ROOT_APP : VirtualAttributes.ROOT_SEQUENCE;
+
+                var link = Metapacket.Create(targetAddress: conceptAddress, linkAddress: root_type);
 
                 Metapacket.Create(link.Address, VirtualAttributes.ROOT_TYPE);
 
@@ -756,9 +787,9 @@ namespace library
 
                 int i = -1;
 
-                if (int.TryParse(dirname, out i))
-                    //    Metapacket.Create(link.Address, MIME_TYPE);
-                    CreatePostTupleOrReuse(conceptAddress, i.ToString("n2"), VirtualAttributes.ORDER);
+                //if (int.TryParse(dirname, out i))
+                //    //    Metapacket.Create(link.Address, MIME_TYPE);
+                //    CreatePostTupleOrReuse(conceptAddress, i.ToString("n2"), VirtualAttributes.ORDER);
 
                 Client.Post(dirname, conceptAddress);
 
@@ -781,10 +812,24 @@ namespace library
 
             }
 
-            var a_order = new string[] { "1", string.Empty, string.Empty };
+            if (null != first_parent)
+            {
+                var index_name = path.Replace(root_path, "").Replace("\\", "/");
 
-            if (nameItems.ContainsKey("season"))
-                a_order[1] = nameItems["season"];
+                if(index_name.Contains("index"))
+                {
+
+                }
+
+                var index = Utils.ToAddressSizeArray(Utils.ToBase64String(first_parent) + index_name);
+
+                var sindex = Utils.ToBase64String(index);
+
+                var indexConcept = Metapacket.Create(
+                    targetAddress: index,
+                    linkAddress: conceptAddress,
+                    type: MetaPacketType.Hash);
+            }
 
             if (nameItems.ContainsKey("episode"))
             {
@@ -792,9 +837,8 @@ namespace library
 
                 int i = -1;
 
-                if (int.TryParse(ep, out i))
-
-                    CreatePostTupleOrReuse(conceptAddress, i.ToString("n2"), VirtualAttributes.ORDER);
+                //if (int.TryParse(ep, out i))
+                //    CreatePostTupleOrReuse(conceptAddress, i.ToString("n2"), VirtualAttributes.ORDER);
             }
 
             if (tags == null || tags.Properties == null)
@@ -1161,6 +1205,8 @@ namespace library
             internal byte[] UserAddress;
 
             internal string[] Paths;
+
+            internal string RootPath;
 
             internal TagLib.File Tags;
 

@@ -1,5 +1,5 @@
-﻿//#define SIMPLE
-//#define PRINT
+﻿#define SIMPLE //for metapackets print command
+//#define PRINT //for print every search result
 
 #if PRINT
 
@@ -9,6 +9,7 @@ using GraphVizWrapper.Queries;
 
 #endif
 
+using Exyll;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,7 +23,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace library
+namespace library 
 {
     public static class Utils
     {
@@ -31,6 +32,10 @@ namespace library
         static SHA256 SHA = SHA256.Create();
 
         static Crc16 CRC = new Crc16(Crc16Mode.Standard);
+
+        public static Regex Base64ReplaceRegexPlus = null;
+
+        public static Regex Base64ReplaceRegexSlash = null;
 
 
         internal static Random Rand = new Random();
@@ -59,31 +64,19 @@ namespace library
             return r.Replace(input, replace);
         }
 
-        public  static byte[] GetAddress(int size = 0)
+        public  static byte[] GetAddress(int size = 0, byte[] append = null)
         {
             if (size == 0)
                 size = pParameters.addressSize;
 
-            byte[] result = new byte[size];
+            byte[] result = new byte[size + (null != append? append.Length : 0)];
             
             Rand.NextBytes(result);
 
-            if(AddressCount == 413)
-                {
+            Utils.ToAddressSizeArray(AddressCount++.ToString()).CopyTo(result, 0);
 
-            }
-
-            result = Utils.ToAddressSizeArray(AddressCount++.ToString());
-
-            if(Utils.ToBase64String(result) == "9lJR8befQ535xFiwC5gDsL2WC45C8EN5bxKZT5ACHYA=")
-            {
-
-            }
-
-            //result = Utils.ToAddressSizeArray(Rand.NextDouble().ToString());
-
-            if(Utils.ToSimpleAddress(result) == "409")
-            { }
+            if(null != append)
+                append.CopyTo(result, size);
 
             return result;
         }
@@ -114,8 +107,8 @@ namespace library
 
         public static byte[] ComputeHash(byte[] buffer, int offset, int count)
         {
-            lock (MD5)
-                return MD5.ComputeHash(buffer, offset, count);
+            lock (SHA)
+                return SHA.ComputeHash(buffer, offset, count);
         }
 
         public static byte[] ToAddressSizeArray(string value)
@@ -167,9 +160,12 @@ namespace library
             return data.Skip(buffer.Length + offset).Take(length).ToArray();
         }
 
+        static Base64Encoder f = new Base64Encoder('-', '_', true);
+
         public static string ToBase64String(byte[] term)
         {
-            return term == null ? null : Convert.ToBase64String(term).Replace('/', '_').Replace('+', '-').Replace('=','=');
+            return term == null ? null : f.ToBase(term);
+                //Base64ReplaceRegexSlash.Replace(Base64ReplaceRegexPlus.Replace(Convert.ToBase64String(term), "-"), "_");//.Replace('/', '_').Replace('+', '-').Replace('=','=');
         }
         
         public static string DisplayBytes(long byteCount)

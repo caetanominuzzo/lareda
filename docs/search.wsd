@@ -1,0 +1,7 @@
+@startuml
+Webserver -> SearchResult : "Ctor"
+SearchResult -> Client  : "Search"
+Client -> SearchResult : "SerchReturn"
+Webserver -> SearchResult : "GetResult"
+SearchResult -> Webserver : "GetResult"
+@endumlx

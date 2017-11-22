@@ -1,0 +1,13 @@
+@startuml
+Webserver -> SearchResults.Ctor
+SearchResults.Ctor -> SearchResults.AddSearch
+SearchResults.AddSearch -> SearchResults.ResetResults
+SearchResults.AddSearch -> SearchResults.Search : [If not searched]
+SearchResults.Search -> Client.Search
+Client.Search -> SearchResults.OnSearchReturn
+SearchResults.OnSearchReturn -> AddSearchResults : [If searched]
+SearchResults.OnSearchReturn -> PrepareToRender : [If searched]
+SearchResults.OnSearchReturn -> GetToSearch : [If searched]
+SearchResults.OnSearchReturn -> SearchResults.Search : [While GetToSearch != null]
+
+@endumlx

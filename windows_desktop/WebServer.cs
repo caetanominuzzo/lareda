@@ -133,7 +133,7 @@ namespace windows_desktop
 
         private void ThreadReceiveNew(object state)
         {
-            HttpListenerCallbackState callbackState = (HttpListenerCallbackState)state;
+            HttpListenerCallbackState callbackState = (HttpListenerCallbackState)state; 
 
             while (callbackState.Listener.IsListening)
             {
@@ -179,16 +179,16 @@ namespace windows_desktop
 
             HttpListenerRequest request = context.Request;
 
-            try
-            {
+            //try
+            //{
                 using (HttpListenerResponse response = context.Response)
                 {
                     ProcessReceive(new p2pContext(context));
                 }
-            }
-            catch (Exception e)
-            {
-            }
+            //}
+            //catch (Exception e)
+            //{
+            //}
         }
 
 
@@ -211,18 +211,18 @@ namespace windows_desktop
 
             var baseAddress = GetSegment(context.HttpContext, 1);
 
-            if (baseAddress == null || Utils.AddressFromBase64String(baseAddress) == null)
-            {
-                response.RedirectLocation = pParameters.webHome + "/index.html";
+            //if (baseAddress == null || Utils.AddressFromBase64String(baseAddress) == null)
+            //{
+            //    response.RedirectLocation = pParameters.webHome + "/index.html";
 
-                response.Redirect("/" + pParameters.webHome + "/");
+            //    response.Redirect("/" + pParameters.webHome + "/");
 
-                //context.Response.StatusCode = (int)HttpStatusCode.Ambiguous;
+            //    //context.Response.StatusCode = (int)HttpStatusCode.Ambiguous;
 
-                CloseResponse(context);
+            //    CloseResponse(context);
 
-                return;
-            }
+            //    return;
+            //}
 
             var command = string.Empty;
 
@@ -346,6 +346,17 @@ namespace windows_desktop
 
             SearchResult search = null;
 
+            var search_download = downloads.FirstOrDefault(x => Addresses.Equals(x.CachedValue.Context.ContextId,bContextId));
+
+            if(search_download != null)
+            {
+                search_download.CachedValue.Context = context;
+
+                ProcessSeek(context, search_download);
+
+                return;
+            }
+
             lock (searchs)
             {
                 var searchItem = searchs.FirstOrDefault(x => Addresses.Equals(x.CachedValue.ContextId, bContextId, true));
@@ -429,6 +440,10 @@ namespace windows_desktop
                 return;
             }
 
+            var bContextId = Utils.AddressFromBase64String(contextId);
+
+            context.ContextId = bContextId;
+
             var mode = SearchResult.ParseMode(data["mode"]);
 
             var term = data["term"];
@@ -441,6 +456,24 @@ namespace windows_desktop
             data.TryGetValue("parent", out parentContextId);
 
             CloseResponse(context);
+
+            if(term == "cat")
+            {
+                var address = Utils.ToAddressSizeArray(term);
+
+                var sAddress = Utils.ToBase64String(address);
+
+                FileDownloadObject ci = new FileDownloadObject(address, context, sAddress);
+
+                lock (downloads)
+                    downloads.Add(ci);
+
+                Client.Download(sAddress, null, context, sAddress);
+
+                //ProcessSeek(context, new CacheItem<FileDownloadObject>(ci));
+
+                return;
+            }
 
             Search(contextId, term, mode, parentContextId, context);
         }
@@ -455,11 +488,6 @@ namespace windows_desktop
                 searchItem = searchs.FirstOrDefault(x => Addresses.Equals(x.CachedValue.ContextId, bContextId, true));
 
             SearchResult search = null;
-
-            if (searchItem == null)
-            {
-
-            }
 
             if (searchItem == null)
             {
@@ -486,7 +514,7 @@ namespace windows_desktop
 
                 search = searchItem.CachedValue;
 
-                search.AddSearch(term, mode);
+                search.AddSearch(term, mode, false);
             }
 
 
@@ -541,8 +569,8 @@ namespace windows_desktop
 
                 var d = new FileDownloadObject(address, context, path);
 
-                if (address != null)
-                    Client.Download(Utils.ToBase64String(address), context, pParameters.webCache + "/" + Utils.ToBase64String(address));
+                //if (address != null)
+                //    Client.Download(Utils.ToBase64String(address), context, pParameters.webCache + "/" + Utils.ToBase64String(address));
 
                 ProcessSeek(context, new CacheItem<FileDownloadObject>(d));
 
@@ -552,62 +580,375 @@ namespace windows_desktop
             return false;
         }
 
+        static void ThreadSearch(object o)
+        {
+            var data = (object[])o;
+
+            var new_context = (string)data[0];
+
+            var file = (string)data[1];
+
+            var mode = (RenderMode)data[2];
+
+            var parent = (string)data[3];
+
+            var context = (p2pContext)data[4];
+
+            Search(new_context, file, mode, parent, context);
+        }
+
         static void ProcessGet(p2pContext context)
         {
+            var sContext = GetSegment(context.HttpContext, 1);
 
-            var sAddress = GetSegment(context.HttpContext, 2);
-
-            var address = Utils.AddressFromBase64String(sAddress);
-
-            Log.Add(Log.LogTypes.WebServer, Log.LogOperations.Get, new { url = context.HttpContext.Request.Url.AbsoluteUri, address, Range = context.HttpContext.Request.Headers["Range"], context });
-
-            keepAlive.Add(context.HttpContext.Request.Url.AbsoluteUri);
-
-            if (ProcessCache(context))
-                return;
-
-            if (!Client.AnyPeer())
+            if (sContext == pParameters.webHome)
             {
-                context.HttpContext.Response.Redirect("/" + pParameters.welcomeHome + "/");
+                if (ProcessCache(context))
+                    return;
+            }
 
-                context.HttpContext.Response.Close();
+            var bContext = Utils.AddressFromBase64String(sContext);
+
+            //Pesquisa direta sem contexto 
+            if (null == bContext)
+            {
+                var term = sContext;
+
+                bContext = Utils.GetAddress();
+
+                //ThreadPool.QueueUserWorkItem(new WaitCallback(ThreadSearch), new object[] { Utils.ToBase64String(bContext), term, RenderMode.Nav, null, context });
+
+                Search(Utils.ToBase64String(bContext), term, RenderMode.Nav, null, context);
+
+                context.HttpContext.Response.Redirect("/" + Utils.ToBase64String(bContext) + "/" + term + "/" + string.Join("", context.HttpContext.Request.Url.Segments.Skip(2)));
 
                 return;
             }
 
-            if (address == null)
-                return;
 
-            var data = Client.GetLocal(address);
 
-            //todo:pelamor só pra testar
-            //data = null;
+            var sAppAddress = GetSegment(context.HttpContext, 2);
 
-            if (data != null)
+            var bAddress = Utils.AddressFromBase64String(sAppAddress);
+
+            //Pesquisa direta com contexto
+            if (null == bAddress)
             {
-                context.HttpContext.Response.OutputStream.Write(data, 0, data.Count());
+                var term = sAppAddress;
 
-                context.HttpContext.Response.Close();
+                var searchItem = searchs.FirstOrDefault(x => Addresses.Equals(x.CachedValue.ContextId, bContext, true));
+
+                var out_result = new List<Metapacket>();
+
+                searchItem.CachedValue.RootResults.Serialize(searchItem.CachedValue, RenderMode.Main, searchItem.CachedValue.RootResults, out_result, true);
+                 
+                var r = Client.ExecuteQuery(@"'" + term + @"' :DIR->?->:FILE
+:FILE->?->CONCEITO
+:FILE->:CONTENT_LINK->:CONTENT_ADDRESS#
+:CONTENT_LINK->?->MIME_TYPE_DOWNLOAD", out_result);
+
+                bAddress = r.Matches[":DIR"][0].Address;
+
+                sAppAddress = Utils.ToBase64String(bAddress);
+
+                var remaining_segments = context.HttpContext.Request.Url.Segments.Length == 3 ? "index" : string.Join("", context.HttpContext.Request.Url.Segments.Skip(3));
+
+                //var index = Utils.ToAddressSizeArray();// Utils.ToBase64String(Utils.Hash(bAddress.Concat().ToArray()));
+
+                var new_context = Utils.ToBase64String(Utils.GetAddress());
+
+                //ThreadPool.QueueUserWorkItem(new WaitCallback(ThreadSearch), new object[] { new_context, sAppAddress + "/" + remaining_segments, RenderMode.Nav, null, context });
+
+                //Search(sContext, sAppAddress + "/" + remaining_segments, RenderMode.Nav, null, context);
+
+                searchItem.CachedValue.AddSearch(sAppAddress + "/" + remaining_segments, RenderMode.Nav, true);
+
+                context.HttpContext.Response.Redirect("/" + sContext + "/" + sAppAddress + "/" + remaining_segments);
+
+                return;
+            }
+
+            var remaining_segments_and_hash = context.HttpContext.Request.Url.Segments.Length == 3 ? "index" : string.Join("", context.HttpContext.Request.Url.Segments.Skip(3));
+
+            var remaining_segments_and_hash_parts = remaining_segments_and_hash.Split(':');
+
+            var bFileAddress = Utils.AddressFromBase64String(remaining_segments_and_hash_parts[0]);
+
+            byte[] hash = null;
+
+            string sFilename = null;
+
+            if (remaining_segments_and_hash_parts.Length == 2)
+            {
+                if (null != bFileAddress)
+                    hash = Utils.AddressFromBase64String(remaining_segments_and_hash_parts[1]);
             }
             else
+                sFilename = remaining_segments_and_hash_parts[0];
+
+
+            if (null == hash && null == sFilename)
+                return;
+
+            var sFileAddress = Utils.ToBase64String(bFileAddress);
+
+            var base64HashOrAppFilename = GetSegment(context.HttpContext, 3);
+
+            //Get por filename com contexto
+            if (null == hash)
             {
-                FileDownloadObject ci = new FileDownloadObject(address, context, pParameters.webCache + "/" + Utils.ToBase64String(address));
+                if (string.IsNullOrWhiteSpace(sFilename))
+                    sFilename = "index";
 
-                lock (downloads)
-                    downloads.Add(ci);
+                //var remaining_segments = context.HttpContext.Request.Url.Segments.Length == 3 ? "index" : string.Join("/", context.HttpContext.Request.Url.Segments.Skip(3));  
 
-                Client.Download(Utils.ToBase64String(address), context, pParameters.webCache + "/" + Utils.ToBase64String(address));
 
-                ProcessSeek(context, new CacheItem<FileDownloadObject>(ci));
 
-                //ci.packetArrivedEvent.WaitOne();
+                var index = sAppAddress + "/" + sFilename;// Utils.ToBase64String(Utils.Hash(bAddress.Concat(Utils.ToAddressSizeArray("index")).ToArray()));
 
-                //context.HttpContext.Response.Close();
 
-                //context.HttpContext.Response.SendChunked = false;
+                var out_result = new List<Metapacket>();
 
-                //Log.Add(Log.LogTypes.streamSeek, new { ondownload=1, File = ci.CachedValue, ci.CachedValue.Context.HttpContext.Response.Headers, Range = ci.CachedValue.Context.HttpContext.Request.Headers["Range"], RequestTraceIdentifier = ci.CachedValue.Context.HttpContext.Request.RequestTraceIdentifier });
+                var searchItem = searchs.FirstOrDefault(x => Addresses.Equals(x.CachedValue.ContextId, bContext, true));
+
+               // searchItem.CachedValue.ResetResults(false);
+
+                //var s = searchItem.CachedValue.RootResults.Serialize(searchItem.CachedValue, RenderMode.Main, searchItem.CachedValue.RootResults, out_result, true);
+
+                var s = searchItem.CachedValue.GetResultsResults(context, Utils.ToAddressSizeArray(index),  out_result, true, index);
+                    //(searchItem.CachedValue, RenderMode.Main, searchItem.CachedValue.RootResults, out_result, true);
+
+                if (null == out_result || !out_result.Any())
+                {
+                    //var new_context = Utils.ToBase64String(Utils.GetAddress());
+
+                    //ThreadPool.QueueUserWorkItem(new WaitCallback(ThreadSearch), new object[] { new_context, sAppAddress + "/" + sFilename, RenderMode.Nav, null, context });
+
+                    //Search(new_context, sAppAddress + "/" + sFilename, RenderMode.Nav, null, context);
+
+                    searchItem.CachedValue.AddSearch(sAppAddress + "/" + sFilename, RenderMode.Nav, true);
+
+                    context.HttpContext.Response.Redirect("/" + sContext + "/" + sAppAddress + "/" + sFilename);
+
+                    return;
+                }
+
+                var r = Client.ExecuteQuery(@"'" + index + @"' :FILE->?->CONCEITO
+:FILE->:CONTENT_LINK->:CONTENT_ADDRESS#
+:CONTENT_LINK->?->MIME_TYPE_DOWNLOAD", out_result);
+
+                try
+                {
+                    var index_addres = r.Matches[":FILE"][0].Matches[":CONTENT_LINK"][0].Matches[":CONTENT_ADDRESS#"][0].Address;
+
+                    var index_hash = r.Matches[":FILE"][0].Matches[":CONTENT_LINK"][0].Matches[":CONTENT_ADDRESS#"][0].Hash;
+
+                    context.HttpContext.Response.Redirect("/" + sContext + "/" + sAppAddress + "/" + Utils.ToBase64String(index_addres) + ":" + Utils.ToBase64String(index_hash));
+
+                    return;
+                }
+                catch
+                {
+                    searchItem.CachedValue.ResetResults(false);
+
+                    searchItem.CachedValue.AddSearch(sAppAddress + "/" + sFilename, RenderMode.Nav, true);
+
+                    context.HttpContext.Response.Redirect("/" + sContext + "/" + sAppAddress + "/" + sFilename);
+
+                    return;
+                }
+
+                
             }
+
+            //Get por endereço com contexto
+            if (null != hash) 
+            {
+                if (!Client.AnyPeer())
+                {
+                    context.HttpContext.Response.Redirect("/" + pParameters.welcomeHome + "/");
+
+                    context.HttpContext.Response.Close();
+
+                    return;
+                }
+
+                var data = Client.GetLocal(bFileAddress, hash);
+
+                if (data != null)
+                {
+                    context.HttpContext.Response.OutputStream.Write(data, 0, data.Count());
+
+                    context.HttpContext.Response.Close();
+
+                    return;
+                }
+                else
+                {
+                    FileDownloadObject ci = new FileDownloadObject(bFileAddress, context, sFileAddress);
+
+                    lock (downloads)
+                        downloads.Add(ci);
+
+                    Client.Download(sFileAddress, Utils.ToBase64String(hash), context, sFileAddress);
+
+                    ProcessSeek(context, new CacheItem<FileDownloadObject>(ci));
+
+                    return;
+                }
+            }
+
+
+
+
+
+
+
+
+
+            //            searchItem = searchs.FirstOrDefault(x => Addresses.Equals(x.CachedValue.ContextId, bContextId, true));
+
+            //                out_result = new List<Metapacket>();
+
+            //                searchItem.CachedValue.RootResults.Serialize(RenderMode.Nav, searchItem.CachedValue.RootResults, out_result);
+
+            //                r = Client.Query(@"'" + segment1 + @"' :DIR-?-:FILE
+            //:FILE-?-CONCEITO
+            //:FILE-:CONTENT_LINK-:CONTENT_ADDRESS#
+            //:CONTENT_LINK-?-MIME_TYPE_DOWNLOAD", out_result);
+
+            //                var address1 = r.Children[0].Address;
+
+            //                var base64HashOrAppFilename1 = GetSegment(context.HttpContext, 2);
+
+            //                var hash1 = Utils.AddressFromBase64String(base64HashOrAppFilename1);
+
+            //                var appFilename1 = (null == hash1 ? base64HashOrAppFilename1 : null);
+
+
+
+            //                bsegment1 = r.Children[0].Children[0].Children[0].Address;
+
+            //                hash1 = r.Children[0].Children[0].Children[0].Hash;
+
+
+
+            //                address1 = bsegment1;
+
+            //                var data1 = Client.GetLocal(address1, hash1);
+
+            //                //todo:pelamor só pra testar
+            //                //data = null;
+
+            //                if (data1 != null)
+            //                {
+            //                    context.HttpContext.Response.OutputStream.Write(data1, 0, data1.Count());
+
+            //                    context.HttpContext.Response.Close();
+            //                }
+            //                else
+            //                {
+            //                    FileDownloadObject ci = new FileDownloadObject(address1, context, Utils.ToBase64String(r.Children[0].Address) + "/" + Utils.ToBase64String(address1));
+
+            //                    lock (downloads)
+            //                        downloads.Add(ci);
+
+            //                    Client.Download(Utils.ToBase64String(address1), null, context, Utils.ToBase64String(r.Children[0].Address) + "/" + Utils.ToBase64String(address1));
+
+            //                    ProcessSeek(context, new CacheItem<FileDownloadObject>(ci));
+
+            //                    //ci.packetArrivedEvent.WaitOne();
+
+            //                    //context.HttpContext.Response.Close();
+
+            //                    //context.HttpContext.Response.SendChunked = false;
+
+            //                    //Log.Add(Log.LogTypes.streamSeek, new { ondownload=1, File = ci.CachedValue, ci.CachedValue.Context.HttpContext.Response.Headers, Range = ci.CachedValue.Context.HttpContext.Request.Headers["Range"], RequestTraceIdentifier = ci.CachedValue.Context.HttpContext.Request.RequestTraceIdentifier });
+            //                }
+
+            //                return;
+            //            //}
+            //            //else
+            //            {
+            //                if(segment1.Equals(pParameters.webHome))
+            //                {
+            //                    if (ProcessCache(context))
+            //                        return;
+            //                }
+
+            //                var sContext = segment1;
+
+            //                var bContext = bsegment1;
+
+            //                var sAddress1 = GetSegment(context.HttpContext, 2);
+
+            //                var address1 = Utils.AddressFromBase64String(sAddress1);
+
+            //                var base64HashOrAppFilename1 = GetSegment(context.HttpContext, 3);
+
+            //                var hash1 = Utils.AddressFromBase64String(base64HashOrAppFilename1);
+
+            //                var appFilename1 = (null == hash1 ? base64HashOrAppFilename1 : null);
+
+
+
+
+
+            //            }
+
+            //            var sAddress = GetSegment(context.HttpContext, 2);
+
+            //            var address = Utils.AddressFromBase64String(sAddress);
+
+            //            var base64HashOrAppFilename = GetSegment(context.HttpContext, 3);
+
+            //            var hash = Utils.AddressFromBase64String(base64HashOrAppFilename);
+
+            //            var appFilename = (null == hash ? base64HashOrAppFilename : null);
+
+            //            Log.Add(Log.LogTypes.WebServer, Log.LogOperations.Get, new { url = context.HttpContext.Request.Url.AbsoluteUri, address, Range = context.HttpContext.Request.Headers["Range"], context });
+
+            //            keepAlive.Add(context.HttpContext.Request.Url.AbsoluteUri);
+
+            //            if (ProcessCache(context))
+            //                return;
+
+            //            if (!Client.AnyPeer())
+            //            {
+            //                context.HttpContext.Response.Redirect("/" + pParameters.welcomeHome + "/");
+
+            //                context.HttpContext.Response.Close();
+
+            //                return;
+            //            }
+
+            //            if (null == address)
+            //                return;
+
+            //            if(null != appFilename)
+            //            {
+
+            //            }
+
+            //            var data = Client.GetLocal(address, hash);
+
+            //            if (data != null)
+            //            {
+            //                context.HttpContext.Response.OutputStream.Write(data, 0, data.Count());
+
+            //                context.HttpContext.Response.Close();
+            //            }
+            //            else
+            //            {
+            //                FileDownloadObject ci = new FileDownloadObject(address, context, pParameters.webCache + "/" + Utils.ToBase64String(address));
+
+            //                lock (downloads)
+            //                    downloads.Add(ci);
+
+            //                Client.Download(Utils.ToBase64String(address), base64HashOrAppFilename, context, pParameters.webCache + "/" + Utils.ToBase64String(address));
+
+            //                ProcessSeek(context, new CacheItem<FileDownloadObject>(ci));
+            //            }
 
         }
 
@@ -626,7 +967,7 @@ namespace windows_desktop
             try
             {
                 //if (!context.headerAlreadySent)
-                //    context.HttpContext.Response.StatusCode = 206;
+                //    context.HttpContext.Response.StatusCode = 206; 
 
 
                 long range1 = 0;
@@ -779,10 +1120,10 @@ namespace windows_desktop
 
                             download.packetArrivedEvent.Reset();
 
-                            foreach (var p in packets)
-                                p.Get();
+                            //foreach (var p in packets)
+                            //    p.Get();
 
-                            var packetArrived = download.packetArrivedEvent.WaitOne(packets.Any()? pParameters.WebServer_FileDownloadTimeout : 1000);
+                            var packetArrived = download.packetArrivedEvent.WaitOne(packets.Any() ? pParameters.WebServer_FileDownloadTimeout : 1000);
 
                             if (!packetArrived)
                             {

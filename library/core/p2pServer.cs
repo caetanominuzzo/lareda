@@ -148,21 +148,27 @@ namespace library
 
                     var s = SocketTcpServer.Accept();
 
-                    var buffer = ReceiveAll(s);
+                    var buffer = ReceiveAll
+                        (s);
+
+                    if (null == buffer)
+                    {
+                        s.Close();
+
+                        continue;
+                    }
 
                     remoteEndPoint = (IPEndPoint)s.RemoteEndPoint;
 
                     var count = buffer.Length;
 
-                    //var buffer = new byte[count];
+                    //var buffer = new byte[count];      
 
                     //Buffer.BlockCopy(buffer1, 0, buffer, 0, count);
 
-                    s.Close();
-
                     Log.Add(Log.LogTypes.P2p, Log.LogOperations.Incoming, new { a = 1 });
 
-                    if (remoteEndPoint != null)
+                    if (remoteEndPoint != null && null != buffer && buffer.Length > 0)
                     {
                         var command = (RequestCommand)buffer[0];
 
@@ -184,23 +190,6 @@ namespace library
             SocketTcpServer.Close();
         }
 
-        public static byte[] ReceiveAll(Socket socket)
-        {
-            var buffer = new List<byte>();
-
-            while (socket.Available > 0)
-            {
-                var currByte = new Byte[1];
-                var byteCounter = socket.Receive(currByte, currByte.Length, SocketFlags.None);
-
-                if (byteCounter.Equals(1))
-                {
-                    buffer.Add(currByte[0]);
-                }
-            }
-
-            return buffer.ToArray();
-        }
 
         static void TcpThreadReceive()
         {
@@ -292,12 +281,97 @@ namespace library
 
             s.Connect(endPoint);
 
-            var i = s.Send(data);
+            //var i = s.Send(data);
+
+            var buffer_size = 1500;
+
+            var offset = 0;
+
+            var count = 0;
+
+            var ack = new byte[1];
+
+            while (offset < length)
+            {
+                buffer_size = Math.Min(buffer_size, length - offset);
+
+                count = s.Send(data, offset, buffer_size, SocketFlags.None);
+
+                s.Receive(ack);
+
+                offset += count;
+            }
 
             s.Close();
 
-            return i;
+            return count;
         }
+
+        public static byte[] ReceiveAll2(Socket socket)
+        {
+            var buffer = new List<byte>();
+
+            while (socket.Available > 0)
+            {
+                var currByte = new Byte[1];
+                var byteCounter = socket.Receive(currByte, currByte.Length, SocketFlags.None);
+
+                if (byteCounter.Equals(1))
+                {
+                    buffer.Add(currByte[0]);
+                }
+            }
+
+            return buffer.ToArray();
+        }
+
+        public static byte[] ReceiveAll(Socket socket)
+        {
+            var buffer = new byte[pParameters.packetSize + 63];
+
+            int buffer_offset = 0;
+
+            var count = 0;
+
+            var retry = 1;
+
+            var max_retry = 3;
+
+            try
+            {
+                while (true)
+                {
+                    count = socket.Receive(buffer, buffer_offset, Math.Min(1500, (pParameters.packetSize + 63) - buffer_offset), SocketFlags.None);
+
+                    socket.Send(new byte[1] { 1 });
+
+                    buffer_offset += count;
+
+                    if (socket.Available == 0)
+                    {
+                        if (retry++ > max_retry)
+                            break;
+
+                        Thread.Sleep(10);
+                    }
+
+                }
+            }
+            catch(Exception e)
+            {
+                Log.Add(Log.LogTypes.Application, Log.LogOperations.Exception, new { Exception = e.ToString() });
+            }
+
+            if (buffer_offset == pParameters.packetSize)
+                return buffer;
+
+            var result = new byte[buffer_offset];
+
+            Buffer.BlockCopy(buffer, 0, result, 0, buffer_offset);
+
+            return result;
+        }
+
 
         #endregion
     }

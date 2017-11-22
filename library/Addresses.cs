@@ -47,40 +47,132 @@ namespace library
         //    return result;
         //}
 
-        public static bool Equals(byte[] s1, byte[] s2, bool full = false)
+        public static bool Equals(byte[] s1, byte[] s2, bool full = false, bool forceFull = true)
         {
-            //Pointer comparision of addresses was an early optimization and caused non local searchs to return false.
-            //Keeping coding modifications but forcing to always compare the address content.
-            //This should be mitigated by replacing all address in incoming packets by its local conterpart, then this commit could be reverted.
-            full = true;
-
-            if (!full)
-                return s1 == s2;
-
             if (s1 == s2)
                 return true;
 
-          //  if (s1.Length != s2.Length)
-          //      return false;
+            //Pointer comparision of addresses was an early optimization and caused non local searchs to return false.
+            //Keeping coding modifications but forcing to always compare the address content.
+            //This should be mitigated by replacing all address in incoming packets by its local conterpart, then this commit could be reverted.
+            if (forceFull)
+                full = true;
+
+            if (!full)
+            {
+                //var equals = s1 == s2;
+
+                //if (!equals)
+                //{
+                //    var length2 = s1.Length;
+
+                //    var sube = true;
+                //    for (int i = 0; i < length2; i++)
+                //    {
+                //        if (s1[i] != s2[i])
+                //        {
+                //            sube = false;
+                //            break;
+                //        }
+                //    }
+
+                //    if (sube)
+                //    {
+
+                //    }
+                //}
+
+
+
+                return s1 == s2;
+            }
+                
+
+          
+
+            //if (s1.Length != s2.Length)
+            //    return false;  
 
 
             //var b =s1.SequenceEqual(s2);
- 
+
             //if(b)
             //    s1 = s2;
 
             //return b;
 
-          
-
             for (int i = 0; i < pParameters.addressSize; i++)
             {
-               if (s1[i] != s2[i])
+               if (s1[i] != s2[i])  
+                    return false; 
+
+            }
+
+            return true;
+        }
+
+        public static bool EqualsRef(byte[] s1, ref byte[] s2, bool full = false, bool forceFull = true)
+        {
+            //Pointer comparision of addresses was an early optimization and caused non local searchs to return false.
+            //Keeping coding modifications but forcing to always compare the address content.
+            //This should be mitigated by replacing all address in incoming packets by its local conterpart, then this commit could be reverted.
+            if (forceFull)
+                full = true;
+
+            if (!full)
+            {
+                //var equals = s1 == s2;
+
+                //if (!equals)
+                //{
+                //    var length2 = s1.Length;
+
+                //    var sube = true;
+                //    for (int i = 0; i < length2; i++)
+                //    {
+                //        if (s1[i] != s2[i])
+                //        {
+                //            sube = false;
+                //            break;
+                //        }
+                //    }
+
+                //    if (sube)
+                //    {
+
+                //    }
+                //}
+
+
+
+                return s1 == s2;
+            }
+
+
+            if (s1 == s2)
+                return true;
+
+            //if (s1.Length != s2.Length)
+            //    return false;
+
+
+            //var b =s1.SequenceEqual(s2);
+
+            //if(b)
+            //    s1 = s2;
+
+            //return b;
+
+            var length = s1.Length;
+
+            for (int i = 0; i < length; i++)
+            {
+                if (s1[i] != s2[i])
                     return false;
 
             }
 
-            s1 = s2;
+            s2 = s1;
 
             return true;
         }
@@ -102,10 +194,27 @@ namespace library
             return 0;
         }
 
-        internal static double EuclideanDistance(byte[] x, byte[] y)
+        internal static double KadDistance(byte[] x, byte[] y)
+        {
+            if (x == null || y == null || x.Length != y.Length || y.Length != pParameters.addressSize)
+                return 514;
+
+            double sum = 0;
+
+            for (var i = 0; i < 32; i++)
+            {
+                if (x[i] != y[i])
+                    sum += Math.Pow(2, 32 - (i + 1));
+
+            }
+
+            return sum;
+        }
+
+        public static double EuclideanDistance(byte[] x, byte[] y)
         {
             if (x==null || y == null || x.Length != y.Length || y.Length != pParameters.addressSize)
-                return 514;
+                return pParameters.MaxDistance;
 
             double sum = 0;
 
@@ -118,7 +227,7 @@ namespace library
 
             sum = Math.Sqrt(sum);
 
-            return sum;
+            return sum / pParameters.MaxDistance;
         }
 
         internal static double Distance(byte[] s1, byte[] s2)
@@ -180,15 +289,17 @@ namespace library
 
             var data2 = data.ToArray();
 
-            while (offset * pParameters.addressSize < count)
+            var addressSize = pParameters.addressSize + pParameters.hashSize;
+
+            while (offset * addressSize < count)
             {
                 //buffer = data.Skip(offset * pParameters.addressSize).
                 //    Take(pParameters.addressSize).
                 //    ToArray();
 
-                var buffer = new byte[pParameters.addressSize];
+                var buffer = new byte[addressSize];
 
-                Buffer.BlockCopy(data2, offset * pParameters.addressSize, buffer, 0, pParameters.addressSize);
+                Buffer.BlockCopy(data2, offset * addressSize, buffer, 0, addressSize);
 
 
                 offset++;

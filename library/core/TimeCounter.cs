@@ -61,13 +61,14 @@ namespace library
                 _lastPeriod = Data.Where(x => now.Subtract(x.DateTime).TotalSeconds < Period)
                     .Sum(x => x.Value);
 
-
                 if (Data.Any())
                 {
+                    var lastAvg = TotalLastTimeout / Data.Count();
+
                     if (double.IsInfinity(Timeout))
                         _average = TotalLastTimeout / Data.Count();
                     else
-                        _average = (TotalLastTimeout / (Timeout / Period)) / Data.Count();
+                        _average = _average + (lastAvg - _average) / ((Timeout / Period) + 1);// (TotalLastTimeout / (Timeout / Period)) / Data.Count();
                 }
             }
         }

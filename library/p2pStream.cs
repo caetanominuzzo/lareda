@@ -88,7 +88,7 @@ namespace library
 
             packets = null;
 
-            if (P2pFile != null)
+            if (P2pFile != null) 
                 return P2pFile.TryReadFromPackets(buffer, offset, count, out packets);
 
             if (offset == length)

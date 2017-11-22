@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -16,15 +17,21 @@ namespace library
 
         internal byte[] Address = new byte[pParameters.addressSize];
 
+        internal long Id;
+
         internal byte[] Hash = null;
 
         internal Metapacket Src = null;
 
-        internal List<DIV> Children = new List<DIV>();
+        internal Dictionary<long, DIV> Children = new Dictionary<long, DIV>();
 
-        internal List<DIV> Parents = new List<DIV>();
+        internal Dictionary<long, DIV> ChildrenAddedSinceLastInvalidation = new Dictionary<long, DIV>();
+
+        internal Dictionary<long, DIV> Parents = new Dictionary<long, DIV>();
 
         internal double Weight = 1;
+
+        internal double NewWeight = 1;
 
         internal double RelativeWeight = 1;
 
@@ -52,24 +59,38 @@ namespace library
 
         internal bool IsReseted = false;
 
-        SearchResult Result;
+        int itemCount = 0;
 
-        internal DIV(SearchResult result)
+
+
+        SearchResult Result { get; set; }
+
+        internal DIV(SearchResult result, byte[] address = null)
         {
             Result = result;
+
+            if (null == address)
+                return;
+
+            this.Address = address;
+
+            this.Id = BitConverter.ToInt64(address, 0);
         }
 
-        internal Dictionary<byte[], int> Distances = new Dictionary<byte[], int>(new ByteArrayComparer());
-
+        internal Dictionary<long, int> Distances = new Dictionary<long, int>();
 
         internal double UncollapsedWeight(DIV parent)
         {
             if (Src == null)
                 return Weight;
 
-            var target = Find(this.Children, Src.TargetAddress);
+            DIV target = null;
 
-            var link = Find(this.Children, Src.LinkAddress);
+            this.Children.TryGetValue(Src.IdTargetAddress, out target);
+
+            DIV link = null;
+
+            this.Children.TryGetValue(Src.IdLinkAddress, out link);
 
             if (target == parent)
                 return link.Weight;
@@ -80,154 +101,109 @@ namespace library
             return Weight;
         }
 
-        internal double CollapsedWeight(DIV parent)
+        internal double CollapsedWeight(SearchResult searchResult, DIV parent)
         {
-            //if (Distances[(int)DIV.DISTANCE_MARKERS.Concept] == 0 && Distances[(int)DIV.DISTANCE_MARKERS.Content] == 0)
-            //    return Weight;
-            //else
-            {
-                if (Src == null)
-                    return Weight;
-
-                var target = Find(this.Children, Src.TargetAddress);
-
-                var link = Find(this.Children, Src.LinkAddress);
-
-                if (target == parent)
-                    return link == null ? Weight : link.Weight;
-
-                if (link == parent)
-                    return target == null ? Weight : target.Weight;
-
+            if (Src == null)
                 return Weight;
 
-                //if (Children.Any())
-                //    return Children.Max(x => x.Weight);
+            DIV target = null;
 
-                //return Weight;
+            this.Children.TryGetValue(Src.IdTargetAddress, out target);
 
-                var ttt = getChildren(parentCount: 1, not: parent);
+            DIV link = null;
 
-                return ttt.Any() ? ttt.First().Weight : Weight;
-                //return Children.Any() ? Children.Max(x => x.Weight) : Weight;
-            }
+            this.Children.TryGetValue(Src.IdLinkAddress, out link);
+
+            //todo:9:Dont tryGetm just compare the Ids
+            if (target == parent)
+                return link == null ? Weight : link.Weight;
+
+            if (link == parent)
+                return target == null ? Weight : target.Weight;
+
+            return Weight;
         }
 
-
-
-
-        internal static DIV Find(List<DIV> RootResults, byte[] address)
+        internal static DIV Find(Dictionary<long, DIV> RootResults, long id)
         {
-            foreach (var c in RootResults)
-                if (Addresses.Equals(c.Address, address))
-                    return c;
+            DIV result = null;
 
-            return null;
-        }
-
-        IEnumerable<DIV> FindAll(byte[] address, Queue<byte[]> parents = null)
-        {
-            //Log.Write("..." + Utils.ToBase64String(address));
-
-            List<DIV> result = new List<DIV>();
-
-            if (parents == null)
-                parents = new Queue<byte[]>();
-
-            //
-            if (parents.Count() < 2 && !parents.Any(x => Addresses.Equals(x, this.Address)))
-            {
-
-                if (Addresses.Equals(this.Address, address))
-                    result.Add(this);
-
-                else
-                {
-                    parents.Enqueue(this.Address);
-
-                    lock (SearchResult.LockRootResults)
-                        foreach (var child in Children)
-                        {
-                            result.AddRange(child.FindAll(address, parents));
-
-                            //if (result != null)
-                            //{
-                            //    foreach (var r in result)
-                            //        yield return r;
-                            //}
-                        }
-
-                    parents.Dequeue();
-                }
-
-            }
+            RootResults.TryGetValue(id, out result);
 
             return result;
         }
 
-        bool FindAny(byte[] address)
-        {
-            if (Addresses.Equals(this.Address, address))
-                return true;
+        //IEnumerable<DIV> FindAll(SearchResult searchResult, long id, Queue<long> parents = null)
+        //{
+        //    //Log.Write("..." + Utils.ToBase64String(address));
 
-            lock (SearchResult.LockRootResults)
-                foreach (var child in Children)
-                {
-                    if (child.FindAny(address))
-                        return true;
-                }
+        //    List<DIV> result = new List<DIV>();
 
-            return false;
-        }
+        //    if (parents == null)
+        //        parents = new Queue<long>();
+
+        //    //
+        //    if (parents.Count() < 2 && !parents.Contains(id))
+        //    {
+
+        //        if (Addresses.Equals(this.Address, address))
+        //            result.Add(this);
+
+        //        else
+        //        {
+        //            parents.Enqueue(this.Address);
+
+        //            lock (searchResult.LockRootResults)
+        //                foreach (var child in Children)
+        //                {
+        //                    result.AddRange(child.FindAll(searchResult, address, parents));
+
+        //                    //if (result != null)
+        //                    //{
+        //                    //    foreach (var r in result)
+        //                    //        yield return r;
+        //                    //}
+        //                }
+
+        //            parents.Dequeue();
+        //        }
+
+        //    }
+
+        //    return result;
+        //}
+
+        //bool FindAny(SearchResult searchResult, byte[] address)
+        //{
+        //    if (Addresses.Equals(this.Address, address))
+        //        return true;
+
+        //    lock (searchResult.LockRootResults)
+        //        foreach (var child in Children)
+        //        {
+        //            if (child.FindAny(searchResult, address))
+        //                return true;
+        //        }
+
+        //    return false;
+        //}
 
         public string ToString()
         {
             return Utils.ToSimpleAddress(Utils.ToSimpleName(Address));
         }
-
-        public string Print(List<DIV> done = null)
-        {
-            if (done == null)
-                done = new List<DIV>();
-            else if (done.Any(x => Addresses.Equals(x.Address, Address)))
-                return string.Empty;
-
-            done.Add(this);
-
-            var result = Utils.ToSimpleAddress(Address) + ";\r\n";
-
-            if (result[0] == ';')
-            {
-
-            }
-
-            foreach (var c in Children)
-            {
-                result += (Utils.ToSimpleAddress(Address) + " -> " + Utils.ToSimpleAddress(c.Address) + ";\r\n");
-
-                var s = c.Print(done);
-
-                if (!string.IsNullOrEmpty(s))
-                {
-                    result += s;
-                }
-            }
-
-            return result;
-
-        }
-
-        int itemCount = 0;
+        
 
         public void ResetItemCount()
-        {
+        { 
             itemCount = 0;
         }
 
-        public string Serialize(RenderMode mode, DIV parent, int parentCount = 0, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
+        public string Serialize(SearchResult searchResult, RenderMode mode, DIV parent, List<Metapacket> out_result, bool justHierarchy, int parentCount = 0, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
         {
             if (this.ToString() == "408")
             { }
+
 
             if (IsRendered)
                 return string.Empty;
@@ -252,10 +228,13 @@ namespace library
 
 
             IsRendered = true;
+            out_result.Add(this.Src);
 
-            if (SearchResult.GetDeepDistance(this, VirtualAttributes.CONCEITO) == 0 &&
-                SearchResult.GetDeepDistance(this, VirtualAttributes.CONTEUDO) == 0)
+            if (SearchResult.GetDeepDistance(this, VirtualAttributes.Id_CONCEITO) == 0 &&
+                SearchResult.GetDeepDistance(this, VirtualAttributes.Id_CONTEUDO) == 0)
             {
+
+
                 if (childrenFilter == GettingChildrenFilter.Inferior)
                     parentCount++;
 
@@ -270,7 +249,7 @@ namespace library
 
                 //var root_type = SearchResult.ClosestMarker(this, VirtualAttributes.ROOT_TYPE);
 
-                var root_type = SearchResult.ClosestMarker(this, VirtualAttributes.ROOT_TYPE);
+                var root_type = SearchResult.ClosestMarker(searchResult, this, VirtualAttributes.Id_ROOT_TYPE);
 
                 var root_stype = "post";
 
@@ -290,13 +269,13 @@ namespace library
 
                 var root = "\"root\": \"" + root_stype + "\"";
 
-                var m_order = SearchResult.ClosestMarker(this, VirtualAttributes.ORDER);
+                var m_order = justHierarchy ? null : SearchResult.ClosestMarker(searchResult, this, VirtualAttributes.Id_ORDER);
 
                 var order = string.Empty;
 
                 if (m_order != null)
                 {
-                    var s_order = SearchResult.FirstContent(m_order, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
+                    var s_order = SearchResult.FirstContent(searchResult, m_order, VirtualAttributes.Id_MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
                     order = "\"order\": \"" + s_order + "\"";
                 }
@@ -329,7 +308,7 @@ namespace library
 
                 var pic = string.Empty;
 
-                var picAddress = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_IMAGE_THUMB, Result.Context);
+                var picAddress = justHierarchy ? null : SearchResult.FirstContent(searchResult, this, VirtualAttributes.Id_MIME_TYPE_IMAGE_THUMB, Result.Context);
 
                 var videoStream = string.Empty;
 
@@ -347,34 +326,42 @@ namespace library
                 if (this.ToString() == "419" || this.ToString() == "390")
                 { }
 
-                if (mode == RenderMode.Nav && parentCount <= 1)  
+                if (mode == RenderMode.Nav && parentCount <= 3)
                 {
-                    var videoDiv = SearchResult.ClosestMarker(this, VirtualAttributes.MIME_TYPE_VIDEO_STREAM);
+                    var videoResult = Query.Execute("[" + this.Src.Base64TargetAddress + @"]->:LINK->:STREAM
+:LINK->?->MIME_TYPE_VIDEO_STREAM");
 
-                    var videoStreamAddres = videoDiv == null ? string.Empty : Utils.ToBase64String(videoDiv.Address);
+                    var videoDiv = SearchResult.ClosestMarker(searchResult, this, VirtualAttributes.Id_MIME_TYPE_VIDEO_STREAM);
 
-                    videoStream = "\"video\": \"" + videoStreamAddres + "\"";
+                    var videoStreamAddres = !videoResult.Valid? string.Empty : Utils.ToBase64String(searchResult.ContextId) + "/" + Utils.ToBase64String(videoResult.Matches[":LINK"][0].Matches[":STREAM"][0].Address) + ":" + Utils.ToBase64String(videoResult.Matches[":LINK"][0].Matches[":STREAM"][0].Hash);
 
-                    //if (picAddress.Length == 0 && videoStreamAddres.Length == 0 && firstauthor != null)
-                    //    picAddress = SearchResult.FirstContent(firstauthor, VirtualAttributes.MIME_TYPE_IMAGE_THUMB, Result.Context);
-
-                    pic = "\"pic\": \"" + picAddress + "\"";
+                    videoStream = "\"video\": \"" +  videoStreamAddres + "\"";
 
                     audioStream = string.Empty;
 
-                    var audioStreamAddres = SearchResult.FirstContent(videoDiv == null ? this : videoDiv, VirtualAttributes.MIME_TYPE_AUDIO_STREAM, Result.Context);
+                    var audioResult = Query.Execute("[" + (videoResult.Valid? Utils.ToBase64String(videoResult.Matches[":LINK"][0].Matches[":STREAM"][0].Address) : this.Src.Base64TargetAddress) + @"]->:LINK->:STREAM
+:LINK->?->MIME_TYPE_AUDIO_STREAM");
+
+                    var audioStreamResultAddres = !audioResult.Valid ? string.Empty : Utils.ToBase64String(searchResult.ContextId) + "/" + Utils.ToBase64String(audioResult.Matches[":LINK"][0].Matches[":STREAM"][0].Address) + ":" + Utils.ToBase64String(audioResult.Matches[":LINK"][0].Matches[":STREAM"][0].Hash); 
+
+                    var audioStreamAddres = SearchResult.FirstContent(searchResult, videoDiv == null ? this : videoDiv, VirtualAttributes.Id_MIME_TYPE_AUDIO_STREAM, Result.Context);
 
                     audioStream = "\"audio\": \"" + audioStreamAddres + "\"";
 
                     subtitleStream = string.Empty;
 
-                    var subtitleStreamAddres = SearchResult.FirstContent(videoDiv == null ? this : videoDiv, VirtualAttributes.MIME_TYPE_TEXT_STREAM, Result.Context);
+                    var subtitleStreamAddres = SearchResult.FirstContent(searchResult, videoDiv == null ? this : videoDiv, VirtualAttributes.Id_MIME_TYPE_TEXT_STREAM, Result.Context);
+
+                    var subtitlesResult = Query.Execute("[" + (videoResult.Valid? Utils.ToBase64String(videoResult.Matches[":LINK"][0].Matches[":STREAM"][0].Address) : this.Src.Base64TargetAddress) + @"]->:LINK->:STREAM
+:LINK->?->MIME_TYPE_TEXT_STREAM");
+
+                    var subtitlesStreamResultAddres = !subtitlesResult.Valid ? string.Empty : Utils.ToBase64String(searchResult.ContextId) + "/" + Utils.ToBase64String(subtitlesResult.Matches[":LINK"][0].Matches[":STREAM"][0].Address) + ":" + Utils.ToBase64String(subtitlesResult.Matches[":LINK"][0].Matches[":STREAM"][0].Hash);
 
                     subtitleStream = "\"subtitle\": \"" + subtitleStreamAddres + "\"";
 
-                    subtitleStreamList = string.Format("\"subtitles\": [{0}]", SerializeChildren(videoDiv, VirtualAttributes.MIME_TYPE_TEXT_STREAM));
+                    //subtitleStreamList = string.Format("\"subtitles\": [{0}]", SerializeChildren(searchResult, videoDiv, VirtualAttributes.Id_MIME_TYPE_TEXT_STREAM, justHierarchy));
 
-                    audioStreamList = string.Format("\"audios\": [{0}]", SerializeChildren(videoDiv, VirtualAttributes.MIME_TYPE_AUDIO_STREAM));
+                    //audioStreamList = string.Format("\"audios\": [{0}]", SerializeChildren(searchResult, videoDiv, VirtualAttributes.Id_MIME_TYPE_AUDIO_STREAM, justHierarchy));
 
                     #endregion
 
@@ -382,17 +369,17 @@ namespace library
 
                     download = string.Empty;
 
-                    var downloadAddress = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_DOWNLOAD, Result.Context);
+                    var downloadAddress = SearchResult.FirstContent(searchResult, this, VirtualAttributes.Id_MIME_TYPE_DOWNLOAD, Result.Context);
 
                     download = "\"download\": \"" + downloadAddress + "\"";
 
                 }
 
-                var text = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_TEXT, Result.Context, true);
+                var text = justHierarchy ? null : SearchResult.FirstContent(searchResult, this, VirtualAttributes.Id_MIME_TYPE_TEXT, Result.Context, true);
 
                 text = "\"text\": \"" + text + "\"";
 
-                var thumb_text = SearchResult.FirstContent(this, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
+                var thumb_text = justHierarchy ? null : SearchResult.FirstContent(searchResult, this, VirtualAttributes.Id_MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
                 thumb_text = "\"thumb_text\": \"" + thumb_text + "\"";
 
@@ -403,7 +390,7 @@ namespace library
 
                 var average = "\"average\": \"" + this.AverageChildrenWeight.ToString("n2") + "\"";
 
-                var collapsed = "\"collapsed\": \"" + CollapsedWeight(this).ToString("n2") + "\"";
+                var collapsed = "\"collapsed\": \"" + CollapsedWeight(searchResult, this).ToString("n2") + "\"";
 
                 itemCount++;
 
@@ -417,7 +404,7 @@ namespace library
 
                 if (childrenFilter == GettingChildrenFilter.Inferior)
                 {
-                    var inferiorChildrenList = SerializeChildren(mode,this, parentCount, true, GettingChildrenFilter.Inferior);
+                    var inferiorChildrenList = SerializeChildren(searchResult, mode, this, out_result, justHierarchy, parentCount, true, GettingChildrenFilter.Inferior);
 
                     if (inferiorChildrenList.Any())
                         inferiorChildren = string.Format("\"children\": [{0}]", string.Join(", ", inferiorChildrenList));
@@ -425,7 +412,7 @@ namespace library
 
                 if (this.Index)
                 {
-                    var superiorChildrenList = SerializeChildren(mode, this, parentCount, true, GettingChildrenFilter.Superior);
+                    var superiorChildrenList = SerializeChildren(searchResult, mode, this, out_result, justHierarchy, parentCount, true, GettingChildrenFilter.Superior);
 
                     if (superiorChildrenList.Any())
                         superiorChildren = string.Format("\"superiorchildren\": [{0}]", string.Join(", ", superiorChildrenList));
@@ -452,7 +439,7 @@ namespace library
             {
                 if (true)
                 {
-                    var inferiorChildrenList = SerializeChildren(mode, parent, parentCount, false, childrenFilter);
+                    var inferiorChildrenList = SerializeChildren(searchResult, mode, parent, out_result, justHierarchy, parentCount, false, childrenFilter);
 
                     if (inferiorChildrenList.Any())
                         return string.Join(", ", inferiorChildrenList);
@@ -462,9 +449,9 @@ namespace library
 
         }
 
-        private string SerializeChildren(DIV item, byte[] marker)
+        private string SerializeChildren(SearchResult searchResult, DIV item, long marker, bool justHierarchy)
         {
-            var DIVSubtitles = SearchResult.ClosestMarkerList(item == null ? this : item, marker);
+            var DIVSubtitles = SearchResult.ClosestMarkerList(searchResult, item == null ? this : item, marker);
 
             var legendaResultAddress = new List<string>();
 
@@ -477,17 +464,19 @@ namespace library
 
 
 
-                if (validChildren != null)
+                if (null != validChildren)
                 {
-                    var xxx = SearchResult.FirstContent(validChildren, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
+                    var xxx = SearchResult.FirstContent(searchResult, validChildren, VirtualAttributes.Id_MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
-                    var linkDoValidChildren = DIV.Find(validChildren.Children, validChildren.Src.LinkAddress);
+                    DIV linkDoValidChildren = null;
 
-                    if (linkDoValidChildren != null)
+                    validChildren.Children.TryGetValue(validChildren.Src.IdLinkAddress, out linkDoValidChildren);
+
+                    if (null != linkDoValidChildren)
                     {
-                        var xx = SearchResult.FirstContent(linkDoValidChildren, VirtualAttributes.MIME_TYPE_TEXT_THUMB, Result.Context, true);
+                        var xx = SearchResult.FirstContent(searchResult, linkDoValidChildren, VirtualAttributes.Id_MIME_TYPE_TEXT_THUMB, Result.Context, true);
 
-                        legendaResultAddress.Add(string.Format("{{\"thumb_text\": \"{0}\", \"address\": \"{1}\"}}", xx, Utils.ToBase64String(DIVSubtitle.Address)));
+                        legendaResultAddress.Add(string.Format("{{\"thumb_text\": \"{0}\", \"address\": \"{1}:{2}\"}}", xx, Utils.ToBase64String(DIVSubtitle.Address), Utils.ToBase64String(DIVSubtitle.Src.Hash)));
                     }
                 }
             }
@@ -499,32 +488,39 @@ namespace library
         //Properties are any children which are not from the main metapacket
         private static IEnumerable<DIV> DivPropertiesList(DIV legenda)
         {
-            var linkDaLegenda = DIV.Find(legenda.Children, legenda.Src.LinkAddress);
+            DIV linkDaLegenda = null;
 
-            var targetDaLegenda = DIV.Find(legenda.Children, legenda.Src.TargetAddress);
+            legenda.Children.TryGetValue(legenda.Src.IdLinkAddress, out linkDaLegenda);
 
-            var addressDaLegenda = DIV.Find(legenda.Children, legenda.Src.Address);
+            DIV targetDaLegenda = null;
 
-            foreach (var filhoDoLinkDaLegenda in legenda.Children)
+            legenda.Children.TryGetValue(legenda.Src.IdTargetAddress, out targetDaLegenda);
+
+            DIV addressDaLegenda = null;
+
+            legenda.Children.TryGetValue(legenda.Src.IdAddress, out addressDaLegenda);
+
+
+            foreach (var filhoDoLinkDaLegenda in legenda.Children.Keys)
             {
-                if (filhoDoLinkDaLegenda == linkDaLegenda || filhoDoLinkDaLegenda == legenda || filhoDoLinkDaLegenda == addressDaLegenda)
+                if (filhoDoLinkDaLegenda == linkDaLegenda.Id || filhoDoLinkDaLegenda == legenda.Id || filhoDoLinkDaLegenda == addressDaLegenda.Id)
                     continue;
 
-                yield return filhoDoLinkDaLegenda;
+                yield return legenda.Children[filhoDoLinkDaLegenda];
 
                 break;
             }
         }
 
-        private string[] SerializeChildren(RenderMode mode, DIV parent, int parentCount, bool onChildren, GettingChildrenFilter childrenFilter)
+        private string[] SerializeChildren(SearchResult searchResult, RenderMode mode, DIV parent, List<Metapacket> out_result, bool justHierarchy, int parentCount, bool onChildren, GettingChildrenFilter childrenFilter)
         {
-            var ttt = getChildren(parentCount, onChildren, childrenFilter: childrenFilter);
+            var ttt = getChildren(searchResult, parentCount, onChildren, childrenFilter: childrenFilter);
 
             List<string> ar = new List<string>();
 
             foreach (var tttt in ttt)
             {
-                var ssss = tttt.Serialize(mode, parent, parentCount, childrenFilter);
+                var ssss = tttt.Serialize(searchResult, mode, parent, out_result, justHierarchy, parentCount, childrenFilter);
 
                 if (!string.IsNullOrEmpty(ssss))
                     ar.Add(ssss);
@@ -539,52 +535,52 @@ namespace library
             Inferior
         }
 
-        internal IEnumerable<DIV> getChildren(int parentCount = 0, bool onChildrens = false, DIV not = null, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
+        internal IEnumerable<DIV> getChildren(SearchResult searchResult, int parentCount = 0, bool onChildrens = false, DIV not = null, GettingChildrenFilter childrenFilter = GettingChildrenFilter.Inferior)
         {
             int maxWideness = 20;
 
-            lock (SearchResult.LockRootResults)
+            lock (searchResult.LockRootResults)
             {
 
                 var result = Children.Where(
                     x =>
                         (!onChildrens || (childrenFilter == GettingChildrenFilter.Superior ?
 
-                            x.CollapsedWeight(x) > this.Weight :
-                            x.CollapsedWeight(x) <= this.Weight
+                            x.Value.CollapsedWeight(searchResult, x.Value) > this.Weight :
+                            x.Value.CollapsedWeight(searchResult, x.Value) <= this.Weight
 
                             )) &&
 
-                        !x.IsRendered &&
+                        !x.Value.IsRendered &&
                         //(parentCount != 0 || x.Index) &&
-                        not != x
+                        not != x.Value
                         //&& SearchResult.GetDeepDistance(x, VirtualAttributes.MIME_TYPE_DIRECTORY) != 0
                         ).
 
                     OrderByDescending(
 
                         x =>
-                            SearchResult.GetDeepDistance(x, VirtualAttributes.CONCEITO) == 0 &&
-                            SearchResult.GetDeepDistance(x, VirtualAttributes.CONTEUDO) == 0
+                            SearchResult.GetDeepDistance(x.Value, VirtualAttributes.Id_CONCEITO) == 0 &&
+                            SearchResult.GetDeepDistance(x.Value, VirtualAttributes.Id_CONTEUDO) == 0
                         ).
 
                     ThenByDescending(
 
                     x =>
-                        LogAndReturnWeight(x)).  // Weight // .Children.Average(z => z.Weight)
+                        LogAndReturnWeight(searchResult, x.Value)).  // Weight // .Children.Average(z => z.Weight)
 
-                    Take(maxWideness);
+                    Take(maxWideness).Select(x => x.Value);
 
                 return result;
             }
         }
 
-        double LogAndReturnWeight(DIV item)
+        double LogAndReturnWeight(SearchResult searchResult, DIV item)
         {
             var w =
-                SearchResult.GetDeepDistance(item, VirtualAttributes.CONCEITO) == 0 &&
-                SearchResult.GetDeepDistance(item, VirtualAttributes.CONTEUDO) == 0 ?
-                item.CollapsedWeight(this) : item.AverageChildrenWeight;
+                SearchResult.GetDeepDistance(item, VirtualAttributes.Id_CONCEITO) == 0 &&
+                SearchResult.GetDeepDistance(item, VirtualAttributes.Id_CONTEUDO) == 0 ?
+                item.CollapsedWeight(searchResult, this) : item.AverageChildrenWeight;
 
             //Log.Write(item.ToString() + "\t" + w.ToString(), 1);
 

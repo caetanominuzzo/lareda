@@ -18,13 +18,23 @@ namespace library
 
         internal static event PacketArrivedHandler OnPacketArrived;
 
+        internal delegate void PacketValidationErrordHandler(byte[] address);
+
+        internal static event PacketValidationErrordHandler OnPacketValidatorError;
+
         internal static ManualResetEvent localPacketEvent = new ManualResetEvent(true);
+
+        internal static ManualResetEvent aboveMaxPacketsEvent = new ManualResetEvent(false);
 
         static List<byte[]> packets = new List<byte[]>();
 
         internal static TimeCounter LocalAddressDistance = new TimeCounter(10, 100);
 
         internal static TimeCounter LastAccess = new TimeCounter(10, 100);
+
+        static double probabilityByMaxPackets = 0;
+
+        static int totalAtFillQueue = 0;
 
         static void Load()
         {
@@ -126,22 +136,14 @@ namespace library
                 }
             }
         }
-
-        static void Remove(byte[] address)
-        {
-            lock (packets)
-                packets.Remove(address);
-
-            string path = Path.Combine(pParameters.localPacketsDir, Utils.ToBase64String(address));
-
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-
+        
         static void AddAddress(byte[] address)
         {
             lock (packets)
                 packets.Add(address);
+
+            if (packets.Count() > pParameters.PacketsMaxItems * (1 + (pParameters.MinPacketsMaintenanceQueueSize) / 100d))
+                aboveMaxPacketsEvent.Set();
 
             localPacketEvent.Set();
         }
@@ -150,12 +152,12 @@ namespace library
         {
             if (!peer.Equals(Client.LocalPeer))
             {
-                byte[] actual = Exists(address);
+                if (!VerifyIntegrity(address, data, peer))
+                {
+                    OnPacketValidatorError?.Invoke(address);
 
-                VerifyIntegrity(address, actual, data, peer);
-
-                if (actual != null)
                     return;
+                }
             }
 
             DelayedWrite.Add(Path.Combine(pParameters.localPacketsDir, Utils.ToBase64String(address)), data);
@@ -170,6 +172,10 @@ namespace library
             }
 
             OnPacketArrived?.Invoke(address, data);
+
+            LocalAddressDistance.Add(Addresses.EuclideanDistance(Client.LocalPeer.Address, address));
+
+            LastAccess.Add(0);
         }
 
         internal static byte[] Get(byte[] address, string debug_filename = "")
@@ -207,9 +213,18 @@ namespace library
             return null;
         }
 
-        static void VerifyIntegrity(byte[] address, byte[] actual, byte[] data, Peer peer)
+        static bool VerifyIntegrity(byte[] address, byte[] data, Peer peer)
         {
-            //todo: 
+            var hash = Utils.ComputeHash(data, pParameters.packetHeaderSize, data.Length - pParameters.packetHeaderSize);
+
+            var internal_hash = data.Skip(5).Take(pParameters.hashSize).ToArray();
+
+            var result = Addresses.Equals(hash, internal_hash, true);
+
+            Log.Add(Log.LogTypes.File, Log.LogOperations.Hash, new { Address = address, Result = result, Length = data.Length });
+
+
+            return result;
         }
 
         #region Thread Refresh
@@ -220,12 +235,14 @@ namespace library
 
             Thread thread = new Thread(Refresh);
 
-            // thread.Start();
+            thread.Start();
         }
 
         internal static void Stop()
         {
             localPacketEvent.Set();
+
+            aboveMaxPacketsEvent.Set();
 
             Client.Stats.belowMinSentEvent.Set();
 
@@ -261,39 +278,75 @@ namespace library
                 if (Client.Stop)
                     break;
 
-                var total = packets.Count();
 
-                //Probability by total packets
-                var pT = (total - pParameters.PacketsMaxItems) / total;
 
-                var avgDistance = LocalAddressDistance.Average;
 
                 //Probability by address distance to Local address
-                var pL = Math.Log(Addresses.EuclideanDistance(Client.LocalPeer.Address, address), avgDistance);
+                var probabilityByAddressDistance = Math.Log(Addresses.EuclideanDistance(Client.LocalPeer.Address, address) * 100, Peers.TopAverageDistance * 100) - 1;
+
+                if (double.IsNaN(probabilityByAddressDistance))
+                    probabilityByAddressDistance = 1;
 
                 string filename = Path.Combine(pParameters.localPacketsDir, Utils.ToBase64String(address));
 
                 var info = new FileInfo(filename);
 
-                var lastAccess = DateTime.Now.Subtract(info.LastAccessTime).TotalMinutes;
+                var packetLastAccess = DateTime.Now.Subtract(info.LastAccessTime).TotalMinutes;
 
-                var avgLastAccess = LastAccess.Average;
+                var maxLastAccess = LastAccess.Average * 2;
 
-                //probability by last access
-                var pA = Math.Log(lastAccess, avgLastAccess);
+                var packetLastAccessPercent = packetLastAccess / maxLastAccess;
 
-                if (lastAccess < avgLastAccess || pL == 0 || pA == 0 || Utils.Roll(1 / pL * 1 / pA))
+                var averagePercent = LastAccess.Average / maxLastAccess;
+
+                var probabilityByLastAccess = Math.Log(100 * packetLastAccessPercent, 100 * averagePercent) - 1;
+
+                if (double.IsNaN(probabilityByLastAccess))
+                    probabilityByLastAccess = 1;
+
+                if (probabilityByMaxPackets > 0 && Utils.Roll((probabilityByMaxPackets + probabilityByAddressDistance + probabilityByLastAccess) / 3d))
+                {
+                    Remove(address);
+
+                    totalAtFillQueue--;
+
+                    probabilityByMaxPackets = ((double)totalAtFillQueue - pParameters.PacketsMaxItems) / totalAtFillQueue;
+                }
+                else if (Utils.Roll(((1 - probabilityByLastAccess) + (1 - probabilityByAddressDistance)) / 2d))
                 {
                     Sincronize(address);
                 }
 
-                if (pT > 0 && Utils.Roll(pT * pL * pA))
-                {
-                    Remove(address);
                 }
+
+        }
+
+        static void FillQueue()
+        {
+            totalAtFillQueue = packets.Count();
+
+            probabilityByMaxPackets = ((double)totalAtFillQueue - pParameters.PacketsMaxItems) / totalAtFillQueue;
+
+            if (probabilityByMaxPackets < (pParameters.MinPeerMaintenanceQueueSize / totalAtFillQueue))
+            {
+                aboveMaxPacketsEvent.Reset();
+
+                aboveMaxPacketsEvent.WaitOne();
             }
 
+            lock (packets)
+                queue = new Queue<byte[]>(packets.OrderBy(x => Utils.Rand.Next()).Take(pParameters.PacketsMaintenanceQueueSize)); ;
+        }
 
+        static void Remove(byte[] address)
+        {
+            lock (packets)
+                packets.Remove(address);
+
+            string path = Path.Combine(pParameters.localPacketsDir, Utils.ToBase64String(address));
+
+            if (File.Exists(path))
+                File.Delete(path);
         }
 
         internal static string Print()
@@ -337,11 +390,7 @@ namespace library
 
         static Queue<byte[]> queue = new Queue<byte[]>();
 
-        static void FillQueue()
-        {
-            lock (packets)
-                queue = new Queue<byte[]>(packets.OrderBy(x => Utils.Rand.Next()).Take(pParameters.PacketsMaintenanceQueueSize)); ;
-        }
+      
 
         #endregion
 

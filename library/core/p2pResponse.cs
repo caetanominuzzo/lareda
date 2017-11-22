@@ -98,7 +98,7 @@ namespace library
                        data: data);
 
 
-                     request.Send();
+                    request.Send();
 
                 }
                 else
@@ -111,77 +111,80 @@ namespace library
 
         void ProcessMetadata()
         {
-            if(Utils.ToSimpleAddress(Request.Address) == "129")
+            if (Utils.ToSimpleAddress(Request.Address) == "129")
             {
 
             }
 
-            if (Request.Data.Length > pParameters.addressSize) 
+            if (Request.Data.Length > pParameters.addressSize)
             {
                 //Packets.Add(Request.Header.Address, Request.Data, Request.Header.OriginPeer);
 
                 var metapackets = MetaPackets.FromBytes(Request.Data.Skip(pParameters.addressSize).ToArray());
 
-                foreach (var m in metapackets)
+                if (null != metapackets)
                 {
-                    m.Type = Request.Command == RequestCommand.Hashs ? MetaPacketType.Hash : MetaPacketType.Link;
+                    foreach (var m in metapackets)
+                    {
+                        m.Type = Request.Command == RequestCommand.Hashs ? MetaPacketType.Hash : MetaPacketType.Link;
 
-                    MetaPackets.Add(m);
+                        MetaPackets.Add(m);
+                    }
+
+                    Client.SearchReturn(Request.Address, Request.Command == RequestCommand.Hashs ? MetaPacketType.Hash : MetaPacketType.Link, metapackets);
                 }
-
-                Client.SearchReturn(Request.Address, Request.Command == RequestCommand.Hashs ? MetaPacketType.Hash : MetaPacketType.Link, metapackets);
             }
             else
             {
 
                 var m = MetaPackets.LocalSearch(Request.Address, Request.Command == RequestCommand.Hashs ? MetaPacketType.Hash : MetaPacketType.Link);
 
-                if(m != null && m.Any())
+                if (m != null && m.Any())
                 {
-                    if(m.Any(x => x.Hash != null && !Addresses.Equals(x.Hash, Addresses.zero, true)))
-                        {
+                    if (m.Any(x => x.Hash != null && !Addresses.Equals(x.Hash, Addresses.zero, true)))
+                    {
 
                     }
 
                     var res = new p2pRequest(
-                        Request.Command, Request.Address, Client.LocalPeer, Client.LocalPeer, Request.OriginalPeer,MetaPackets.ToBytes(m));
+                        Request.Command, Request.Address, Client.LocalPeer, Client.LocalPeer, Request.OriginalPeer, MetaPackets.ToBytes(m));
 
                     res.Enqueue();
                 }
             }
 
-        //    byte[] address = Utils.ReadBytes(Request.Data, Parameters.requestHeaderSize);
+            //    byte[] address = Utils.ReadBytes(Request.Data, Parameters.requestHeaderSize);
 
-        //    byte[] data = Utils.ReadBytes(Request.Data, Parameters.requestHeaderSize + 4 + address.Length).ToArray();
+            //    byte[] data = Utils.ReadBytes(Request.Data, Parameters.requestHeaderSize + 4 + address.Length).ToArray();
 
-        //    if (data.Count() == 0)
-        //    {
-        //        ValueHits addresses = LocalIndex.SearchMetadataAddressesByValue(address);
+            //    if (data.Count() == 0)
+            //    {
+            //        ValueHits addresses = LocalIndex.SearchMetadataAddressesByValue(address);
 
-        //        if (addresses == null || !addresses.Any())
-        //        {
-        //            p2pRequest.Enqueue(
-        //                senderPeer: Request.SenderPeer,
-        //                address: BitConverter.GetBytes(address.Length).Concat(address).ToArray(),
-        //                command: RequestCommand.Metadata,
-        //                returnPeer: Request.Header.Peer);
-        //        }
-        //        else
-        //        {
-        //            foreach (ValueHitsItem item in addresses)
-        //            {
-        //                p2pRequest.Enqueue(
-        //                    senderPeer: Request.SenderPeer,
-        //                    originPeer: Request.Header.Peer ?? Request.OriginPeer,
-        //                    address: item.Value,
-        //                    data: LocalPackets.Get(item.Value));
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        LocalPackets.Add(Utils.GetAddress(), data, Request.OriginPeer);
-        //    }
+            //        if (addresses == null || !addresses.Any())
+            //        {
+            //            p2pRequest.Enqueue(
+            //                senderPeer: Request.SenderPeer,
+            //                address: BitConverter.GetBytes(address.Length).Concat(address).ToArray(),
+            //                command: RequestCommand.Metadata,
+            //                returnPeer: Request.Header.Peer);
+            //        }
+            //        else
+            //        {
+            //            foreach (ValueHitsItem item in addresses)
+            //            {
+            //                p2pRequest.Enqueue(
+            //                    senderPeer: Request.SenderPeer,
+            //                    originPeer: Request.Header.Peer ?? Request.OriginPeer,
+            //                    address: item.Value,
+            //                    data: LocalPackets.Get(item.Value));
+            //            }
+            //        }
+            //    }
+            //    else
+            //    {
+            //        LocalPackets.Add(Utils.GetAddress(), data, Request.OriginPeer);
+            //    }
         }
     }
 }

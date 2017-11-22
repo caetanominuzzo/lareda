@@ -129,7 +129,7 @@ namespace library
             }
         }
 
-        internal p2pFile(byte[] address, p2pContext context, string filename = null, string specificFile = null)
+        internal p2pFile(byte[] address, byte[] hash, p2pContext context, string filename = null, string specificFile = null)
         {
             Address = address;
 
@@ -143,7 +143,7 @@ namespace library
             if (!string.IsNullOrEmpty(specificFile))
                 SpecifFilename = specificFile;
 
-            Root = AddPacket(address, null, 0, 0, filename);
+            Root = AddPacket(address, hash, null, 0, 0, filename);
 
             Root.Get();
 
@@ -339,9 +339,9 @@ namespace library
         }
 
 
-        internal Packet AddPacket(byte[] address, p2pFile.Packet parent, int filePacketsOffset, int offset, string filename = null)
+        internal Packet AddPacket(byte[] address, byte[] hash, p2pFile.Packet parent, int filePacketsOffset, int offset, string filename = null)
         {
-            Packet p = new Packet(this, parent, filePacketsOffset, offset, address, filename);
+            Packet p = new Packet(this, hash, parent, filePacketsOffset, offset, address, filename);
 
             AddPacket(p);
 
@@ -364,6 +364,14 @@ namespace library
 
         internal int TryReadFromPackets(byte[] buffer, int position, int count, out Packet[] packets)
         {
+            if(null == this.Root.Hash)
+            {
+                packets = null;
+
+                Buffer.BlockCopy(CacheResult.Get(this.Address), 0, buffer, 0, buffer.Length);
+
+                return buffer.Length;
+            }
 
             if (position > 0)
             {
@@ -372,7 +380,7 @@ namespace library
 
             Packet packet = null;
 
-            var old_dequeue = dequeueOffset;
+            var old_dequeue = dequeueOffset; 
 
             var old_filedequeue = dequeueFilePacketsOffset;
 
@@ -407,7 +415,7 @@ namespace library
 
                 if ((max_dequeue - min_dequeue == 0 && packets_count == 1) || (packets_count >= max_dequeue - min_dequeue + 1))
                 {
-                    var mod_first_packet = (position % pParameters.packetSize);
+                    var mod_first_packet = (position % pParameters.packetSize); 
 
                     var mod_last_packet = vpackets.Last().Value.data.Length - ((position + count) % pParameters.packetSize) - pParameters.packetHeaderSize;
 

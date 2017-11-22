@@ -18,6 +18,7 @@ using log4net.Repository.Hierarchy;
 using log4net.Layout;
 using log4net.Appender;
 using log4net.Core;
+using System.Text.RegularExpressions;
 
 namespace windows_desktop
 {
@@ -82,8 +83,13 @@ namespace windows_desktop
         {
             //GenerateSimpleNames()
 
-            Configure();
+            Utils.Base64ReplaceRegexPlus = new Regex(@"\+");
 
+            Utils.Base64ReplaceRegexSlash = new Regex(@"/");
+
+            Configure(); 
+
+          
             //log4netConfig();
             log4net.Config.XmlConfigurator.Configure();
 
@@ -110,6 +116,8 @@ namespace windows_desktop
 
             pp.Show();
 
+            
+
             using (ProcessIcon.Start())
             using (Client.Start(p2pAddress, p2pEndpoint))
             using (WebServer.Start())
@@ -119,7 +127,10 @@ namespace windows_desktop
 
                 fmDrag.SetDrag(false);
 
-                ThreadPool.QueueUserWorkItem(new WaitCallback(Client.BootStrap));
+                //ThreadPool.QueueUserWorkItem(new WaitCallback(Client.BootStrap));
+                Client.BootStrap(null);
+
+                Client.StartThreads();
 
                 //Client.GetInstaller();
 
@@ -137,7 +148,7 @@ namespace windows_desktop
                 //        break;
                 //}
 
-                Application.Run();
+                Application.Run();   
             }
         }
 

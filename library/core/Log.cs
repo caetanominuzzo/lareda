@@ -12,7 +12,7 @@ namespace library
 {
     public static class Log
     {//null;//
-        public static string textFilter = null;//"TIXC_X2vlUeUQ3QBW8-cv_I";//"3DnFpsP2xPTUm9L4G--gLseAGI6QBqGWA5YKLUIHEoU=";
+        public static string textFilter = "dWe9Yy_uKoQtP_LIO7ueNNEaWRGGOxv3_EuK3hzvImI=";
         // LogTypes.None;// LogTypes.Journaling | LogTypes.Stream | LogTypes.WebServer | LogTypes.File 
         ////
         public static LogTypes typeFilter = LogTypes.All;// LogTypes.P2p | LogTypes.WebServer | LogTypes.Queue;// | LogTypes.Queue;// | LogTypes.Journaling | LogTypes.Stream | LogTypes.File | LogTypes.Queue; //LogTypes.All; // LogTypes.Queue ;// | LogTypes.streamSeek | LogTypes.DownloadDispose | LogTypes.streamOutputClose;// LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
@@ -167,18 +167,19 @@ namespace library
             }
         }
 
-        public static List<LogItem> Items = new List<LogItem>();
+        public static List<LogItem> Items = new List<LogItem>(); 
 
 
 
         public static void Add(LogTypes type, LogOperations operation, params object[] data)
-        { 
+        {
 #if !DEBUG
-         //   return;
+            return;  
 #endif
 
-            //return;
 
+            // return;
+             
             if (typeFilter == LogTypes.None || (typeFilter != LogTypes.All && type != LogTypes.Ever && (typeFilter & type) != type))
                 return;
 

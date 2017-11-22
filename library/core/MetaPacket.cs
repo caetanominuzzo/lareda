@@ -16,6 +16,12 @@ namespace library
 
         internal byte[] LinkAddress;
 
+        internal long IdAddress;
+
+        internal long IdTargetAddress;
+
+        internal long IdLinkAddress;
+
         internal byte[] Hash;
 
         internal DateTime Creation = DateTime.MinValue;
@@ -42,22 +48,41 @@ namespace library
             set { Address = Utils.AddressFromBase64String(value); }
         }
 
-        public string TargetBase64Address
+        public string Base64TargetAddress
         {
-            get { return Utils.ToSimpleAddress(TargetAddress); }
+            get { return Utils.ToBase64String(TargetAddress); }
         }
 
         public string SimpleLinkAddress
         {
             get { return Utils.ToSimpleAddress(LinkAddress); }
         }
-        
+
         public string SimpleAddress
         {
             get { return Utils.ToSimpleAddress(Address); }
         }
 
-        internal byte[] Marker = null;
+        public string SimpleTargetAddress
+        {
+            get { return Utils.ToSimpleAddress(TargetAddress); }
+        }
+
+        byte[] _marker = null;
+
+        internal byte[] Marker
+        {
+            get { return _marker; }
+            set
+            {
+                _marker = value;
+
+                Id_Marker = BitConverter.ToInt64(value, 0);
+
+            }
+        }
+
+        internal long Id_Marker;
 
         static Cache<byte[]> DistancesItems = new Cache<byte[]>(60 * 1000000);
 
@@ -99,6 +124,8 @@ namespace library
                 DistancesItems.Add(VirtualAttributes.ROOT_TYPE);
 
                 DistancesItems.Add(VirtualAttributes.ORDER);
+
+                DistancesItems.Add(VirtualAttributes.MIME_TYPE_DOWNLOAD);
             }
 
             Creation = creation;
@@ -110,6 +137,12 @@ namespace library
             this.Hash = hashContent;
 
             this.LinkAddress = linkAddress;
+
+            this.IdAddress = BitConverter.ToInt64(this.Address, 0);
+
+            this.IdLinkAddress = BitConverter.ToInt64(this.LinkAddress, 0);
+
+            this.IdTargetAddress = BitConverter.ToInt64(this.TargetAddress, 0);
 
             this.Type = type;
 

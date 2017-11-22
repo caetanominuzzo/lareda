@@ -12,7 +12,7 @@ namespace library
 {
     public partial class p2pFile
     {
-        public  class Packet
+        public class Packet
         {
             p2pFile File;
 
@@ -33,7 +33,11 @@ namespace library
             public int Offset;
 
             public int FilePacketOffset;
-            
+
+            public bool Error = false;
+
+            public byte[] Hash;
+
             public IEnumerable<Guid> RequestTraceIdentifier
             {
                 get
@@ -140,7 +144,7 @@ namespace library
 
             p2pFile.Packet Parent = null;
 
-            internal Packet(p2pFile file, p2pFile.Packet parent, int filePacketsOffset, int offset, byte[] address, string filename = null)
+            internal Packet(p2pFile file, byte[] hash, p2pFile.Packet parent, int filePacketsOffset, int offset, byte[] address, string filename = null)
             {
                 File = file;
 
@@ -152,17 +156,41 @@ namespace library
 
                 Offset = offset;
 
+                Hash = hash;
+
                 FilePacketOffset = filePacketsOffset;
             }
+
+
+            private void Packets_OnPacketValidatorError(byte[] address)
+            {
+                if (!Addresses.Equals(Address, address))
+                    return;
+
+                this.Error = true;
+
+                this.File.dequeueFilePacketsOffset = this.FilePacketOffset;
+
+                this.File.dequeueOffset = this.Offset;
+            }
+
 
             internal void VerifyDataArrived(byte[] address, byte[] data)
             {
                 if (!Addresses.Equals(Address, address))
                     return;
 
-                Packets.OnPacketArrived -= VerifyDataArrived;
+                var error = ProcessDataArrived(data);
 
-                ProcessDataArrived(data);
+                if (error)
+                    this.Error = true;
+
+                if (!this.Error)
+                {
+                    Packets.OnPacketArrived -= VerifyDataArrived;
+
+                    Packets.OnPacketValidatorError -= Packets_OnPacketValidatorError;
+                }
             }
 
             bool isRoot()
@@ -184,24 +212,46 @@ namespace library
                         yield return p;
             }
 
-            void ProcessDataArrived(byte[] data)
+            bool ProcessDataArrived(byte[] data)
             {
+                if (null != this.Hash)
+                {
+                    var internal_hash = data.Skip(5).Take(pParameters.hashSize).ToArray();
+
+                    if (!Addresses.Equals(this.Hash, internal_hash, true))
+                    {
+                        this.Error = true;
+
+                        return false;
+                    }
+                }
+
+
                 lock (dataArrivedObjectLocker)
                 {
-                    PacketType = (PacketTypes)data[0];
-
-                    if (PacketType == PacketTypes.Content)
+                    if (null == this.Hash)
                     {
-                        if (Offset != BitConverter.ToInt32(data, 1))
-                            Offset = BitConverter.ToInt32(data, 1);
-                    }
+                        PacketType = PacketTypes.Content;
 
+                        Offset = 0;
+                    }
+                    else
+                    {
+                        PacketType = (PacketTypes)data[0];
+
+                        if (PacketType == PacketTypes.Content)
+                        {
+                            if (Offset != BitConverter.ToInt32(data, 1))
+                                Offset = BitConverter.ToInt32(data, 1);
+                        }
+
+                    }
                     this.data = data;
 
                     File.ReturnRatio = (File.ReturnRatio + (RequestSent / (double)Arrives + 1)) / 2;
 
                     if (Arrives != 0)
-                        return;
+                        return true;
 
                     Arrives++;
                 }
@@ -220,7 +270,7 @@ namespace library
                         var last_offset = count - 1;
 
                         var FilePacketsOffset = (Parent == null ? 0 : Parent.Children.Last().Value.FilePacketOffset + this.Offset * (pParameters.packetSize / pParameters.addressSize));
-                        
+
                         FilePacketsOffset++;
 
                         //last item to the main thread
@@ -243,7 +293,7 @@ namespace library
 
                         //first item to the main thread
                         //ProcessAddPackets(new object[] { addresses.Take(1).ToArray(), FilePacketsOffset, 0});
-                       // ProcessAddPackets(new object[] { addresses.Skip(1).Take(1), FilePacketsOffset, 1, false });
+                        // ProcessAddPackets(new object[] { addresses.Skip(1).Take(1), FilePacketsOffset, 1, false });
 
 
 
@@ -266,7 +316,7 @@ namespace library
                         //    data.Skip(pParameters.packetHeaderSize + pParameters.addressSize).Take(data.Length - pParameters.packetHeaderSize - (pParameters.addressSize * 3)), FilePacketsOffset, 1, true });
 
 
-                       
+
 
                         //ThreadPool.QueueUserWorkItem(ProcessAddPackets, new object[] { addresses.Skip(1).Take(count - 2).ToArray(), FilePacketsOffset, 1 });
 
@@ -293,7 +343,7 @@ namespace library
                         var offset = 1;
 
                         foreach (byte[] addr in files.Keys)
-                            File.AddPacket(addr, this, offset, offset++, Path.Combine(File.Filename, files[addr]));
+                            File.AddPacket(addr, null, this, offset, offset++, Path.Combine(File.Filename, files[addr]));
 
                         break;
 
@@ -301,8 +351,8 @@ namespace library
 
                         var buffer = data;//.Skip(pParameters.packetHeaderSize).ToArray();
 
-                        if(null != (Filename ?? File.Filename))
-                            DelayedWrite.Add(Filename ?? File.Filename, buffer, Offset, pParameters.packetHeaderSize);
+                        //if(null != (Filename ?? File.Filename))
+                        DelayedWrite.Add(Filename ?? File.Filename, buffer, Offset, null == this.Hash? 0: pParameters.packetHeaderSize);
 
                         lock (File.FilePackets)
                         {
@@ -312,9 +362,9 @@ namespace library
 
                                 File.Levels = this.Level;
 
-                                var new_length = (this.Offset * pParameters.packetSize) + buffer.Length - pParameters.packetHeaderSize;
+                                var new_length = null == this.Hash ? data.Length : (this.Offset * pParameters.packetSize) + buffer.Length - pParameters.packetHeaderSize;
 
-                                if(new_length > File.Length)
+                                if (new_length > File.Length)
                                     File.Length = new_length;
                             }
                         }
@@ -322,26 +372,28 @@ namespace library
                         if (this.Offset == 0 && this.Parents().All(x => x.Offset == 0))
                             File.FirstContentFilePacketOffset = this.FilePacketOffset;
 
-                        lock(File.arrives)
+                        lock (File.arrives)
                             File.arrives.Add(this.FilePacketOffset);
 
                         Client.DownloadComplete(File.Address, File.Filename, File.SpecifFilename, File.Arrives, File.Cursors);
 
                         break;
 
-                    case PacketTypes.Metapacket:  
+                    case PacketTypes.Metapacket:
 
                         DelayedWrite.Add(Filename, data, 0);
 
                         break;
                 }
- 
-                
+
+
 
                 ProcessPacketPriority();
-                
+
 
                 File.packetEvent.Set();
+
+                return true;
             }
 
             private void Back_DoWork(object sender, DoWorkEventArgs e)
@@ -351,7 +403,7 @@ namespace library
 
             private void ProcessAddPackets(object data)
             {
-               
+
                 var datas = (object[])data;
 
                 var addresses = (IEnumerable<byte[]>)datas[0];
@@ -379,8 +431,10 @@ namespace library
 
                 var i = 0;
 
+
+
                 //for (var i = 0; i < count; i += pParameters.addressSize)
-                foreach (byte[] addr in addresses)
+                foreach (byte[] addr_hash in addresses)
                 {
                     //var buffer = new byte[pParameters.addressSize];
 
@@ -388,13 +442,21 @@ namespace library
 
                     //buffer = addresses.Skip(i).Take(pParameters.addressSize).ToArray();
 
-                    p = File.AddPacket(addr, this, filePacketsOffset, baseOffset, Filename);
+                    var addr = new byte[pParameters.addressSize];
+
+                    var hash = new byte[pParameters.hashSize];
+
+                    Buffer.BlockCopy(addr_hash, 0, addr, 0, pParameters.addressSize);
+
+                    Buffer.BlockCopy(addr_hash, pParameters.addressSize, hash, 0, pParameters.hashSize);
+
+                    p = File.AddPacket(addr, hash, this, filePacketsOffset, baseOffset, Filename);
 
                     if (null == min)
                         min = p;
                     else
                     {
-                        if (i == count-1)
+                        if (i == count - 1)
                             max = p;
                     }
 
@@ -404,10 +466,10 @@ namespace library
                         Children.Add(p.Offset, p);
 
                     filePacketsOffset++;
-                    
+
                     baseOffset++;
 
-                   
+
                 }
 
                 Log.Add(Log.LogTypes.Queue, Log.LogOperations.Packets | Log.LogOperations.Add, this, min, max);
@@ -423,55 +485,48 @@ namespace library
 
                 byte[] data = null;
 
-                if (null == this.Filename || this.Filename.StartsWith(pParameters.webCache + "/", StringComparison.CurrentCultureIgnoreCase) || MayHaveLocalData)
+                if (null == this.Filename || MayHaveLocalData)
                 {
-                    
-
-                    data = Packets.Get(Address, this.Filename);
-
-                    
+                    if (null == this.Hash)
+                        data = CacheResult.Get(Address);
+                    else
+                        data = Packets.Get(Address, this.Filename);
 
                     if (data == null)
                         MayHaveLocalData = false;
                 }
 
+                //todo: should p2p search anyway
                 if (data == null)
                 {
-                    var search = MetaPackets.LocalSearch(Address, MetaPacketType.Link);
+                    Client.Stats.PresumedReceived.Add((int)(pParameters.packetSize / File.ReturnRatio));
 
-                    if (search.Any(x => Addresses.Equals(x.LinkAddress, VirtualAttributes.MIME_TYPE_DOWNLOAD)))
-                    {
-                        GetDirectory(search);
+                    Client.Stats.belowMaxReceivedEvent.WaitOne(File.MayHaveLocalData() ? 0 : Timeout.Infinite);
 
+                    var peer = Peers.GetPeer(Address);
+
+                    if (peer == null)
                         return;
-                    }
-                    else
+
+                    //todo: IMPORTANT! Refazer: removido parametro wait. Se não tiver chance de ter localdata (!File.MayHaveLocalData())  fazer Peers.idlePeerEvent.WaitOne
+
+                    new p2pRequest(RequestCommand.Packet, Address).Enqueue();
+
+                    //var sent = p2pRequest.Send(
+                    //    address: Address,
+                    //    wait: !File.MayHaveLocalData());
+
+                    var sent = true;
+
+                    if (sent)
                     {
-                        Client.Stats.PresumedReceived.Add((int)(pParameters.packetSize / File.ReturnRatio));
+                        RequestSent++;
 
-                        Client.Stats.belowMaxReceivedEvent.WaitOne(File.MayHaveLocalData() ? 0 : Timeout.Infinite);
-
-                        var peer = Peers.GetPeer(Address);
-
-                        if (peer == null)
-                            return;
-
-                        //todo: IMPORTANT! Refazer: removido parametro wait. Se não tiver chance de ter localdata (!File.MayHaveLocalData())  fazer Peers.idlePeerEvent.WaitOne
-
-                        new p2pRequest(RequestCommand.Packet, Address).Enqueue();
-
-                        //var sent = p2pRequest.Send(
-                        //    address: Address,
-                        //    wait: !File.MayHaveLocalData());
-
-                        var sent = true;
-
-                        if (sent)
+                        if (RequestSent == 1)
                         {
-                            RequestSent++;
+                            Packets.OnPacketArrived += VerifyDataArrived;
 
-                            if (RequestSent == 1)
-                                Packets.OnPacketArrived += VerifyDataArrived;
+                            Packets.OnPacketValidatorError += Packets_OnPacketValidatorError;
                         }
                     }
                 }
@@ -480,8 +535,9 @@ namespace library
 
                 //ThreadPool.QueueUserWorkItem ProcessDataArrived(data);
 
-               
+
             }
+
 
             void ThreadProcessDataArrived(object data)
             {
@@ -546,6 +602,6 @@ namespace library
             }
         }
 
-       
+
     }
 }

@@ -69,14 +69,14 @@ namespace library
                 Log.Add(Log.LogTypes.Journaling, Log.LogOperations.Refresh, "3DnFpsP2x");
 
                 lock (queue)
-                    item = queue.Where(x => !x.writeToPacketsDir).ToList().OrderBy(x => -x.Offset).FirstOrDefault();
+                    item = queue.Where(x => x.writeToCacheDir).ToList().OrderBy(x => -x.Offset).FirstOrDefault();
 
                 if (null != item)
                     Write(item);
 
 
                 lock (queue)
-                    items = queue.Where(x => x.writeToPacketsDir).ToList();
+                    items = queue.Where(x => !x.writeToCacheDir).ToList();
 
                 foreach (var i in items)
                     Write(i);
@@ -95,9 +95,8 @@ namespace library
 
             try
             {
-                if (item.writeToPacketsDir)
+                if (!item.writeToCacheDir)
                 {
-
                     File.OpenWrite(item.Filename).Write(item.Data, item.ReadOffset, item.Data.Length - item.ReadOffset);
 
                     //File.WriteAllBytes(item.Filename, item.Data);
@@ -216,7 +215,7 @@ namespace library
 
         class DelayedWriteItem
         {
-            internal bool writeToPacketsDir;
+            internal bool writeToCacheDir;
 
             string filename;
 
@@ -230,7 +229,7 @@ namespace library
                 {
                     filename = value;
 
-                    writeToPacketsDir = Path.GetDirectoryName(filename) == pParameters.localPacketsDir;
+                    writeToCacheDir = (Path.GetDirectoryName(filename) != pParameters.localPacketsDir && Path.GetDirectoryName(filename) != pParameters.json);
                 }
             }
 

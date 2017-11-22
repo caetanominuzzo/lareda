@@ -14,6 +14,8 @@ namespace library
 
         public static byte base64AddressSize = 44;
 
+        public static double MaxDistance = Math.Sqrt(Math.Pow(128, 2) * addressSize);
+
         public static int statsBufferSize = 10;
 
         public static int propagation = 1;
@@ -28,7 +30,9 @@ namespace library
 
         public static int postSize = (addressSize * 2029) - (requestHeaderSize + sizeof(int) + addressSize + 1); //sizeof(int) = content length; addressize = targetsize; 1 = binary
 
-        public static int packetHeaderSize = 21; //1 byte (data type) + 4 byte (offset) + 16 byte (hash)
+        public static int packetHeaderSize = 37; //1 byte (data type) + 4 byte (offset) + 32 byte (hash)
+
+        public static int hashSize = 32;
 
         #region semantic search
 
@@ -86,6 +90,12 @@ namespace library
 
         public static int PeerMaintenanceQueueSize = 1000;
 
+        public static int MinPeerMaintenanceQueueSize = 10;
+
+        public static int MinPacketsMaintenanceQueueSize = 100;
+
+        public static int TopPeersPercent = 10;
+
         public static int PeerMaxItems = 1000;
 
         public static int MaxDelayedWriteQueue = 20;
@@ -102,6 +112,8 @@ namespace library
         public static string AppName = "la-red";
 
         public static string webCache = "cache\\";
+
+        public static string json = "json";
 
         public static string webHome = "k5c0241K9ckEw3ruLh2ZTUppkFtTurVikZJTuMn8UX8_";
 
