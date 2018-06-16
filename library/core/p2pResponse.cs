@@ -26,8 +26,11 @@ namespace library
 
         void Process()
         {
+            if (Client.Stats.IsAboveMinSent) //todo: or max confomr % de uso, ver outro uso (adicionar if Client.IsIdle use belowMax)
+                return;
+
             switch (Request.Command)
-            {
+            { 
                 case RequestCommand.Peer:
                     ProcessPeer();
                     break;
@@ -57,21 +60,21 @@ namespace library
             else
             {
                 List<Peer> peers = Peers.GetPeers(
-                    closestToAddress: Request.Address,
-                    excludeOriginAddress: Request.Address,
-                    excludeSenderPeer: new[] { Request.OriginalPeer },
-                    count: pParameters.GetPeerCountReturn).ToList();
+                    closestToAddress:       Request.Address,
+                    excludeOriginAddress:   Request.Address,
+                    excludeSenderPeer:      new[] { Request.OriginalPeer },
+                    count:                  pParameters.GetPeerCountReturn).ToList();
 
                 Peers.AddPeer(Request.OriginalPeer);
 
                 peers.Add(Client.LocalPeer);
 
                 p2pRequest request = new p2pRequest(
-                    command: RequestCommand.Peer,
+                    command:         RequestCommand.Peer,
                     originalPeer: Request.SenderPeer,
                     senderPeer: Client.LocalPeer,
                     destinationPeer: Request.OriginalPeer,
-                    data: Peers.ToBytes(peers));
+                    data:            Peers.ToBytes(peers));
 
                 request.Enqueue();
             }
@@ -82,45 +85,90 @@ namespace library
             if (Request.Data.Length > pParameters.addressSize)
             {
                 Packets.Add(Request.Address, Request.Data.Skip(pParameters.addressSize).ToArray(), Request.OriginalPeer);
+
+                var data_hash = Utils.ComputeHash(Request.Data, 0, Request.Data.Length);
+
+                lock("a")
+                foreach (var r in Request.parents)
+                {
+                    if (!r.results.Any(x => Addresses.Equals(x, data_hash, true)))
+                    {
+                        if(data_hash == null)
+                        {
+
+                        }
+                        r.results.Add(data_hash);
+
+                        var res = new p2pRequest(
+                            command: Request.Command,
+                            address: Request.Address,
+                            originalPeer: Client.LocalPeer,
+                            senderPeer: Client.LocalPeer,
+                            destinationPeer: r.OriginalPeer,
+                            data: Request.Data);
+
+                        res.Enqueue();
+                    }
+                }
             }
             else
             {
                 var data = Packets.Get(Request.Address);
 
-                if (data != null)
+                if (null != data)
                 {
                     p2pRequest request = new p2pRequest(
-                       command: RequestCommand.Packet,
-                       address: Request.Address,
-                       originalPeer: Request.OriginalPeer,
-                       senderPeer: Client.LocalPeer,
+                       command:         RequestCommand.Packet,
+                       address:         Request.Address,
+                       originalPeer:    Client.LocalPeer,
+                       senderPeer:      Client.LocalPeer,
                        destinationPeer: Request.OriginalPeer,
-                       data: data);
-
+                       data:            data);
 
                     request.Send();
-
                 }
-                else
+              //  else
                 {
                     //todo: Propagate 
+                    //Se originalPeer for preenchido (propagação rapida - retorno direto), nao salva cache de quem pesquisou;
+                    //se peer Original == Any ao propagar salvar peer original num cache, ao receber um retorno de packet verifica se esta nesta lista e retona para o peer original.
+
                     //n vezes se origin == sender senão uma probabilidade conforme a distancia do endereço local até o endereço pesquisado.
+
+                    if (Request.TTL < 1)
+                        return;
+
+                    Request.TTL--;
+
+                    var destinationPeer = Peers.GetPeer(
+                                           closestToAddress: Request.Address,
+                                           excludeSenderPeer: new Peer[] { Request.SenderPeer, Request.OriginalPeer },
+                                           excludeOriginAddress: Client.LocalPeer.Address);
+
+                    if (null == destinationPeer)
+                        return;
+
+                    p2pRequest request = new p2pRequest(
+                        ttl: Request.TTL,
+                        address: Request.Address,
+                        command: Request.Command,
+                        originalPeer: Client.LocalPeer,
+                        senderPeer: Client.LocalPeer,
+                        destinationPeer: destinationPeer
+                        //data: MetaPackets.ToBytes(new Metapacket[] { metapacket })
+                        );
+
+                    request.Enqueue();
+
                 }
             }
         }
 
         void ProcessMetadata()
         {
-            if (Utils.ToSimpleAddress(Request.Address) == "129")
-            {
-
-            }
-
             if (Request.Data.Length > pParameters.addressSize)
             {
-                //Packets.Add(Request.Header.Address, Request.Data, Request.Header.OriginPeer);
-
-                var metapackets = MetaPackets.FromBytes(Request.Data.Skip(pParameters.addressSize).ToArray());
+                var metapackets = MetaPackets.FromBytes(Request.Data.Skip(pParameters.addressSize * 1).ToArray());
 
                 if (null != metapackets)
                 {
@@ -128,63 +176,77 @@ namespace library
                     {
                         m.Type = Request.Command == RequestCommand.Hashs ? MetaPacketType.Hash : MetaPacketType.Link;
 
-                        MetaPackets.Add(m);
+                        MetaPackets.Add(m, Request.OriginalPeer);
                     }
 
                     Client.SearchReturn(Request.Address, Request.Command == RequestCommand.Hashs ? MetaPacketType.Hash : MetaPacketType.Link, metapackets);
                 }
+
+                var data_hash = Utils.ComputeHash(Request.Data, 0, Request.Data.Length);
+
+                lock("a")
+                foreach (var r in Request.parents)
+                {
+                    if (!r.results.Any(x => Addresses.Equals(x, data_hash, true)))
+                    {
+                        var res = new p2pRequest(
+                            command: Request.Command,
+                            address: Request.Address,
+                            originalPeer: Client.LocalPeer,
+                            senderPeer: Client.LocalPeer,
+                            destinationPeer: r.OriginalPeer,
+                            data: Request.Data);
+
+                        res.Enqueue();
+                    }
+                }
             }
             else
             {
-
                 var m = MetaPackets.LocalSearch(Request.Address, Request.Command == RequestCommand.Hashs ? MetaPacketType.Hash : MetaPacketType.Link);
 
                 if (m != null && m.Any())
                 {
-                    if (m.Any(x => x.Hash != null && !Addresses.Equals(x.Hash, Addresses.zero, true)))
-                    {
-
-                    }
-
                     var res = new p2pRequest(
-                        Request.Command, Request.Address, Client.LocalPeer, Client.LocalPeer, Request.OriginalPeer, MetaPackets.ToBytes(m));
+                        command:         Request.Command, 
+                        address:         Request.Address, 
+                        originalPeer:    Client.LocalPeer, 
+                        senderPeer:      Client.LocalPeer, 
+                        destinationPeer: Request.OriginalPeer, 
+                        data:            MetaPackets.ToBytes(m));
 
                     res.Enqueue();
                 }
+                //else
+                {
+                    if (Request.TTL < 1)
+                        return;
+
+                    Request.TTL--;
+
+                    //todo: Propagate 
+                    //n vezes se origin == sender senão uma probabilidade conforme a distancia do endereço local até o endereço pesquisado.
+                    var destinationPeer = Peers.GetPeer(
+                                       closestToAddress: Request.Address,
+                                       excludeSenderPeer: Request.parents.Select(x => x.OriginalPeer).Concat(new Peer[] { Request.SenderPeer, Request.OriginalPeer }).ToArray(),
+                                       excludeOriginAddress: Client.LocalPeer.Address);
+
+                    if (null == destinationPeer)
+                        return;
+
+                    p2pRequest request = new p2pRequest(
+                        ttl: Request.TTL,
+                        address: Request.Address,
+                        command: Request.Command,
+                        originalPeer: Client.LocalPeer,
+                        senderPeer: Client.LocalPeer,
+                        destinationPeer: destinationPeer
+                        //data: MetaPackets.ToBytes(new Metapacket[] { metapacket })
+                        );
+
+                    request.Enqueue();
+                }
             }
-
-            //    byte[] address = Utils.ReadBytes(Request.Data, Parameters.requestHeaderSize);
-
-            //    byte[] data = Utils.ReadBytes(Request.Data, Parameters.requestHeaderSize + 4 + address.Length).ToArray();
-
-            //    if (data.Count() == 0)
-            //    {
-            //        ValueHits addresses = LocalIndex.SearchMetadataAddressesByValue(address);
-
-            //        if (addresses == null || !addresses.Any())
-            //        {
-            //            p2pRequest.Enqueue(
-            //                senderPeer: Request.SenderPeer,
-            //                address: BitConverter.GetBytes(address.Length).Concat(address).ToArray(),
-            //                command: RequestCommand.Metadata,
-            //                returnPeer: Request.Header.Peer);
-            //        }
-            //        else
-            //        {
-            //            foreach (ValueHitsItem item in addresses)
-            //            {
-            //                p2pRequest.Enqueue(
-            //                    senderPeer: Request.SenderPeer,
-            //                    originPeer: Request.Header.Peer ?? Request.OriginPeer,
-            //                    address: item.Value,
-            //                    data: LocalPackets.Get(item.Value));
-            //            }
-            //        }
-            //    }
-            //    else
-            //    {
-            //        LocalPackets.Add(Utils.GetAddress(), data, Request.OriginPeer);
-            //    }
         }
     }
 }

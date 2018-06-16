@@ -16,6 +16,64 @@ namespace purge
 
         static void Main(string[] args)
         {
+            var ccc = 10;
+            var cc = 10;
+            for (var ii = 0; ii < ccc; ii++)
+            {
+
+
+                var adds = new List<byte[]>();
+
+                for (var i = 0; i < cc; i++)
+                    adds.Add(library.Utils.GetAddress());
+
+                var sum = 0d;
+
+                var count = 0;
+
+                foreach(var a in adds)
+                //for(var j = 0;j<cc;j++)
+                {
+                    //var a = adds[j];                   
+
+                    var d = new List<double>();
+
+                    var largerTop10 = 1d;
+
+                    foreach (var b in adds)
+                     // for(var k = j+1; k <cc; k++)
+                    {
+                        if (a == b)
+                            continue;
+                        var dist = library.Addresses.EuclideanDistance(a, b);
+
+                        if(dist < largerTop10)
+                        {
+                            d.Add(dist);
+
+                            largerTop10 = dist;
+                        }
+
+                        // var b = adds[k];
+                    }
+
+                    for(var l = 0;l<Math.Min(100,d.Count);l++)
+                    {
+                        sum += d[l];
+                        count++;
+                    }
+
+                    sum = sum / count;
+                }
+
+                Console.WriteLine(cc + " " +(sum*10 / count).ToString("n10"));
+
+                cc *= 2;
+            }
+            Console.ReadKey();
+
+            return;
+                
             address = library.Utils.GetAddress();
 
             for (var i = 0; i < 2000; i++)

@@ -76,7 +76,7 @@ namespace windows_desktop
 
                 var txtFile = "demo.gv";
 
-                var path = @"..\\..\\..\\home\\jquery.graphviz.svg-master\\";
+                var path = @"..\\..\\..\\..\\..\\home\\jquery.graphviz.svg-master\\";
 
                 path = Path.GetFullPath( path);
 
@@ -90,7 +90,7 @@ namespace windows_desktop
                 if (process != null)
                     process.Close();
 
-                process = System.Diagnostics.Process.Start("http://localhost:46005/k5c0241K9ckEw3ruLh2ZTUppkFtTurVikZJTuMn8UX8_/jquery.graphviz.svg-master/demo.html");
+                process = System.Diagnostics.Process.Start("http://localhost:"+Program.WebPort+"/k5c0241K9ckEw3ruLh2ZTUppkFtTurVikZJTuMn8UX8_/jquery.graphviz.svg-master/demo.html");
 
                 //var psi = new ProcessStartInfo();
 

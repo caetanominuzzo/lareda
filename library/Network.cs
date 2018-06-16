@@ -17,7 +17,7 @@ namespace library
             Task.Run(configure);
         }
 
-        static async Task configure()
+        static async Task configure() 
         {
             var discoverer = new NatDiscoverer();
              
@@ -27,7 +27,7 @@ namespace library
 
             var ip = await device.GetExternalIPAsync(); 
 
-            Client.LocalPeer.EndPoint = new System.Net.IPEndPoint(ip, Client.LocalPeer.EndPoint.Port);
+            //Client.LocalPeer.EndPoint = new System.Net.IPEndPoint(ip, Client.LocalPeer.EndPoint.Port);
 
 
             var list = await device.GetAllMappingsAsync();

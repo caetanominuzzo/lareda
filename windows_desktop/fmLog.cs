@@ -93,7 +93,6 @@ namespace windows_desktop
 
                 if (((Log.LogTypes)c.Tag & (Log.LogTypes)((Control)sender).Tag) != Log.LogTypes.None)
                     c.Checked = ((CheckBox)sender).Checked;
-
             }
         }
 
@@ -110,13 +109,9 @@ namespace windows_desktop
 
         private void C_Click(object sender, EventArgs e)
         {
-
             SetValues(sender);
 
             GetValue();
-
-
-
         }
 
         private void panel1_DoubleClick(object sender, EventArgs e)

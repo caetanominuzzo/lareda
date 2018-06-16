@@ -49,7 +49,7 @@ namespace windows_desktop
         void ni_MouseClick(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
-                System.Diagnostics.Process.Start("http://localhost:" + Program.WebPort);
+                System.Diagnostics.Process.Start("http://localhost:" + Program.WebPort + "/" + pParameters.webHome + "/");
         }
     }
 }

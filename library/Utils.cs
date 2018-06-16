@@ -73,12 +73,22 @@ namespace library
             
             Rand.NextBytes(result);
 
-            Utils.ToAddressSizeArray(AddressCount++.ToString()).CopyTo(result, 0);
+            //if(UseAddressCountForVirtualAttributes)
+                Utils.ToAddressSizeArray(AddressCount++.ToString()).CopyTo(result, 0);
 
             if(null != append)
                 append.CopyTo(result, size);
 
             return result;
+        }
+
+        static bool UseAddressCountForVirtualAttributes = true;
+
+        public static int StopInternalAddressCount()
+        {
+            UseAddressCountForVirtualAttributes = false;
+
+            return AddressCount;
         }
 
         public static string Points(IEnumerable<byte> data)

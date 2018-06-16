@@ -53,13 +53,13 @@ namespace library
 
         internal void AddToSearch(IEnumerable<byte[]> addresses)
         {
-            //            Log.Add(Log.LogTypes.Search, Log.LogOperations.Add, addresses.Select(x => Utils.ToSimpleAddress(x)));
+            Log.Add(Log.LogTypes.Search, Log.LogOperations.Add, addresses.Select(x => Utils.ToSimpleAddress(x)));
 
             lock (AddressestoSearch)
             {
                 foreach (var b in addresses)
                 {
-                    if (!Addresses.Equals(Addresses.zero, b, true) && !AddressestoSearch.Any(x => Addresses.Equals(x, b)))
+                    if (!Metapacket.DistancesItems.Any(x => Addresses.Equals(x.CachedValue, b, true)) && !Addresses.Equals(Addresses.zero, b, true) && !AddressestoSearch.Any(x => Addresses.Equals(x, b)))
                     {
                         //Log.Write("TO SEARCH: " + Utils.ToSimpleAddress(b));
 
@@ -537,7 +537,7 @@ namespace library
 
             if (type == MetaPacketType.Hash)
             {
-                Log.Add(Log.LogTypes.Search, Log.LogOperations.Get, new { METAPACKETS = 1, HASH = 1, metapacket.SimpleLinkAddress });
+                Log.Add(Log.LogTypes.Search, Log.LogOperations.Add, new { METAPACKETS = 1, HASH = 1, metapacket.SimpleLinkAddress });
 
                 //return true;
             }
@@ -652,7 +652,7 @@ namespace library
             if (Utils.ToSimpleAddress(search) == "380")
             { }
 
-            lock (LockRootResults)
+           // lock (LockRootResults)
 
                 if (Searched(search))
                 {

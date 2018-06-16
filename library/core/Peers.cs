@@ -41,6 +41,8 @@ namespace library
             return;
             Thread thread = new Thread(Refresh);
 
+            thread.Name = "Peers";
+
             thread.Start();
         }
 
@@ -77,12 +79,6 @@ namespace library
 
                 Peer peer = queue.Dequeue();
 
-                Client.Stats.belowMinSentEvent.WaitOne(); //todo: or max confomr % de uso, ver outro uso (adicionar if Client.IsIdle use belowMax)
-
-                if (Client.Stop)
-                    break;
-
-                //Probability by address distance to Local address
                 var probabilityByAddressDistance = Math.Log(Addresses.EuclideanDistance(Client.LocalPeer.Address, peer.Address) * 100, TopAverageDistance * 100) - 1;
 
                 if (double.IsNaN(probabilityByAddressDistance))
@@ -107,12 +103,10 @@ namespace library
 
                     probabilityByMaxPeers = (totalAtFillQueue - pParameters.PeerMaxItems) / (double)totalAtFillQueue;
                 }
-                else if (Utils.Roll(1 - probabilityByAddressDistance))
-                {
-                    new p2pRequest(RequestCommand.Peer, destinationPeer: peer).Enqueue();
-                }
-
-
+                //else if (Utils.Roll(1 - probabilityByAddressDistance))
+                //{
+                //    new p2pRequest(RequestCommand.Peer, destinationPeer: peer).Enqueue();
+                //}
             }
         }
 
@@ -307,16 +301,11 @@ namespace library
 
             Peer peer = Peers.CreatePeer(endpoint, address);
 
-
-
-
-
             peer.LastAccess = DateTime.FromBinary(BitConverter.ToInt64(data, offset));
 
             offset += sizeof(Int64);
 
             peer.Latency = BitConverter.ToDouble(data, offset);
-
 
             return peer;
         }
@@ -338,6 +327,9 @@ namespace library
                     if (p2 == null)
                     {
                         var dist = Addresses.EuclideanDistance(Client.LocalPeer.Address, peer.Address);
+
+                        while (peers.ContainsKey(dist))
+                            dist += double.MinValue;
 
                         peers.Add(dist, peer);
 
@@ -424,7 +416,7 @@ namespace library
                 return result;
 
             lock (peers)
-                result = peers.OrderBy(x => Addresses.EuclideanDistance(x.Value.Address, closestToAddress)).Select(x => x.Value).Take(count * 2).ToArray();
+                result = peers.Where(x => excludeSenderPeer == null || !excludeSenderPeer.Any(y => y != null && y.EndPoint.Equals(x.Value.EndPoint))).OrderBy(x => Addresses.EuclideanDistance(x.Value.Address, closestToAddress)).Select(x => x.Value).Take(count * 2).ToArray();
 
             result.OrderBy(x => Utils.Rand.Next()).Take(count);
 

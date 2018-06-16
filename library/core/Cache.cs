@@ -74,7 +74,7 @@ namespace library
 
         IEnumerable<CacheItem<T>> refresh()
         {
-           
+
 
             // lock (this)
             {
@@ -82,17 +82,18 @@ namespace library
 
                 var now = DateTime.Now;
 
-             
+
 
                 if (OnCacheExpired != null)
                 {
                     var expired = this.Where(x => (Timeout > 0 && now.Subtract(x.DateTime).TotalMilliseconds >= Timeout) ||
                                                   (Timeout == -1 && x.DateTime.Equals(DateTime.MinValue)));
 
-                    expired.ToList().ForEach(x =>
+                    lock (this)
+                        expired.ToList().ForEach(x =>
                         {
-                            lock (this)
-                                this.Remove(x);
+
+                            this.Remove(x);
 
                             OnCacheExpired(x);
 

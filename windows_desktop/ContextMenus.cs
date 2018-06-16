@@ -106,11 +106,41 @@ namespace windows_desktop
             fmDownloads.Start();
         }
 
+        void retrySetClipboard(string text)
+        {
+            var max = 3;
+
+            var retry = 0;
+
+            while(retry++ < max)
+            {
+                try
+                {
+                    Clipboard.SetText(text, TextDataFormat.Text);
+                }
+                catch { }
+            }
+        }
+
         void Debug_Click(object sender, EventArgs e)
         {
             var text = ((ToolStripMenuItem)sender).Text;
 
-            System.Diagnostics.Process.Start("http://localhost:" + Program.WebPort + "/" + pParameters.webHome + "/debug:" + text);
+            var method = typeof(Client).GetMethod(text);
+
+            if(method.GetParameters().Length == 0)
+            {
+                var res = method.Invoke(null, null);
+
+                if(null != res)
+                    retrySetClipboard(res.ToString());
+            }
+            else
+            {
+                method.Invoke(null, new string[] { Clipboard.GetText() });
+            }
+
+            //System.Diagnostics.Process.Start("http://localhost:" + Program.WebPort + "/" + pParameters.webHome + "/debug:" + text);
         } 
         
         void Log_Click(object sender, EventArgs e)

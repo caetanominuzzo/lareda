@@ -72,6 +72,8 @@ namespace windows_desktop
             {
                 thread = new Thread(ws.Configure);
 
+                thread.Name = "WebServer";
+
                 thread.Start();
             }
 
@@ -133,7 +135,10 @@ namespace windows_desktop
 
         private void ThreadReceiveNew(object state)
         {
-            HttpListenerCallbackState callbackState = (HttpListenerCallbackState)state; 
+            HttpListenerCallbackState callbackState = (HttpListenerCallbackState)state;
+
+
+            Thread.CurrentThread.Name = "WebServer Receive";
 
             while (callbackState.Listener.IsListening)
             {
@@ -158,6 +163,8 @@ namespace windows_desktop
 
         private void ListenerCallback(IAsyncResult ar)
         {
+            //Thread.CurrentThread.Name = "WebServer Receive Callback";
+
             HttpListenerCallbackState callbackState = (HttpListenerCallbackState)ar.AsyncState;
             HttpListenerContext context = null;
 
@@ -179,16 +186,17 @@ namespace windows_desktop
 
             HttpListenerRequest request = context.Request;
 
-            //try
-            //{
+            try
+            {
                 using (HttpListenerResponse response = context.Response)
                 {
                     ProcessReceive(new p2pContext(context));
                 }
-            //}
-            //catch (Exception e)
-            //{
-            //}
+            }
+            catch (Exception e)
+            {
+                Log.Add(Log.LogTypes.WebServer, Log.LogOperations.Exception, new { Exception = e.ToString() });
+            }
         }
 
 
@@ -457,20 +465,20 @@ namespace windows_desktop
 
             CloseResponse(context);
 
-            if(term == "cat")
+            if(term == "cet")
             {
                 var address = Utils.ToAddressSizeArray(term);
 
                 var sAddress = Utils.ToBase64String(address);
 
-                FileDownloadObject ci = new FileDownloadObject(address, context, sAddress);
+                FileDownloadObject ci = new FileDownloadObject(address, context, pParameters.json + "/" + sAddress);
 
                 lock (downloads)
                     downloads.Add(ci);
 
-                Client.Download(sAddress, null, context, sAddress);
+                Client.Download(sAddress, null, context, pParameters.json + "/" + sAddress);
 
-                //ProcessSeek(context, new CacheItem<FileDownloadObject>(ci));
+                ProcessSeek(context, new CacheItem<FileDownloadObject>(ci));
 
                 return;
             }

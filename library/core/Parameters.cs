@@ -20,6 +20,8 @@ namespace library
 
         public static int propagation = 1;
 
+        public static byte TTL  = 10;
+
         public static byte requestHeaderParamsSize = 4;
 
         public static byte requestHeaderSize = (byte)(requestHeaderParamsSize + 6); //6 = sizeof(ip:port);
@@ -94,6 +96,8 @@ namespace library
 
         public static int MinPacketsMaintenanceQueueSize = 100;
 
+        public static int MinMetapacketsMaintenanceQueueSize = 100;
+
         public static int TopPeersPercent = 10;
 
         public static int PeerMaxItems = 1000;
@@ -113,7 +117,7 @@ namespace library
 
         public static string webCache = "cache\\";
 
-        public static string json = "json";
+        public static string json = "packets";
 
         public static string webHome = "k5c0241K9ckEw3ruLh2ZTUppkFtTurVikZJTuMn8UX8_";
 

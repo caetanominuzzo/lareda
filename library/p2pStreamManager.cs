@@ -31,6 +31,9 @@ namespace library
                 if (initial_position != -1)
                     stream.CachedValue.source_position[context] = initial_position;
 
+                if (stream.CachedValue.Length == -1)
+                    stream.CachedValue = new p2pStream(filename, context, initial_position);
+
                 return stream.CachedValue;
             }
 

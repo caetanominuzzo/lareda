@@ -12,12 +12,12 @@ namespace library
 {
     public static class Log
     {//null;//
-        public static string textFilter = "dWe9Yy_uKoQtP_LIO7ueNNEaWRGGOxv3_EuK3hzvImI=";
+        public static string textFilter = null;//"dWe9Yy_uKoQtP_LIO7ueNNEaWRGGOxv3_EuK3hzvImI=";
         // LogTypes.None;// LogTypes.Journaling | LogTypes.Stream | LogTypes.WebServer | LogTypes.File 
         ////
-        public static LogTypes typeFilter = LogTypes.All;// LogTypes.P2p | LogTypes.WebServer | LogTypes.Queue;// | LogTypes.Queue;// | LogTypes.Journaling | LogTypes.Stream | LogTypes.File | LogTypes.Queue; //LogTypes.All; // LogTypes.Queue ;// | LogTypes.streamSeek | LogTypes.DownloadDispose | LogTypes.streamOutputClose;// LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
+        public static LogTypes typeFilter = LogTypes.P2p;// LogTypes.P2p | LogTypes.WebServer | LogTypes.Queue;// | LogTypes.Queue;// | LogTypes.Journaling | LogTypes.Stream | LogTypes.File | LogTypes.Queue; //LogTypes.All; // LogTypes.Queue ;// | LogTypes.streamSeek | LogTypes.DownloadDispose | LogTypes.streamOutputClose;// LogTypes.None ;// Log.LogTypes.queueFileComplete | LogTypes.WebServerGet | LogTypes.queueGetPacket | LogTypes.Nears; // LogTypes.queue;// | LogTypes.Application | LogTypes.p2pIncomingPackets | LogTypes.p2pOutgoingPackets;
 
-        public static LogOperations OpFilter = LogOperations.Any;
+        public static LogOperations OpFilter = LogOperations.Any;// | LogOperations.Write;
 
         internal static LogOperations FromCommand(RequestCommand command)
         { 
@@ -115,6 +115,7 @@ namespace library
             Hash = Any << 32,
             Peers = Any << 33,
             File = Any << 34,
+            Deserialize = Any << 35,
 
             CantSeek = Cant | Seek,
 
@@ -174,7 +175,7 @@ namespace library
         public static void Add(LogTypes type, LogOperations operation, params object[] data)
         {
 #if !DEBUG
-            return;  
+           // return;  
 #endif
 
 
@@ -220,7 +221,7 @@ namespace library
 
                 //Log.Write(type + "\r\n\r\n" + json + "\r\n\r\n----------------------------------------------------------------------------\r\n");
 
-                Log.Write("\t" + type.ToString().PadRight(10) + "\t" + operation.ToString().PadRight(10) + "\t" + json + "\t\r\n");
+                Log.Write("\t" + type.ToString().PadRight(10) + "\t" + operation.ToString().PadRight(10) + "\t" + json + "\t");
 
                 return;
 

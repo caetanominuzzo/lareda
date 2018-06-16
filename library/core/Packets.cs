@@ -136,7 +136,7 @@ namespace library
                 }
             }
         }
-        
+
         static void AddAddress(byte[] address)
         {
             lock (packets)
@@ -150,14 +150,31 @@ namespace library
 
         internal static void Add(byte[] address, byte[] data, Peer peer)
         {
-            if (!peer.Equals(Client.LocalPeer))
+            if (peer.Equals(Client.LocalPeer))
             {
-                if (!VerifyIntegrity(address, data, peer))
-                {
-                    OnPacketValidatorError?.Invoke(address);
 
-                    return;
-                }
+                var destinationPeer = Peers.GetPeer(
+                                   closestToAddress: address,
+                                   excludeOriginAddress: Client.LocalPeer.Address);
+
+                p2pRequest request = new p2pRequest(
+                    command: RequestCommand.Packet,
+                    originalPeer: Client.LocalPeer,
+                    senderPeer: Client.LocalPeer,
+                    destinationPeer: destinationPeer,
+                    address: address,
+                    data : data);
+
+                request.Enqueue();
+            }
+            else
+            {
+                //if (!VerifyIntegrity(address, data, peer))
+                //{
+                //    OnPacketValidatorError?.Invoke(address);
+
+                //    return;
+                //}
             }
 
             DelayedWrite.Add(Path.Combine(pParameters.localPacketsDir, Utils.ToBase64String(address)), data);
@@ -235,6 +252,8 @@ namespace library
 
             Thread thread = new Thread(Refresh);
 
+            thread.Name = "Packets";
+
             thread.Start();
         }
 
@@ -273,15 +292,6 @@ namespace library
 
                 byte[] address = queue.Dequeue();
 
-                Client.Stats.belowMinSentEvent.WaitOne();  //todo: or max confomr % de uso, ver outro uso
-
-                if (Client.Stop)
-                    break;
-
-
-
-
-                //Probability by address distance to Local address
                 var probabilityByAddressDistance = Math.Log(Addresses.EuclideanDistance(Client.LocalPeer.Address, address) * 100, Peers.TopAverageDistance * 100) - 1;
 
                 if (double.IsNaN(probabilityByAddressDistance))
@@ -312,12 +322,12 @@ namespace library
 
                     probabilityByMaxPackets = ((double)totalAtFillQueue - pParameters.PacketsMaxItems) / totalAtFillQueue;
                 }
-                else if (Utils.Roll(((1 - probabilityByLastAccess) + (1 - probabilityByAddressDistance)) / 2d))
-                {
-                    Sincronize(address);
-                }
+                //else if (Utils.Roll(((1 - probabilityByLastAccess) + (1 - probabilityByAddressDistance)) / 2d))
+                //{
+                //    Sincronize(address);
+                //}
 
-                }
+            }
 
         }
 
@@ -335,7 +345,7 @@ namespace library
             }
 
             lock (packets)
-                queue = new Queue<byte[]>(packets.OrderBy(x => Utils.Rand.Next()).Take(pParameters.PacketsMaintenanceQueueSize)); ;
+                queue = new Queue<byte[]>(packets.OrderBy(x => Utils.Rand.Next()).Take(pParameters.PacketsMaintenanceQueueSize));
         }
 
         static void Remove(byte[] address)
@@ -357,8 +367,8 @@ namespace library
             {
                 var data = Get(key);
 
-                if(data != null)
-                    result += string.Format("{0}{1}", Utils.ToBase64String(key), (data.Length < 1024? "<1 kb: " + Encoding.Unicode.GetString(data) : ">1kb"))
+                if (data != null)
+                    result += string.Format("{0}{1}", Utils.ToBase64String(key), (data.Length < 1024 ? "<1 kb: " + Encoding.Unicode.GetString(data) : ">1kb"))
                          + Environment.NewLine;
             }
 
@@ -374,8 +384,9 @@ namespace library
             if (peer != null)
             {
                 p2pRequest request = new p2pRequest(
-                    
-                    RequestCommand.Packet, address, Client.LocalPeer,
+                    command: RequestCommand.Packet, 
+                    address: address, 
+                    originalPeer: Client.LocalPeer,
                     senderPeer: Client.LocalPeer,
                     destinationPeer: peer,
                     data: Get(address));
@@ -390,7 +401,7 @@ namespace library
 
         static Queue<byte[]> queue = new Queue<byte[]>();
 
-      
+
 
         #endregion
 

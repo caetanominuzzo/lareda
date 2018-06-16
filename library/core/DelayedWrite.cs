@@ -42,11 +42,11 @@ namespace library
 
         static ManualResetEvent itemsOnQueueEvent = new ManualResetEvent(false);
 
-        static ManualResetEvent freeQueueEvent = new ManualResetEvent(true);
-
         internal static void Start()
         {
             Thread thread = new Thread(Refresh);
+
+            thread.Name = "DelayedWrite";
 
             thread.Start();
         }
@@ -54,8 +54,6 @@ namespace library
         internal static void Stop()
         {
             itemsOnQueueEvent.Set();
-
-            freeQueueEvent.Set();
         }
 
         static void Refresh()
@@ -181,9 +179,6 @@ namespace library
 
                 count = queue.Count();
             }
-
-            if (count < pParameters.MaxDelayedWriteQueue)
-                freeQueueEvent.Set();
         }
 
         #endregion

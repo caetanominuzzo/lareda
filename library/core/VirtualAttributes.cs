@@ -255,7 +255,14 @@ namespace library
                 //if (field.Name == "MIME_TYPE_IMAGE_THUMB")
                 //    return;
             }
-                
+
+
+            Client.Post("Ingles", VirtualAttributes.EN_US);
+
+            Client.Post("Portugues", VirtualAttributes.PT_BR);
+
+            Utils.StopInternalAddressCount(); 
+
         }
 
     }

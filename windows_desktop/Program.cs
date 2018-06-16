@@ -112,11 +112,6 @@ namespace windows_desktop
 
             Application.SetCompatibleTextRenderingDefault(false);
 
-            fmLog pp = new fmLog();
-
-            pp.Show();
-
-            
 
             using (ProcessIcon.Start())
             using (Client.Start(p2pAddress, p2pEndpoint))

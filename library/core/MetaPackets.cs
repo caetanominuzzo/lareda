@@ -14,6 +14,10 @@ namespace library
 
         internal class Stats
         {
+            internal int totalAtFillQueue = 0;
+
+            internal double probabilityByMaxMetapackets = 0;
+
             internal MetaPacketType Type = MetaPacketType.Link;
 
             internal TimeCounter LocalAddressDistance = new TimeCounter(10, 100);
@@ -24,7 +28,9 @@ namespace library
 
             internal Queue<byte[]> Queue = new Queue<byte[]>();
 
-            internal ManualResetEvent Event = new ManualResetEvent(true);
+            internal ManualResetEvent LocalPacketEvent = new ManualResetEvent(true);
+
+            internal ManualResetEvent aboveMaxMetaPacketsEvent = new ManualResetEvent(false);
 
             internal Dictionary<byte[], List<Metapacket>> Items = new Dictionary<byte[], List<Metapacket>>(new ByteArrayComparer());
 
@@ -42,6 +48,26 @@ namespace library
 
         internal static Counter MostUsedRatio = new Counter(0);
 
+        internal static string ToString()
+        {
+            var result = string.Empty;
+
+            foreach(var r in Hashs.Items)
+            {
+                foreach (var rr in r.Value)
+                    result += rr.ToString() + "\r\n";
+            }
+
+            foreach (var r in Links.Items)
+            {
+                foreach (var rr in r.Value)
+                    result += rr.ToString() + "\r\n";
+            }
+
+            return result;
+
+        }
+
 
         #region Thread Refresh
 
@@ -53,15 +79,25 @@ namespace library
 
             thread = new Thread(Refresh);
 
+            thread.Name = type.ToString();
+
             thread.Start(type == MetaPacketType.Link ? Links : Hashs);
         }
 
         internal static void Stop(MetaPacketType type)
         {
             if (type == MetaPacketType.Link)
-                Links.Event.Set();
+            {
+                Links.LocalPacketEvent.Set();
+
+                Links.aboveMaxMetaPacketsEvent.Set();
+            }
             else
-                Hashs.Event.Set();
+            {
+                Hashs.LocalPacketEvent.Set();
+
+                Hashs.aboveMaxMetaPacketsEvent.Set();
+            }
 
             Save(type);
         }
@@ -85,7 +121,6 @@ namespace library
 
             while (!Client.Stop)
             {
-                return;
                 bool any;
 
                 lock (c.Items)
@@ -93,9 +128,9 @@ namespace library
 
                 if (!any)
                 {
-                    c.Event.Reset();
+                    c.LocalPacketEvent.Reset();
 
-                    c.Event.WaitOne();
+                    c.LocalPacketEvent.WaitOne();
                 }
 
 
@@ -103,13 +138,13 @@ namespace library
                     break;
 
                 if (!c.Queue.Any())
-                    FillQueue(c.Items, ref c.Queue);
+                    FillQueue(ref c);
 
                 if (!c.Queue.Any())
                 {
-                    c.Event.Reset();
+                    c.LocalPacketEvent.Reset();
 
-                    c.Event.WaitOne();
+                    c.LocalPacketEvent.WaitOne();
                 }
 
                 // GetThreads();
@@ -122,53 +157,60 @@ namespace library
 
                 byte[] address = c.Queue.Dequeue();
 
-                Client.Stats.belowMinSentEvent.WaitOne();  //todo: or max confomr % de uso, ver outro uso
+                var probabilityByAddressDistance = Math.Log(Addresses.EuclideanDistance(Client.LocalPeer.Address, address) * 100, Peers.TopAverageDistance * 100) - 1;
 
-                if (Client.Stop)
-                    break;
-
-                var total = c.Items.Count;
-
-                //Probability by total packets
-                var pT = (total - pParameters.MetaPacketsMaxItems) / total;
-
-                var avgDistance = c.LocalAddressDistance.Average;
-
-                //Probability by address distance to Local address
-                var pL = Math.Log(Addresses.EuclideanDistance(Client.LocalPeer.Address, address), avgDistance);
-
-                var toSincronize = new List<Metapacket>();
+                if (double.IsNaN(probabilityByAddressDistance))
+                    probabilityByAddressDistance = 1;
 
                 var toRemove = new List<Metapacket>();
 
-                foreach (var m in c.Items[address]) 
+                foreach (var m in c.Items[address])
                 {
                     var lastAccess = DateTime.Now.Subtract(m.LastAccess).TotalMinutes;
 
-                    var avgLastAccess = c.LastAccess.Average;
+                    var maxLastAccess = c.LastAccess.Average * 2;
 
-                    //probability by last access
-                    var pA = Math.Log(lastAccess, avgLastAccess);
+                    var metapacketLastAccessPercent = lastAccess / maxLastAccess;
 
-                    if (true) // (lastAccess < avgLastAccess || pL == 0 || pA == 0 || Utils.Roll(1 / pL * 1 / pA))
+                    var averagePercent = c.LastAccess.Average / maxLastAccess;
+
+                    var probabilityByLastAccess = Math.Log(100 * metapacketLastAccessPercent, 100 * averagePercent) - 1;
+
+                    if (double.IsNaN(probabilityByLastAccess))
+                        probabilityByLastAccess = 1;
+
+                    if (c.probabilityByMaxMetapackets > 0 && Utils.Roll((c.probabilityByMaxMetapackets + probabilityByAddressDistance + probabilityByLastAccess) / 3d))
                     {
-                        toSincronize.Add(m);
-                    }
-
-                    if (pT > 0 && Utils.Roll(pT * pL * pA))
-                    {
-
                         toRemove.Add(m);
-                    }
-                }
 
-                if (toSincronize.Any())
-                    Sincronize(c, toSincronize);
+                        c.totalAtFillQueue--;
+
+                        c.probabilityByMaxMetapackets = ((double)c.totalAtFillQueue - pParameters.MetaPacketsMaxItems) / c.totalAtFillQueue;
+                    }
+
+
+                }
 
                 if (toRemove.Any())
                     Remove(c, toRemove);
-
             }
+        }
+
+        static void FillQueue(ref Stats c)
+        {
+            c.totalAtFillQueue = c.Items.Count;
+
+            c.probabilityByMaxMetapackets = (c.totalAtFillQueue - pParameters.MetaPacketsMaxItems) / (double)c.totalAtFillQueue;
+
+            if (c.probabilityByMaxMetapackets < (pParameters.MinMetapacketsMaintenanceQueueSize / c.totalAtFillQueue))
+            {
+                c.aboveMaxMetaPacketsEvent.Reset();
+
+                c.aboveMaxMetaPacketsEvent.WaitOne();
+            }
+
+            lock (c.Items)
+                c.Queue = new Queue<byte[]>(c.Items.OrderBy(x => Utils.Rand.Next()).Take(pParameters.MetaPacketsMaintenanceQueueSize).Select(x => x.Key));
         }
 
         private static void Remove(Stats stats, List<Metapacket> toRemove)
@@ -207,27 +249,23 @@ namespace library
             if (peer != null)
             {
                 p2pRequest request = new p2pRequest(
-                    command: stats.Type == MetaPacketType.Hash ? RequestCommand.Hashs : RequestCommand.Metapackets,
-                    address: toSincronize[0].Address,
-                    originalPeer: Client.LocalPeer,
-                    senderPeer: Client.LocalPeer,
+                    command:         stats.Type == MetaPacketType.Hash ? RequestCommand.Hashs : RequestCommand.Metapackets,
+                    address:         toSincronize[0].Address,
+                    originalPeer:    Client.LocalPeer,
+                    senderPeer:      Client.LocalPeer,
                     destinationPeer: peer,
-                    data: data.ToArray());
+                    data:            data.ToArray());
 
                 request.Enqueue();
             }
 
         }
 
-        static void FillQueue(Dictionary<byte[], List<Metapacket>> list, ref Queue<byte[]> queue)
-        {
-            lock (list)
-                queue = new Queue<byte[]>(list.OrderBy(x => Utils.Rand.Next()).Take(pParameters.MetaPacketsMaintenanceQueueSize).Select(x => x.Key));
-        }
+     
 
         internal static void ExpandSearch()
         {
-            var address = Utils.ToAddressSizeArray("cat"); //Client.LocalPeer.Address
+            var address = Utils.ToAddressSizeArray("cet"); //Client.LocalPeer.Address
 
             var toExpand = Hashs.Items.OrderBy(x => Addresses.EuclideanDistance(x.Key, address)).First();
 
@@ -243,7 +281,7 @@ namespace library
 
             while (result == string.Empty && temp_result == "[]")
             {
-                temp_result = r.GetResultsResults(p2pContext, toExpand.Value.First().TargetAddress);
+                temp_result = r.GetResultsResults(p2pContext, address);// toExpand.Value.First().TargetAddress);
 
                 if (temp_result != "[]")
                 {
@@ -254,7 +292,7 @@ namespace library
                 break;
             }
 
-            DelayedWrite.Add(Path.Combine(pParameters.json, Utils.ToBase64String(toExpand.Value.First().TargetAddress)), System.Text.Encoding.UTF8.GetBytes(result));
+            DelayedWrite.Add(Path.Combine(pParameters.json, Utils.ToBase64String(address)), System.Text.Encoding.UTF8.GetBytes(result));
         }
 
         #endregion
@@ -285,7 +323,7 @@ namespace library
             {
                 m.Type = type;
 
-                Add(m);
+                Add(m, Client.LocalPeer);
             }
 
             /*
@@ -402,6 +440,8 @@ namespace library
                 offset += metapacket_size;
             }
 
+            Log.Add(Log.LogTypes.P2p, Log.LogOperations.Serialize, new { Packet = result.Length, Metapackets = metapackets.Select(x => x.ToString()).Aggregate<string>((a, b) => a + ";  " + b) });
+
             return result;
         }
 
@@ -473,8 +513,12 @@ namespace library
             if (!packet.Any())
                 return null;
 
+           // if (packet.Length % metapacket_size != 0)
+           //     packet = packet.Skip(pParameters.addressSize).ToArray();
+
             if (packet.Length % metapacket_size != 0)
                 return null;
+
 
             var result = new Metapacket[packet.Length / metapacket_size];
 
@@ -487,21 +531,18 @@ namespace library
                 offset += metapacket_size;
             }
 
+            Log.Add(Log.LogTypes.P2p, Log.LogOperations.Deserialize, new { Packet = packet.Length, Metapackets = result.Select(x => x.ToString()).Aggregate<string>((a,b)=>a + ";  " +b) });
+
             return result;
         }
 
-        static Metapacket FromBytes(byte[] packet, int offset, byte[] address = null)
+        static Metapacket FromBytes(byte[] packet, int offset)
         {
-            //When loading from file the addres is on the file name
-            //On receiving via p2p the address is the first data on the packet
-            if (address == null)
-            {
-                address = new byte[pParameters.addressSize];
+            var address = new byte[pParameters.addressSize];
 
-                Buffer.BlockCopy(packet, offset, address, 0, pParameters.addressSize);
+            Buffer.BlockCopy(packet, offset, address, 0, pParameters.addressSize);
 
-                offset += pParameters.addressSize;
-            }
+            offset += pParameters.addressSize;
 
             var targetAddress = new byte[pParameters.addressSize];
             var linkAddress = new byte[pParameters.addressSize];
@@ -521,12 +562,10 @@ namespace library
 
             if (Addresses.Equals(hashAddress, Addresses.zero, true))
                 hashAddress = null;
-            else
-            {
 
-            }
 
-            Int64 lastAccess = BitConverter.ToInt64(packet, offset);
+
+            var lastAccess = BitConverter.ToInt64(packet, offset);
 
             offset += sizeof(Int64);
 
@@ -548,8 +587,50 @@ namespace library
         #endregion
 
          
-        internal static void Add(Metapacket metapacket)
+        internal static void Add(Metapacket metapacket, Peer peer)
         {
+            if (peer.Equals(Client.LocalPeer))
+            {
+
+                var destinationPeer = Peers.GetPeer(
+                                   closestToAddress: metapacket.Address,
+                                   excludeOriginAddress: Client.LocalPeer.Address);
+
+                p2pRequest request = new p2pRequest(
+                    address: metapacket.Address,
+                    command: RequestCommand.Metapackets,
+                    originalPeer: Client.LocalPeer,
+                    senderPeer: Client.LocalPeer,
+                    destinationPeer: destinationPeer,
+                    data: MetaPackets.ToBytes(new Metapacket[] { metapacket }));
+
+                request.Enqueue();
+
+                destinationPeer = Peers.GetPeer(
+                                   closestToAddress: metapacket.TargetAddress,
+                                   excludeOriginAddress: Client.LocalPeer.Address);
+
+                request = new p2pRequest(
+                    address: metapacket.Address,
+                    command: RequestCommand.Metapackets,
+                    originalPeer: Client.LocalPeer,
+                    senderPeer: Client.LocalPeer,
+                    destinationPeer: destinationPeer,
+                    data: MetaPackets.ToBytes(new Metapacket[] { metapacket }));
+
+                request.Enqueue();
+            }
+            else
+            {
+                //todo:
+                //if (!VerifyIntegrity(address, data, peer))
+                //{
+                //    OnPacketValidatorError?.Invoke(address);
+
+                //    return;
+                //}
+            }
+
             var mode = metapacket.Type == MetaPacketType.Hash ? Hashs : Links;
 
             var list = mode.Items;
@@ -583,21 +664,17 @@ namespace library
 
                 MostUsedRatio.Add(count);
 
-                Links.Event.Set();
+                Links.LocalPacketEvent.Set();
             }
             else
-                Hashs.Event.Set();
+                Hashs.LocalPacketEvent.Set();
 
 
         }
 
         internal static IEnumerable<Metapacket> LocalSearch(byte[] address, MetaPacketType type)
         {
-            if (Utils.ToSimpleAddress(address).Contains("3DnFpsP2xPTUm9L4G"))
-            {
-
-            }
-
+            
             var result = new Metapacket[0];
 
             if (type == MetaPacketType.Link)

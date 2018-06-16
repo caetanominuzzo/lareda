@@ -47,7 +47,7 @@ namespace library
 
         internal static void FileUpload(string root_path, string[] paths, byte[] conceptAddress, byte[] userAddress = null, bool newThread = true, List<byte[]> parents = null)
         {
-            TagLib.File tags = null;
+            TagLib.File tags = null; 
 
             try
             {

@@ -14,6 +14,10 @@ namespace library
 {
     class p2pRequest
     {
+        internal List<p2pRequest> parents = new List<p2pRequest>();
+
+        internal List<byte[]> results = new List<byte[]>();
+
         internal RequestCommand Command = RequestCommand.Packet;
 
         internal Peer OriginalPeer;
@@ -25,6 +29,8 @@ namespace library
         internal Peer DestinationPeer;
 
         internal byte[] Data;
+
+        internal byte? TTL;
 
         internal static byte[] bytes_empty = new byte[0];
 
@@ -42,12 +48,18 @@ namespace library
         internal p2pRequest(
             RequestCommand command = RequestCommand.Peer,
             byte[] address = null,
+            byte? ttl = null,
             Peer originalPeer = null,
             Peer senderPeer = null,
             Peer destinationPeer = null,
             byte[] data = null)
         {
             Command = command;
+
+            if (ttl.HasValue)
+                TTL = ttl;
+            else
+                TTL = pParameters.TTL;
 
             Address = address;
 
@@ -64,16 +76,14 @@ namespace library
 
         internal static p2pRequest CreateRequestFromReceivedBytes(IPEndPoint endpoint, byte[] buffer)
         {
-            //var header = p2pRequestHeader.CreateFromReceivedBytes(buffer);
-
             byte[] address = buffer.Skip(pParameters.requestHeaderSize).Take(pParameters.addressSize).ToArray();
 
-            IPEndPoint originEndPoint = Addresses.FromBytes(buffer.Skip(pParameters.requestHeaderParamsSize).ToArray());
+            IPEndPoint originalEndPoint = Addresses.FromBytes(buffer.Skip(pParameters.requestHeaderParamsSize).ToArray());
 
             Peer originalPeer = null;
 
-            if (originEndPoint != null)
-                originalPeer = Peers.CreatePeer(originEndPoint, null);
+            if (originalEndPoint != null)
+                originalPeer = Peers.CreatePeer(originalEndPoint, null);
 
             if (address != null && address.Length == 0)
                 address = null;
@@ -95,11 +105,14 @@ namespace library
 
             var result = new p2pRequest(
                 command: (RequestCommand)buffer[0],
+                ttl: buffer[1],
                 originalPeer: originalPeer,
                 address: address,
                 senderPeer: senderPeer,
                 destinationPeer: Client.LocalPeer,
                 data: buffer.Skip(pParameters.requestHeaderSize).ToArray());
+
+            result.parents = p2pServer.requests_received.Where(x => Addresses.Equals(x.CachedValue.Address, address)).Select(x => x.CachedValue).ToList();
 
             return result;
         }
@@ -109,6 +122,8 @@ namespace library
         internal static void Start()
         {
             Thread thread = new Thread(Refresh);
+
+            thread.Name = "p2pRequest";
 
             thread.Start();
         }
@@ -174,12 +189,29 @@ namespace library
 
         internal bool Send()
         {
+            if (Command != RequestCommand.Peer)
+            {
+                var address = (Address ?? bytes_empty);
+
+                if (address.Length == 0 && null != Data)
+                    address = Data.Take(pParameters.addressSize).ToArray();
+
+                if (null != Data && Data.Length == pParameters.addressSize)
+                    lock (p2pServer.requests_sent)
+                    {
+                        if (p2pServer.requests_sent.Any(x => Addresses.Equals(x.CachedValue, address)))
+                            return true;
+
+                        p2pServer.requests_sent.Add(address);
+                    }
+            }
+
             if (DestinationPeer == null)
             {
                 DestinationPeer = Peers.GetPeer(
                     closestToAddress: Address,
                     excludeOriginAddress: Address,
-                    excludeSenderPeer: new[] { OriginalPeer });
+                    excludeSenderPeer: parents.Select(x => x.SenderPeer).Concat(new[] { OriginalPeer }).ToArray());
 
                 if (DestinationPeer == null)
                     return false;
@@ -192,7 +224,7 @@ namespace library
                  Concat(Address ?? bytes_empty).
                 Concat(Data ?? bytes_empty).ToArray();
 
-            Log.Add(Log.LogTypes.P2p, Log.LogOperations.Outgoing | Log.FromCommand(Command), new { Port = DestinationPeer.EndPoint.Port, Address = Address ?? Data, Data = null != Data && Data.Length > 0 });
+            Log.Add(Log.LogTypes.P2p, Log.LogOperations.Outgoing | Log.FromCommand(Command), new { Port = DestinationPeer.EndPoint.Port, Address = Address ?? Data, Data = null != Data && Data.Length > pParameters.addressSize });
 
             //Client.LocalPeer.EndPoint.Port + " >>> " + DestinationPeer.EndPoint.Port + " [" +
             //    Command.ToString() + "] [" + Utils.ToSimpleAddress(Address != null && Address.Length > 0 ? Address : Data), 
@@ -220,7 +252,12 @@ namespace library
 
             b[0] = (byte)Command;
 
-            Addresses.ToBytes(null == OriginalPeer ? Client.LocalPeer.EndPoint : OriginalPeer.EndPoint).CopyTo(b, pParameters.requestHeaderParamsSize);
+            if (TTL.HasValue)
+                b[1] = TTL.Value;
+            else
+                b[1] = pParameters.TTL;
+
+            Addresses.ToBytes(Client.LocalPeer.EndPoint).CopyTo(b, pParameters.requestHeaderParamsSize);
 
             return b;
         }
@@ -253,7 +290,7 @@ namespace library
             {
                 var i = p2pServer.SocketTcpSend(data, data.Length, remoteEndPoint);
 
-                Log.Add(Log.LogTypes.P2p, Log.LogOperations.Outgoing, new { Address = Utils.ToBase64String(data.Skip(pParameters.packetHeaderSize).Take(pParameters.addressSize).ToArray()), remoteEndPoint = remoteEndPoint.ToString(), Wrote = i });
+                Log.Add(Log.LogTypes.P2p, Log.LogOperations.Outgoing, new { remoteEndPoint = remoteEndPoint.ToString(), Wrote = i });
 
                 //u.Send(data, data.Length, remoteEndPoint);
             }

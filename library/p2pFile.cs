@@ -149,6 +149,8 @@ namespace library
 
             Thread thread = new Thread(Refresh);
 
+            thread.Name = "p2pFile: " + filename;
+
             thread.Start();
         }
 

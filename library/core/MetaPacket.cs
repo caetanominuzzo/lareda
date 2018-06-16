@@ -84,7 +84,7 @@ namespace library
 
         internal long Id_Marker;
 
-        static Cache<byte[]> DistancesItems = new Cache<byte[]>(60 * 1000000);
+        internal static Cache<byte[]> DistancesItems = new Cache<byte[]>(60 * 1000000);
 
         internal Metapacket(
             DateTime creation,
@@ -126,6 +126,12 @@ namespace library
                 DistancesItems.Add(VirtualAttributes.ORDER);
 
                 DistancesItems.Add(VirtualAttributes.MIME_TYPE_DOWNLOAD);
+
+                DistancesItems.Add(VirtualAttributes.ROOT_TYPE);
+
+                DistancesItems.Add(VirtualAttributes.ROOT_SEQUENCE);
+
+                DistancesItems.Add(VirtualAttributes.ROOT_STREAM);
             }
 
             Creation = creation;
@@ -168,18 +174,22 @@ namespace library
         {
             Metapacket result = new Metapacket(DateTime.UtcNow, targetAddress, linkAddress, hashContent, type, address);
 
-            MetaPackets.Add(result);
+            MetaPackets.Add(result, Client.LocalPeer);
 
             return result;
         }
 
         internal string ToString()
         {
-            return string.Format("Address {0}\r\nTarget {1}\r\nLink {2}\r\n{3}\r\n",
+            return string.Format("{7}\r\nAddress: {0}\r\nTarget: {1}\r\nLink: {2}\r\nHash: {3} [{6}]\r\nCreation: {4}\r\nLastAccess: {5}\r\n",
                 Utils.ToSimpleAddress(Address),
                 Utils.ToSimpleAddress(TargetAddress),
                 Utils.ToSimpleAddress(LinkAddress),
-                Hash == null || Addresses.Equals(Hash, Addresses.zero) ? "" : "CONTEUDO");
+                Hash == null || Addresses.Equals(Hash, Addresses.zero) ? "" : "CONTEUDO",
+                Creation,
+                LastAccess,
+                Hash == null ? "null" : Hash.Length.ToString(),
+                Type == MetaPacketType.Hash? "hash" : "link");
         }
     }
 }
